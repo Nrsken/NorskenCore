@@ -20,6 +20,8 @@ _G.NorskenCore = API
 ---@return table object
 function API:NewAddon(object, name, ...)
     setmetatable(object, { __index = API }) -- AceAddon copies an existing metatable, this one survives
+    -- AceAddon's own annotation misses the form that takes an object
+    ---@diagnostic disable-next-line: type-mismatch
     return LibStub('AceAddon-3.0'):NewAddon(object, name, ...)
 end
 

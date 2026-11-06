@@ -6,7 +6,7 @@ local Private = select(2, ...)
 
 local GetLocale = GetLocale
 local setmetatable = setmetatable
-local pairs = pairs
+local pairs, ipairs = pairs, ipairs
 
 -- the ten locales we ship files for, in the order the picker lists them, with their own names
 Private.LANGUAGES = {
