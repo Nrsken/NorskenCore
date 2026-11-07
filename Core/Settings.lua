@@ -136,11 +136,21 @@ function Private:OnInitialize()
     hadSavedValues = saved ~= nil and saved.global ~= nil and next(saved.global) ~= nil
     self.sharedDB = LibStub('AceDB-3.0'):New('NorskenCoreDB', defaults, true)
     self:RefreshCurves()
+    self:LoadCustomColors()
 end
 
 ---@return NRSKNUI.SharedSettings shared
 function Private:GetSharedSettings()
     return Private.sharedDB.global
+end
+
+---A shared setting changed, whichever addon's window did it: every addon applies it in its own way.
+---@param font boolean? the global font was the one to change
+function Private:SharedSettingsChanged(font)
+    if font then
+        Private:SendMessage('NRSKNUI_PROFILE_FONT_CHANGED')
+    end
+    Private:SendMessage('NRSKNUI_SHARED_SETTINGS_CHANGED')
 end
 
 ---@return table defaults what GetSharedSettings starts from

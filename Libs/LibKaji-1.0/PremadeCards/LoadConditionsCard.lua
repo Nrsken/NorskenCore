@@ -25,7 +25,7 @@ local L = lib.L
 local SPEC_NAME_HEIGHT = 18
 local SPEC_ROW_HEIGHT = 30
 local SPEC_COLUMNS, SPEC_COLUMNS_WIDE = 3, 4
-local SPEC_WIDE_AT = 560 -- content width four columns fit in without the blocks crowding
+local SPEC_WIDE_AT = 560  -- content width four columns fit in without the blocks crowding
 local SPEC_ICON_SIZE = 24
 local SPEC_ICON_CELL = 30 -- a fixed step, so a wider window doesn't spread the icons apart
 local SPEC_DIMMED_ALPHA = 0.7
@@ -49,12 +49,32 @@ local openSections = {}
 
 -- file names from Blizzard_CooldownBroadcaster/TrackedCooldowns.lua; raceIDs also cover NPC races, so the IDs are scanned for these
 local PLAYABLE_RACES = {
-    Human = true, Dwarf = true, NightElf = true, Gnome = true, Draenei = true, Worgen = true,
-    Orc = true, Scourge = true, Tauren = true, Troll = true, BloodElf = true, Goblin = true,
-    Pandaren = true, Dracthyr = true,
-    VoidElf = true, LightforgedDraenei = true, DarkIronDwarf = true, KulTiran = true, Mechagnome = true,
-    Nightborne = true, HighmountainTauren = true, MagharOrc = true, ZandalariTroll = true, Vulpera = true,
-    EarthenDwarf = true, Harronir = true,
+    Human = true,
+    Dwarf = true,
+    NightElf = true,
+    Gnome = true,
+    Draenei = true,
+    Worgen = true,
+    Orc = true,
+    Scourge = true,
+    Tauren = true,
+    Troll = true,
+    BloodElf = true,
+    Goblin = true,
+    Pandaren = true,
+    Dracthyr = true,
+    VoidElf = true,
+    LightforgedDraenei = true,
+    DarkIronDwarf = true,
+    KulTiran = true,
+    Mechagnome = true,
+    Nightborne = true,
+    HighmountainTauren = true,
+    MagharOrc = true,
+    ZandalariTroll = true,
+    Vulpera = true,
+    EarthenDwarf = true,
+    Harronir = true,
 }
 local MAX_RACE_ID = 150
 local raceList ---@type { key: string, label: string }[]?
@@ -98,19 +118,19 @@ end
 
 -- The game's own names, with where it's played on the ones that read the same for a dungeon and a raid.
 local DIFFICULTIES = {
-    { id = 1, place = "Dungeon" },
-    { id = 2, place = "Dungeon" },
-    { id = 23, place = "Dungeon" },
+    { id = 1,   place = "Dungeon" },
+    { id = 2,   place = "Dungeon" },
+    { id = 23,  place = "Dungeon" },
     { id = 8 },
-    { id = 24, place = "Dungeon" },
+    { id = 24,  place = "Dungeon" },
     { id = 205 },
     { id = 208 },
     { id = 17 },
     { id = 220, place = "Raid" },
-    { id = 14, place = "Raid" },
-    { id = 15, place = "Raid" },
-    { id = 16, place = "Raid" },
-    { id = 33, place = "Raid" },
+    { id = 14,  place = "Raid" },
+    { id = 15,  place = "Raid" },
+    { id = 16,  place = "Raid" },
+    { id = 33,  place = "Raid" },
 }
 
 ---@return { key: number, label: string }[]
@@ -313,8 +333,8 @@ local function FillZoneTooltip(tooltip, theme)
     Header(L["How To Write Them"])
     tooltip:AddLine(L["Separate entries with commas."], muted[1], muted[2], muted[3], true)
     local zoneSyntax = {
-        { "2393", L["A map"] },
-        { "g486", L["Every floor of a map group"] },
+        { "2393",  L["A map"] },
+        { "g486",  L["Every floor of a map group"] },
         { "c2395", L["A map and every map inside it"] },
         { "i2912", L["An instance"] },
         { "-2393", L["Leave a map out, works with any prefix"] },
@@ -742,7 +762,7 @@ lib.premadeCards.LoadConditionsCard = {
 
         -- General --
 
-        card:Separator(L["General"], { useLabel = true })
+        card:Separator(L["General"], { useLabel = true, height = 20 })
 
         local cells = {}
         for _, state in ipairs(lib.loadStates) do

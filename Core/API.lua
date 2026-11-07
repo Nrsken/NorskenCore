@@ -1,10 +1,11 @@
 ---@class NRSKNUI
 local Private = select(2, ...)
 
+local _G = _G
 local LibStub = LibStub
 local setmetatable = setmetatable
 
--- What the Norsken addons may use. Everything else in Core stays private, a line here is a promise.
+-- What the Norsken addons may use. Everything else in Core stays private.
 
 ---@class NorskenCoreAPI
 local API = {}
@@ -67,6 +68,7 @@ API.ChooseSharedSource = Private.ChooseSharedSource
 API.AdoptSharedSettings = Private.AdoptSharedSettings
 API.SharedSettingsDiffer = Private.SharedSettingsDiffer
 API.ApplySharedSettings = Private.ApplySharedSettings
+API.SharedSettingsChanged = Private.SharedSettingsChanged
 
 -- Media --
 
@@ -131,6 +133,11 @@ API.IsClassInGroup = Private.IsClassInGroup
 API.CreatePrompt = Private.CreatePrompt
 API.CreateCopyDialog = Private.CreateCopyDialog
 API.CreateReloadPrompt = Private.CreateReloadPrompt
+
+-- Anchors and previews --
+
+API.NewAnchors = Private.NewAnchors
+API.NewPreviewManager = Private.NewPreviewManager
 
 -- Load conditions and auras --
 

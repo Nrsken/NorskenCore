@@ -411,6 +411,14 @@ function WindowMixin:Show()
 
     lib.ResetNoticePulses(self.gui)
     self.gui._window = self -- the frame chooser steps around the window that's in use
+
+    -- one settings window at a time across every addon, the previews follow a single page
+    local open = lib.openWindow
+    if open and open ~= self and open:IsShown() then
+        open:Hide()
+    end
+    lib.openWindow = self
+
     self.frame:Show()
     self.frame:Raise()
     if self._currentId then self:ShowPage(self._currentId) end
@@ -437,6 +445,13 @@ function WindowMixin:Resume()
     if not self._suspended then return end
 
     self._suspended = false
+
+    -- another window opened meanwhile and there's only ever one, so this one closes for real
+    if lib.openWindow ~= self then
+        if self._onClose then safecall(self._onClose) end
+        return
+    end
+
     self.frame:Show()
     self.frame:Raise()
     if self._currentId then self:ShowPage(self._currentId) end

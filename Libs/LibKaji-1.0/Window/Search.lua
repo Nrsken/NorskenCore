@@ -46,12 +46,14 @@ local function MakeRow(labels, ctx)
     end
     for _, m in ipairs(WIDGET_METHODS) do row[m] = record end
     row.Icon = function() return row end
+    row.icon = { SetColorTexture = function() end } -- swatches paint what Icon returned
     setmetatable(row, { __index = function() return function() return row end end })
     return row
 end
 
-local function MakeCard(labels, ctx)
-    local card = {}
+local function MakeCard(gui, labels, ctx)
+    -- real fields: the __index below answers anything else with a function, and builders read their theme here
+    local card = { gui = gui, page = { gui = gui } }
     card.Row = function() return MakeRow(labels, ctx) end
     card.Separator = function(self) return self end
     card.Rebuild = function(self, fn)
@@ -66,7 +68,7 @@ end
 -- their real builder against the collector records exactly the labels the live page
 -- would show — no hand-maintained label lists to drift out of date.
 local function RecordPremade(gui, labels, ctx, name, config)
-    local card = MakeCard(labels, ctx)
+    local card = MakeCard(gui, labels, ctx)
     local def = lib.premadeCards and lib.premadeCards[name]
     if not def then return card end
 
@@ -81,8 +83,8 @@ local function RecordPremade(gui, labels, ctx, name, config)
 end
 
 local function MakePage(gui, labels, ctx)
-    local page = {}
-    page.Card = function() return MakeCard(labels, ctx) end
+    local page = { gui = gui }
+    page.Card = function() return MakeCard(gui, labels, ctx) end
     page.SetEnabled = function(self) return self end
     page.SetCondition = function(self) return self end
     page.Refresh = function(self) return self end

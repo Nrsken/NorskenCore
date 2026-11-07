@@ -22,6 +22,8 @@
     <Script file='Auras/AuraPreview.lua' />
     <Script file='Dialog.lua' />
     <Script file='LoadConditions.lua' />
+    <Script file='PreviewManager.lua' />
+    <Script file='Anchors.lua' />
     <Script file='DynamicGroup.lua' />
     <Script file='API.lua' />
 </Ui>

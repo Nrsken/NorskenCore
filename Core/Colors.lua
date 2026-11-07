@@ -256,5 +256,5 @@ function Private:LoadCustomColors()
     -- Status colors are consumed directly (RGBA) by the health handler.
     palette.status = db.Status
 
-    self:SendMessage('NRSKNUI_COLORS_UPDATED')
+    Private:SendMessage('NRSKNUI_COLORS_UPDATED')
 end

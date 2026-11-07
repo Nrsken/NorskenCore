@@ -1,0 +1,19 @@
+## Interface: 120105, 120107
+## Title: |cffe51039Norsken|r|cffb3b3b3Core|r Options
+## Notes: Settings parts the Norsken addons build their pages with. Stores no data.
+## Category: |cffe51039Norsken|r |cffb3b3b3Addons|r
+## Version: @project-version@
+## Author: Norsken
+## IconTexture: Interface\AddOns\NorskenCore\Media\Logo\LogoRed.png
+## LoadOnDemand: 1
+## Dependencies: NorskenCore
+
+Locales\Locales.xml
+
+GUI-SharedPages.lua
+GUI-SharedFonts.lua
+GUI-SharedLanguage.lua
+GUI-SharedTheme.lua
+GUI-SpellList.lua
+GUI-AuraCards.lua
+GUI-TriggerEditor.lua

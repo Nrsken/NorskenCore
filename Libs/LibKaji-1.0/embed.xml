@@ -27,6 +27,7 @@
     <Script file="Window\PageHeader.lua" />
     <Script file="Window\Search.lua" />
     <Script file="Window\Window.lua" />
+    <Script file="Window\ItemTree.lua" />
 
     <!-- Widgets -->
     <Script file="Widgets\Separator.lua" />

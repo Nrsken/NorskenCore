@@ -120,8 +120,7 @@ do
         lastResolvedPath = path
 
         Private:DeferUntilUnrestricted(0, function()
-            Private:SendMessage('NRSKNUI_PROFILE_FONT_CHANGED')
-            Private:SendMessage('NRSKNUI_LATE_FONT')
+            Private:SharedSettingsChanged(true)
             Private:RefreshFontStyles()
         end)
     end

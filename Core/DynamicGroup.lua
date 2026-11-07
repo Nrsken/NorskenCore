@@ -1,16 +1,16 @@
 ---@class NRSKNUI
 local Private = select(2, ...)
 
-local CreateFrame = CreateFrame
-local CreateObjectPool = CreateObjectPool
-local Mixin = Mixin
-local ipairs, type = ipairs, type
 local tinsert, tremove, tsort = table.insert, table.remove, table.sort
 local max, min, floor = math.max, math.min, math.floor
-local wipe = wipe
-local select = select
+local CreateObjectPool = CreateObjectPool
+local ipairs, type = ipairs, type
+local CreateFrame = CreateFrame
 local tostring = tostring
+local select = select
 local error = error
+local Mixin = Mixin
+local wipe = wipe
 
 Private.GrowTypes = {
     { key = "DOWN",       text = "Down" },
