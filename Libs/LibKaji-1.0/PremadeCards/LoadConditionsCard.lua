@@ -5,7 +5,7 @@
 * A section's header sums up what's picked, so everything set reads at a glance with them all closed.
 * Zone takes a map ID list (g/c/i prefixes, - to leave one out); its tooltip lists this season's instances and where you stand.
 * `specs = true` adds Spec (specIDs, every class) and Talent (a TalentTree for the one picked spec, picks stored per spec).
-* General lists the states shared with the CDM Conditions trigger as tri-state ticks (gui.loadStates, from Core/LoadConditions.lua).
+* General lists the states shared with the CDM Conditions trigger as tri-state ticks (lib.loadStates, from Core/LoadConditions.lua).
 * `general(row)` adds one widget of the caller's to General, top right.
 * A change repaints its widget and the summaries; only what changes the rows rebuilds the card (no full page refresh).
 
@@ -745,7 +745,7 @@ lib.premadeCards.LoadConditionsCard = {
         card:Separator(L["General"], { useLabel = true })
 
         local cells = {}
-        for _, state in ipairs(gui.loadStates) do
+        for _, state in ipairs(lib.loadStates) do
             if not state.triggerOnly then
                 local path = { "State", state.key }
                 cells[#cells + 1] = function(row)

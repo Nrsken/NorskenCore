@@ -1,5 +1,7 @@
 {
-    "ignore": [],
+    "ignore": [
+        "spec/"
+    ],
     "library": [
         "Libs/"
     ],
@@ -20,6 +22,7 @@
             "CustomAuraContainerItemEnchantmentPlacement",
             "HidingBarAddon",
             "LoadAddOnWithErrorHandling",
+            "NorskenCoreDB",
             "NorskenUIDB",
             "SCMAPI",
             "TimeUtil",
@@ -29,7 +32,8 @@
             "_G"
         ],
         "write": [
-            "NorskenCore"
+            "NorskenCore",
+            "NorskenCoreDB"
         ]
     },
     "hint": {

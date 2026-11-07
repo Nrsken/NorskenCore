@@ -25,6 +25,126 @@ function API:NewAddon(object, name, ...)
     return LibStub('AceAddon-3.0'):NewAddon(object, name, ...)
 end
 
+-- Core --
+
+API.AreAurasSecret = Private.AreAurasSecret
+API.AreCooldownsSecret = Private.AreCooldownsSecret
+API.CanAccessObject = Private.CanAccessObject
+API.CanAccessValue = Private.CanAccessValue
+API.ClearTexture = Private.ClearTexture
+API.CreateBackdrop = Private.CreateBackdrop
+API.CreateDynamicGroup = Private.CreateDynamicGroup
+API.DeferUntilUnrestricted = Private.DeferUntilUnrestricted
+API.GetRestrictionState = Private.GetRestrictionState
+API.GetSafeRole = Private.GetSafeRole
+API.GlobalZoom = Private.GlobalZoom
+API.HiddenFrame = Private.HiddenFrame
+API.InCombat = Private.InCombat
+API.InjectAPI = Private.InjectAPI
+API.IsFullyRestricted = Private.IsFullyRestricted
+API.IsRestricted = Private.IsRestricted
+API.IsSafeValue = Private.IsSafeValue
+API.IsSecretTable = Private.IsSecretTable
+API.IsSecretUnit = Private.IsSecretUnit
+API.IsSecretValue = Private.IsSecretValue
+API.IsSpellAuraSecret = Private.IsSpellAuraSecret
+API.IsValidUnitToken = Private.IsValidUnitToken
+API.NotSecretValue = Private.NotSecretValue
+API.RegisterDynamicGroupGrower = Private.RegisterDynamicGroupGrower
+API.RunWhenSafe = Private.RunWhenSafe
+API.SafeValue = Private.SafeValue
+API.ScrubSecrets = Private.ScrubSecrets
+API.UnitIsAFK = Private.UnitIsAFK
+API.UnitIsDND = Private.UnitIsDND
+API.WhiteTexture = Private.WhiteTexture
+
+-- Shared Settings --
+
+API.GetSharedSettings = Private.GetSharedSettings
+API.GetSharedDefaults = Private.GetSharedDefaults
+API.HoldsSharedSettings = Private.HoldsSharedSettings
+API.ChooseSharedSource = Private.ChooseSharedSource
+API.AdoptSharedSettings = Private.AdoptSharedSettings
+API.SharedSettingsDiffer = Private.SharedSettingsDiffer
+API.ApplySharedSettings = Private.ApplySharedSettings
+
+-- Media --
+
+API.Media = Private.Media
+API.ResolveMediaPath = Private.ResolveMediaPath
+API.GetFont = Private.GetFont
+API.GetStatusbar = Private.GetStatusbar
+API.GetBarBackground = Private.GetBarBackground
+API.GetBorderColor = Private.GetBorderColor
+API.GetBackdropColor = Private.GetBackdropColor
+API.SetSpark = Private.SetSpark
+API.PlaySafeSound = Private.PlaySafeSound
+
+-- Fonts --
+
+API.GetOutlineLabel = Private.GetOutlineLabel
+API.GetOutlineOptions = Private.GetOutlineOptions
+API.ResolveFlags = Private.ResolveFlags
+API.RefreshFontStyles = Private.RefreshFontStyles
+
+-- Colors --
+
+API.Colors = Private.Colors
+API.ColorModeOptions = Private.ColorModeOptions
+API.LoadCustomColors = Private.LoadCustomColors
+API.GetPlayerClassColor = Private.GetPlayerClassColor
+API.GetClassColor = Private.GetClassColor
+API.GetClassColorRaw = Private.GetClassColorRaw
+API.ColorTextByClass = Private.ColorTextByClass
+API.RGBAToHex = Private.RGBAToHex
+API.ColorTextByTheme = Private.ColorTextByTheme
+API.GetAccentColor = Private.GetAccentColor
+API.CreateColor = Private.CreateColor
+API.ColorGradient = Private.ColorGradient
+API.ColorText = Private.ColorText
+
+-- Curves --
+
+API.curves = Private.curves
+API.RefreshCurves = Private.RefreshCurves
+
+-- Formatting --
+
+API.MINUTES_SECONDS_FORMAT = Private.MINUTES_SECONDS_FORMAT
+API.FormatTime = Private.FormatTime
+API.FormatTokens = Private.FormatTokens
+API.GetDurationFormatUnit = Private.GetDurationFormatUnit
+API.GetPrecisionDurationFormatter = Private.GetPrecisionDurationFormatter
+API.GetAuraDurationFormatter = Private.GetAuraDurationFormatter
+API.RefreshAuraDurationFormatter = Private.RefreshAuraDurationFormatter
+
+-- Player --
+
+API.MyClassLocale = Private.MyClassLocale
+API.MyClass = Private.MyClass
+API.MyClassID = Private.MyClassID
+API.MySpec = Private.MySpec
+API.IsClassInGroup = Private.IsClassInGroup
+
+-- Dialogs --
+
+API.CreatePrompt = Private.CreatePrompt
+API.CreateCopyDialog = Private.CreateCopyDialog
+API.CreateReloadPrompt = Private.CreateReloadPrompt
+
+-- Load conditions and auras --
+
+API.LoadConditions = Private.LoadConditions
+API.AuraFilters = Private.AuraFilters
+API.AuraFiltersPremade = Private.AuraFiltersPremade
+API.AuraTriggers = Private.AuraTriggers
+API.AuraPreview = Private.AuraPreview
+API.GetTriggerBranches = Private.GetTriggerBranches
+API.GetTriggerBranchCount = Private.GetTriggerBranchCount
+API.ResolveAuraGrowth = Private.ResolveAuraGrowth
+API.GetAuraGridSize = Private.GetAuraGridSize
+API.SkinAuraButton = Private.SkinAuraButton
+
 -- Locale --
 
 API.L = Private.L

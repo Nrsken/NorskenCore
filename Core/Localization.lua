@@ -122,3 +122,5 @@ end
 function Private:GetClientLanguage()
     return clientLocale
 end
+
+Private.Libs.KAJI:SetLocale(Private.L)

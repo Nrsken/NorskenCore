@@ -289,7 +289,9 @@ local function SetupEscapeHandler(gui, dialog, onCancel)
             self:SetPropagateKeyboardInput(false)
             if onCancel then onCancel() end
             self:Hide()
-            gui._activePrompt = nil
+            if gui._activePrompt == self then
+                gui._activePrompt = nil
+            end
         else
             self:SetPropagateKeyboardInput(true)
         end
@@ -321,7 +323,10 @@ function InstanceMixin:Prompt(opts)
 
     local function CloseDialog()
         dialog:Hide()
-        self._activePrompt = nil
+        -- onAccept may have opened the next prompt already, and that one is still open
+        if self._activePrompt == dialog then
+            self._activePrompt = nil
+        end
     end
 
     CreateCloseButton(self, header, function()

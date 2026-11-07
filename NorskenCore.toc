@@ -4,6 +4,7 @@
 ## Category: |cffe51039Norsken|r |cffb3b3b3Addons|r
 ## Version: @project-version@
 ## Author: Norsken
+## SavedVariables: NorskenCoreDB
 ## OptionalDeps: Ace3, LibSharedMedia-3.0
 ## IconTexture: Interface\AddOns\NorskenCore\Media\Logo\LogoRed.png
 ## X-Curse-Project-ID: 1787589
