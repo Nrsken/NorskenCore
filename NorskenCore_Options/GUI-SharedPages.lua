@@ -17,6 +17,22 @@ local ipairs, pairs = ipairs, pairs
 local CopyTable = CopyTable
 local _G = _G
 
+---A Hide Minimap Icon row for the addon's launcher, see RegisterLauncher.
+---@param card table
+---@param addon table
+---@param height number? the row height, the last row in a card takes rowHeightLast
+function Shared:LauncherRow(card, addon, height)
+    card:Row(height or rowH):Checkbox(L['Hide Minimap Icon'], {
+        width = 1,
+        value = addon.launcherDB.hide,
+        msgPopup = true,
+        msgText = L['Hide Minimap Icon'],
+        callback = function(checked)
+            addon:SetLauncherHidden(checked)
+        end,
+    })
+end
+
 -- Load-time settings prompt one reload when the user leaves the page, never per edit; latest reason wins.
 -- Written on Core so every addon's pages reach it, one settings window shows at a time.
 local pendingReload
@@ -205,13 +221,13 @@ function PreviewMixin:OnAcquire(parent)
 end
 
 function PreviewMixin:Refresh()
-    local c = Core:GetPlayerClassColor()
+    local c = Core:GetClassColor(Core.MyClass)
     local bg, border = Core:GetBackdropColor(), Core:GetBorderColor()
     self.holder:SetBackgroundTexture(Core:GetBarBackground())
     self.holder:SetBackgroundColor(bg[1], bg[2], bg[3], bg[4])
     self.borders:SetBorderColor(border[1], border[2], border[3], border[4])
     self.bar:SetStatusBarTexture(Core:GetStatusbar())
-    self.bar:SetStatusBarColor(c[1], c[2], c[3], 1)
+    self.bar:SetStatusBarColor(c.r, c.g, c.b, 1)
     Core:SetSpark(self.spark, nil, PREVIEW_BAR_HEIGHT)
     -- Anchored after the bar texture is set, as the castbars do: the fill texture only exists from then.
     self.spark:ClearAllPoints()

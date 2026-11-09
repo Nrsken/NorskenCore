@@ -20,9 +20,34 @@ local CreateNumericRuleFormatter = C_StringUtil and C_StringUtil.CreateNumericRu
 
 local TOKEN_NORMAL, TOKEN_PERCENT, TOKEN_PLACEHOLDER = 0, 1, 2
 
+-- the styles FormatTime knows, with a sample for the pickers; MM:SS.f is left out, only a timer refreshing fast enough for tenths offers it
+Private.TimeFormats = {
+    ['MM:SS']  = '01:30',
+    ['M:SS']   = '1:30',
+    ['MmSs']   = '01m 30s',
+    ['MmSs_c'] = '1m 30s',
+    ['Ss']     = '90s',
+    ['S']      = '90',
+    ['Smart']  = '1m / 30s',
+}
+
+-- what a text can put between two parts, for the pickers; filled in place since API.lua hands the table out at load
+Private.Separators = {}
+Private:OnLanguageSet(function()
+    local separators = Private.Separators
+    separators['||'] = '|'
+    separators['-'] = '-'
+    separators['/'] = '/'
+    separators[' '] = Private.L['Space']
+    separators['•'] = '•'
+    separators['>'] = '>'
+    separators['>>'] = '>>'
+    separators['»'] = '»'
+end)
+
 ---Format a duration in seconds into one of the TimeFormats styles.
 ---@param seconds number
----@param format? string A key from NRSKNUI.TimeFormats (defaults to "MM:SS")
+---@param format? string a TimeFormats key or 'MM:SS.f' (defaults to "MM:SS")
 ---@return string
 function Private:FormatTime(seconds, format)
     seconds = seconds or 0

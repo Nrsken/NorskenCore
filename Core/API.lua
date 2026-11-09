@@ -18,16 +18,31 @@ API.Version = Private.API_VERSION
 
 ---Creates an addon object that reads this API through `__index`, so `object:RunWhenSafe()` works
 ---on the addon itself and what it stores of its own (`db`, `GUI`, `Theme`) stays its own.
+---It also gets what every Norsken addon shares, see `SetupAddon` in Addon.lua.
 ---@param object table usually the addon's private table
 ---@param name string
+---@param themeStore (fun(): table?)? the addon's saved theme, nil until its db exists; none keeps Kaji's defaults
 ---@param ... string AceAddon mixins
 ---@return table object
-function API:NewAddon(object, name, ...)
+function API:NewAddon(object, name, themeStore, ...)
     setmetatable(object, { __index = API }) -- AceAddon copies an existing metatable, this one survives
     -- AceAddon's own annotation misses the form that takes an object
     ---@diagnostic disable-next-line: type-mismatch
-    return LibStub('AceAddon-3.0'):NewAddon(object, name, ...)
+    LibStub('AceAddon-3.0'):NewAddon(object, name, ...)
+    Private.SetupAddon(object, name, themeStore)
+    return object
 end
+
+API.ThemeDefaults = Private.ThemeDefaults
+API.GetTitle = Private.GetTitle
+API.GetVersionText = Private.GetVersionText
+API.Print = Private.Print
+API.OpenOptions = Private.OpenOptions
+API.ToggleOptions = Private.ToggleOptions
+API.ResetGUIState = Private.ResetGUIState
+API.RegisterCommands = Private.RegisterCommands
+API.RegisterLauncher = Private.RegisterLauncher
+API.SetLauncherHidden = Private.SetLauncherHidden
 
 -- Core --
 
@@ -73,6 +88,11 @@ API.SharedSettingsDiffer = Private.SharedSettingsDiffer
 API.ApplySharedSettings = Private.ApplySharedSettings
 API.SharedSettingsChanged = Private.SharedSettingsChanged
 
+-- Export strings --
+
+API.EncodeTable = Private.EncodeTable
+API.DecodeTable = Private.DecodeTable
+
 -- Media --
 
 API.Media = Private.Media
@@ -97,9 +117,7 @@ API.RefreshFontStyles = Private.RefreshFontStyles
 API.Colors = Private.Colors
 API.ColorModeOptions = Private.ColorModeOptions
 API.LoadCustomColors = Private.LoadCustomColors
-API.GetPlayerClassColor = Private.GetPlayerClassColor
 API.GetClassColor = Private.GetClassColor
-API.GetClassColorRaw = Private.GetClassColorRaw
 API.ColorTextByClass = Private.ColorTextByClass
 API.RGBAToHex = Private.RGBAToHex
 API.ColorTextByTheme = Private.ColorTextByTheme
@@ -107,6 +125,11 @@ API.GetAccentColor = Private.GetAccentColor
 API.CreateColor = Private.CreateColor
 API.ColorGradient = Private.ColorGradient
 API.ColorText = Private.ColorText
+
+-- Glow --
+
+API.StartGlow = Private.StartGlow
+API.StopGlow = Private.StopGlow
 
 -- Curves --
 
@@ -116,6 +139,8 @@ API.RefreshCurves = Private.RefreshCurves
 -- Formatting --
 
 API.MINUTES_SECONDS_FORMAT = Private.MINUTES_SECONDS_FORMAT
+API.TimeFormats = Private.TimeFormats
+API.Separators = Private.Separators
 API.FormatTime = Private.FormatTime
 API.FormatTokens = Private.FormatTokens
 API.GetDurationFormatUnit = Private.GetDurationFormatUnit
@@ -129,7 +154,11 @@ API.MyClassLocale = Private.MyClassLocale
 API.MyClass = Private.MyClass
 API.MyClassID = Private.MyClassID
 API.MySpec = Private.MySpec
+API.MyName = Private.MyName
+API.MyRealm = Private.MyRealm
+API.MyGUID = Private.MyGUID
 API.IsClassInGroup = Private.IsClassInGroup
+API.IterateGroupUnits = Private.IterateGroupUnits
 
 -- Dialogs --
 

@@ -29,7 +29,7 @@ For comment styling I am using Better Comments extension for VSCode, with a cust
 
     local GUI = LibStub('LibKaji-1.0'):New({
         store = function() return MyAddonDB.theme end,
-        classColorProvider = function() return MyAddon:GetClassColor() end
+        classColorProvider = function() return MyAddon:GetClassColor(MyAddon.MyClass) end
     })
 
     local window = GUI:CreateGUIWindow({ name = 'MyAddonGUI', defaultPage = 'general' })
@@ -109,7 +109,7 @@ local InstanceMixin = lib.InstanceMixin
 ---@field registerSearchable? fun(widget: Frame, label: string)
 ---@field overlay? Frame high-strata frame open dropdowns reparent to (defaults to UIParent)
 ---@field store? fun(): table? accessor to the host's persisted theme table (mode/selectedPreset/customColors/fonts)
----@field classColorProvider? fun(): number[] returns the active class color {r,g,b} for class mode
+---@field classColorProvider? fun(): ColorMixin? the active class colour for class mode, nil while there's none
 ---@field presets? table override the bundled preset set (defaults to lib.THEME_PRESETS)
 ---@field presetNames? string[] override the ordered preset name list (defaults to lib.THEME_PRESET_NAMES)
 ---@field colorKeys? table[] override the color-key editor metadata (defaults to lib.THEME_COLOR_KEYS)

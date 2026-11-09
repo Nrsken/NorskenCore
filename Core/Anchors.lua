@@ -1177,33 +1177,31 @@ function Anchors:CreatePanel()
     panel:SetScript('OnDragStart', panel.StartMoving)
     panel:SetScript('OnDragStop', panel.StopMovingOrSizing)
     panel:SetBackdrop({
-        bgFile = 'Interface\\Buttons\\WHITE8X8',
-        edgeFile = 'Interface\\Buttons\\WHITE8X8',
+        bgFile = Private.WhiteTexture,
+        edgeFile = Private.WhiteTexture,
         edgeSize = 1,
     })
     panel:SetBackdropColor(Theme.bgLight[1], Theme.bgLight[2], Theme.bgLight[3], 1)
     panel:SetBackdropBorderColor(Theme.border[1], Theme.border[2], Theme.border[3], 1)
 
-    -- one button per addon, this panel's own one lit; ShowPanel moves the body under it when it shows
+    -- one button per addon, this panel's own one lit; ShowPanel picks and lays out the ones that show
     if addons[2] then
         local switcher = CreateFrame('Frame', nil, panel)
         switcher:SetPoint('TOPLEFT', panel, 'TOPLEFT', 10, -8)
         switcher:SetPoint('TOPRIGHT', panel, 'TOPRIGHT', -10, -8)
         switcher:SetHeight(SWITCHER_HEIGHT - 8)
         panel.switcher = switcher
+        panel.switchButtons = {}
 
-        local gap = 4
-        local width = (PANEL_WIDTH - 20 - (#addons - 1) * gap) / #addons
-        for index, addon in ipairs(addons) do
-            local button = GUI:CreateButton(switcher, (addon.name:gsub('^Norsken', '')), {
-                width = width,
+        for _, addon in ipairs(addons) do
+            local button = GUI:CreateButton(switcher, addon.shortName, {
                 height = SWITCHER_HEIGHT - 8,
                 bgColor = Theme.bgDark,
                 callback = function() Anchors:Switch(addon) end,
             })
-            button:SetPoint('TOPLEFT', switcher, 'TOPLEFT', (index - 1) * (width + gap), 0)
             button:SetSelected(addon == activeAddon)
             button:SetTooltip(addon.name)
+            panel.switchButtons[addon] = button
         end
     end
 
@@ -1344,8 +1342,38 @@ end
 function Anchors:ShowPanel()
     local panel = self:CreatePanel()
 
+    -- an addon only gets a button while it has anchors to show (NorskenDev has none), and those come and go
+    local switchable = {}
+    if panel.switcher then
+        for _, addon in ipairs(addons) do
+            local hasAnchors = addon == activeAddon
+            if not hasAnchors then
+                for _, entry in pairs(Anchors.registry) do
+                    if entry.addon == addon then
+                        hasAnchors = true
+                        break
+                    end
+                end
+            end
+            panel.switchButtons[addon]:SetShown(hasAnchors)
+            if hasAnchors then
+                switchable[#switchable + 1] = addon
+            end
+        end
+    end
+
     -- a view opened for one module stays on its addon
-    local switching = panel.switcher ~= nil and Anchors.onlyModule == nil
+    local switching = switchable[2] ~= nil and Anchors.onlyModule == nil
+    if switching then
+        local gap = 4
+        local width = (PANEL_WIDTH - 20 - (#switchable - 1) * gap) / #switchable
+        for index, addon in ipairs(switchable) do
+            local button = panel.switchButtons[addon]
+            button:NUISetPixelWidth(width)
+            button:ClearAllPoints()
+            button:SetPoint('TOPLEFT', panel.switcher, 'TOPLEFT', (index - 1) * (width + gap), 0)
+        end
+    end
     if panel.switcher then
         panel.switcher:SetShown(switching)
     end

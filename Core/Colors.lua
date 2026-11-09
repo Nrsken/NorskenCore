@@ -14,54 +14,34 @@ local unpack = unpack
 local modf = math.modf
 local next = next
 
+local GetBlizzardClassColor = C_ClassColor.GetClassColor
+
 ---An { r, g, b, a? } color array with 0-1 components.
 ---@alias RGBA number[]
 
----Get the player's class color as an RGBA table.
----@return RGBA
-function Private:GetPlayerClassColor()
-    local c = self.Colors.class[self.MyClass]
-    if c then return { c.r, c.g, c.b, 1 } end
-    return { 1, 1, 1, 1 }
-end
-
----Get a class color as an RGBA table for any class token, falling back to the player's class.
+---The one class colour source, the custom palette. Nil without a known class and until the palette loads.
 ---@param classToken? string
----@return RGBA
+---@return ColorMixin?
 function Private:GetClassColor(classToken)
-    if not classToken then
-        return self:GetPlayerClassColor()
+    -- a secret token can't index the palette, so Blizzard's own colour is the only answer there
+    if Private:IsSecretValue(classToken) then
+        return GetBlizzardClassColor(classToken)
     end
-    local c = self.Colors.class[classToken]
-    if c then return { c.r, c.g, c.b, 1 } end
-    return { 1, 1, 1, 1 }
+    if not classToken then return nil end
+
+    return Private.Colors.class[classToken]
 end
 
----Get the class-color ColorMixin for a class token, falling back to the player's class.
----@param classToken? string
----@return ColorMixin
-function Private:GetClassColorRaw(classToken)
-    if type(classToken) == "string" and self.Colors.class[classToken] then
-        return self.Colors.class[classToken]
-    end
-    return self.Colors.class[self.MyClass]
-end
-
----Get a class color hex code ("RRGGBB") for text coloring, falling back to the player's class.
----@param classToken? string
----@return string hex
-function Private:GetClassColorHex(classToken)
-    local c = self:GetClassColorRaw(classToken)
-    return c and self:RGBAToHex(c.r, c.g, c.b) or "FFFFFF"
-end
-
----Wrap text in a class color escape code.
+---Wrap text in a class colour, unchanged without a known class.
 ---@param text string
 ---@param classToken? string
 ---@return string
 function Private:ColorTextByClass(text, classToken)
-    local hex = Private:GetClassColorHex(classToken)
-    return "|cFF" .. hex .. text .. "|r"
+    local color = Private:GetClassColor(classToken)
+    if not color then
+        return text
+    end
+    return color:WrapTextInColorCode(text)
 end
 
 ---Convert 0-1 RGB components to an "RRGGBB" hex string.
@@ -91,8 +71,11 @@ function Private:GetAccentColor(colorMode, customColor)
     colorMode = colorMode or "custom"
 
     if colorMode == "class" then
-        local classColor = self:GetPlayerClassColor()
-        return classColor[1], classColor[2], classColor[3], classColor[4]
+        local classColor = Private:GetClassColor(Private.MyClass)
+        if not classColor then
+            return 1, 1, 1, 1
+        end
+        return classColor.r, classColor.g, classColor.b, 1
     elseif colorMode == "theme" then
         return self.GUI:Color("accent")
     else

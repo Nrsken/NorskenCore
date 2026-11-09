@@ -191,3 +191,4 @@ L['Language'] = true
 L['Language Info'] = true
 L['Text without a translation in the picked language shows in English.'] = true
 L['The new language shows after a reload.'] = true
+L['Hide Minimap Icon'] = true

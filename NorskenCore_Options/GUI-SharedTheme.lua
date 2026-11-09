@@ -86,9 +86,9 @@ end
 
 local function BuildClassCard(page)
     local card = page:Card(L['Class Color Mode'])
-    local color = Core:GetPlayerClassColor()
+    local color = Core:GetClassColor(Core.MyClass)
     local swatch = card:Row(18):Icon({ width = 1, align = 'FILL' })
-    swatch.icon:SetColorTexture(color[1], color[2], color[3], 1)
+    swatch.icon:SetColorTexture(color.r, color.g, color.b, 1)
     card:Row(40, 0):Text(nil, {
         width = 1,
         text = {

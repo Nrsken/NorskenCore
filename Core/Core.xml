@@ -12,10 +12,12 @@
     <Script file='Restricted.lua' />
     <Script file='InjectAPI.lua' />
     <Script file='Formatting.lua' />
+    <Script file='Encoding.lua' />
     <Script file='MediaCore.lua' />
     <Script file='FontCore.lua' />
     <Script file='Curves.lua' />
     <Script file='Colors.lua' />
+    <Script file='Glow.lua' />
     <Script file='Auras/AuraContainer.lua' />
     <Script file='Auras/AuraFilters.lua' />
     <Script file='Auras/AuraPresets.lua' />
@@ -26,5 +28,6 @@
     <Script file='PreviewManager.lua' />
     <Script file='Anchors.lua' />
     <Script file='DynamicGroup.lua' />
+    <Script file='Addon.lua' />
     <Script file='API.lua' />
 </Ui>

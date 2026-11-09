@@ -1,4 +1,5 @@
 ---@class NRSKNUI
+---@field AuraPreview AuraPreview
 local Private = select(2, ...)
 ---@class AuraPreview
 ---@field indicators AuraIndicators? the addon drawing indicators, handed over by NorskenUI

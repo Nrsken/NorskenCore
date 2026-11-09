@@ -535,9 +535,9 @@ function InstanceMixin:_ResolveColor(key, store, mode)
         local cc = self.classColorProvider()
         if cc then
             if key == "selectedBg" or key == "accentHover" then
-                return { cc[1], cc[2], cc[3], 0.25 }
+                return { cc.r, cc.g, cc.b, 0.25 }
             end
-            return { cc[1], cc[2], cc[3], cc[4] or 1 }
+            return { cc.r, cc.g, cc.b, 1 }
         end
     end
 
