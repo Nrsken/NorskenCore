@@ -2,6 +2,7 @@
 local Private = select(2, ...)
 local L = Private.L
 local Animations = Private.Libs.KAJI.Animations
+local pixel = Private.Libs.KAJI.Pixel
 ---@class NRSKNUI.Anchors
 ---@field addon table the addon this handle belongs to, see NewAnchors
 local Anchors = {}
@@ -17,6 +18,10 @@ local math_floor, math_ceil, math_abs, math_rad = math.floor, math.ceil, math.ab
 local GetPhysicalScreenSize = GetPhysicalScreenSize
 local GetCursorPosition = GetCursorPosition
 local IsShiftKeyDown = IsShiftKeyDown
+local IsControlKeyDown = IsControlKeyDown
+local GetTime = GetTime
+local GameTooltip = GameTooltip
+local wipe = wipe
 local GetCurrentKeyBoardFocus = GetCurrentKeyBoardFocus
 local pairs, ipairs = pairs, ipairs
 local CreateFrame = CreateFrame
@@ -33,6 +38,8 @@ local setmetatable = setmetatable
 local addons = {}
 local activeAddon -- the addon whose anchors show
 local Theme       -- its theme, only one addon's overlays and panel exist on screen at a time
+-- nudge panels, one per addon: Kaji widgets belong to the instance that built them and stay in its theme
+local panels = {}
 
 local ARROW_TEXTURE = 'Interface\\AddOns\\NorskenCore\\Media\\GUITextures\\collapse.tga'
 
@@ -50,6 +57,13 @@ local UNSELECTED_ALPHA = 0.8 -- The alpha of overlays that are not selected, whe
 local DRAG_ALPHA = 0.7       -- The alpha of the overlay being dragged.
 local STATE_DURATION = 0.25  -- The duration of the selection fade.
 local WHITE = { 1, 1, 1 }
+local FOCUS_ALPHA = 0.5     -- the group being worked inside, behind its own displays
+local DOUBLE_CLICK = 0.3    -- seconds between two clicks that open a group
+local MARKER_SIZE = 6       -- the anchor markers on the selected box
+
+-- Nudge panel
+local PANEL_WIDTH, PANEL_HEIGHT = 180, 180
+local SWITCHER_HEIGHT = 30 -- the row of addon buttons on top, only with two or more addons
 
 -- Grid Config
 local gridFrame = nil
@@ -282,8 +296,22 @@ end
 local function InView(entry)
     if entry.addon ~= activeAddon then return false end
     if entry.shown and not entry.shown(entry.module) then return false end
+    if Anchors.onlyModule ~= nil and entry.module ~= Anchors.onlyModule then return false end
 
-    return Anchors.onlyModule == nil or entry.module == Anchors.onlyModule
+    -- one level at a time: the top, or the group being worked inside with its own displays
+    return entry.parentKey == Anchors.focusKey or entry.key == Anchors.focusKey
+end
+
+---Whether a box opens into a group of its own boxes.
+---@param key string
+---@return boolean
+local function HasChildren(key)
+    for _, entry in pairs(Anchors.registry) do
+        if entry.parentKey == key and entry.addon == activeAddon and not (entry.shown and not entry.shown(entry.module)) then
+            return true
+        end
+    end
+    return false
 end
 
 ---Registers a frame as a draggable anchor.
@@ -291,7 +319,7 @@ end
 ---@param key string Unique anchor key.
 ---@param frame Frame? The frame to move; defaults to module.frame.
 ---@param guiPath string? Sidebar item id opened by the panel's Open Settings button.
----@param opts table? db, positionKey, xKey, yKey, apply, displayName, frameName, guiContext, shown, bounds
+---@param opts table? db, positionKey, xKey, yKey, apply, displayName, frameName, guiContext, shown, bounds, parentKey, locked
 function Anchors:Register(aceModule, key, frame, guiPath, opts)
     if not aceModule or not key then return end
     opts = opts or {}
@@ -328,12 +356,17 @@ function Anchors:Register(aceModule, key, frame, guiPath, opts)
     entry.shown = opts.shown
     entry.bounds = opts.bounds
 
+    -- parentKey: the group it sits in, whose box opens to show it. locked: its group places it, so it only selects.
+    entry.parentKey = opts.parentKey
+    entry.locked = opts.locked
+
     if type(entry.apply) == 'string' and type(aceModule[entry.apply]) ~= 'function' then
         self.addon:Print(format("Anchor '%s' registered with apply='%s', which the module does not define.", key, entry.apply))
     end
 
     if Anchors.isActive and InView(entry) then
         self:CreateOverlay(key)
+        self:RefreshOverlayState(key) -- a box made mid session takes the look its state calls for
     end
 end
 
@@ -370,9 +403,104 @@ local dragPoint, dragRelTo, dragRelPoint, dragOriginX, dragOriginY
 local dragDBX, dragDBY = 0, 0
 local dragDeltaX, dragDeltaY = 0, 0
 local dragCenterX, dragCenterY, dragRatio = 0, 0, 1
+local dragBox -- the dragged box's left, right, bottom, top and centre at drag start, nil when its rect can't be read
+
+-- What a drag snaps to: the edges and centres of the other boxes in view, in UIParent's units like the overlays.
+local edgesX, edgesY, centersX, centersY = {}, {}, {}, {}
 
 local dragUpdateFrame = CreateFrame('Frame')
 dragUpdateFrame:Hide()
+
+---@param dragKey string
+local function CollectSnapLines(dragKey)
+    wipe(edgesX)
+    wipe(edgesY)
+    wipe(centersX)
+    wipe(centersY)
+
+    for key, overlay in pairs(Anchors.overlays) do
+        -- the open group's box holds what's dragged and doesn't follow it, so it isn't a line to snap to
+        if key ~= dragKey and key ~= Anchors.focusKey and overlay:IsShown() and InView(overlay.entry) then
+            -- a box around a display holding an aura can't be read while auras are secret, it's skipped
+            local left, bottom, width, height = Private:ScrubSecrets(overlay:GetRect())
+            if left and bottom and width and height then
+                edgesX[#edgesX + 1], edgesX[#edgesX + 2] = left, left + width
+                edgesY[#edgesY + 1], edgesY[#edgesY + 2] = bottom, bottom + height
+                centersX[#centersX + 1] = left + width / 2
+                centersY[#centersY + 1] = bottom + height / 2
+            end
+        end
+    end
+end
+
+---The nearest line to `from` within the snap range, if nearer than the one found so far.
+---@param from number?
+---@param lines number[]
+---@param shift number?
+---@param line number?
+---@return number? shift
+---@return number? line
+local function Nearest(from, lines, shift, line)
+    if not from then return shift, line end
+
+    for i = 1, #lines do
+        local gap = lines[i] - from
+        if math_abs(gap) < SNAP_RANGE and (not shift or math_abs(gap) < math_abs(shift)) then
+            shift, line = gap, lines[i]
+        end
+    end
+    return shift, line
+end
+
+-- one entry, so the screen centre goes through Nearest without a table each frame
+local screenLine = { 0 }
+
+---Snap one axis: the box's edges to other edges, its centre to other centres with Ctrl, and always its centre to the screen's.
+---@return number? shift
+---@return number? line
+local function SnapAxis(low, high, mid, edges, centers, screenCenter)
+    local shift, line
+    if IsControlKeyDown() then
+        shift, line = Nearest(mid, centers, shift, line)
+    else
+        shift, line = Nearest(low, edges, shift, line)
+        shift, line = Nearest(high, edges, shift, line)
+    end
+    screenLine[1] = screenCenter
+    return Nearest(mid, screenLine, shift, line)
+end
+
+local guideX, guideY, readout -- the snap guide lines and the offset readout, made on the first drag
+
+-- Guides, readout and anchor markers draw above every box: regions of overlayHost itself would sit under its child frames.
+local decorHost = CreateFrame('Frame', nil, overlayHost)
+decorHost:SetAllPoints()
+decorHost:SetFrameLevel(overlayHost:GetFrameLevel() + 500)
+
+---@param x number? where the vertical guide sits, nil hides it
+---@param y number?
+local function ShowGuides(x, y)
+    guideX:SetShown(x ~= nil)
+    guideY:SetShown(y ~= nil)
+    if x then
+        guideX:ClearAllPoints()
+        pixel.SetPixelPoint(guideX, 'TOP', overlayHost, 'TOPLEFT', x, 0)
+        pixel.SetPixelPoint(guideX, 'BOTTOM', overlayHost, 'BOTTOMLEFT', x, 0)
+    end
+    if y then
+        guideY:ClearAllPoints()
+        pixel.SetPixelPoint(guideY, 'LEFT', overlayHost, 'BOTTOMLEFT', 0, y)
+        pixel.SetPixelPoint(guideY, 'RIGHT', overlayHost, 'BOTTOMRIGHT', 0, y)
+    end
+end
+
+---Take down what a drag draws, whether it ended or was cut short.
+local function EndDragVisuals()
+    if not guideX then return end
+
+    ShowGuides(nil, nil)
+    readout:Hide()
+end
 
 local function UpdateDrag()
     if not isDragging or not dragEntry then return end
@@ -387,17 +515,27 @@ local function UpdateDrag()
     local dx = math_floor(curX - dragCursorX + 0.5)
     local dy = math_floor(curY - dragCursorY + 0.5)
 
-    -- Snap the frame's centre to the screen centre lines, hold Shift to disable.
+    -- snap onto other boxes and the screen centre, live with a guide line; Shift turns it off
+    local lineX, lineY
     if not IsShiftKeyDown() then
-        local centerX = dragCenterX + dx * dragRatio
-        local centerY = dragCenterY + dy * dragRatio
-        if math_abs(centerX - gridCenterX) < SNAP_RANGE then
-            dx = dx + math_floor((gridCenterX - centerX) / dragRatio + 0.5)
+        local moveX, moveY = dx * dragRatio, dy * dragRatio
+        local shiftX, shiftY
+        if dragBox then
+            shiftX, lineX = SnapAxis(dragBox[1] + moveX, dragBox[2] + moveX, dragBox[5] + moveX, edgesX, centersX, gridCenterX)
+            shiftY, lineY = SnapAxis(dragBox[3] + moveY, dragBox[4] + moveY, dragBox[6] + moveY, edgesY, centersY, gridCenterY)
+        else
+            shiftX, lineX = SnapAxis(nil, nil, dragCenterX and dragCenterX + moveX, edgesX, centersX, gridCenterX)
+            shiftY, lineY = SnapAxis(nil, nil, dragCenterY and dragCenterY + moveY, edgesY, centersY, gridCenterY)
         end
-        if math_abs(centerY - gridCenterY) < SNAP_RANGE then
-            dy = dy + math_floor((gridCenterY - centerY) / dragRatio + 0.5)
+        if shiftX then
+            dx = dx + math_floor(shiftX / dragRatio + 0.5)
+        end
+        if shiftY then
+            dy = dy + math_floor(shiftY / dragRatio + 0.5)
         end
     end
+    ShowGuides(lineX, lineY)
+    readout:SetFormattedText('%d, %d', math_floor(dragDBX + dx + 0.5), math_floor(dragDBY + dy + 0.5))
 
     dragDeltaX, dragDeltaY = dx, dy
     frame:ClearAllPoints()
@@ -408,9 +546,10 @@ dragUpdateFrame:SetScript('OnUpdate', UpdateDrag)
 
 local function OnDragStart(overlay)
     -- Overlays stay mouse-live while they fade out, so re-check the session is open.
-    if not Anchors.isActive or Private:InCombat() then return end
+    if not Anchors.isActive or Anchors.switching or Private:InCombat() then return end
 
     local entry = overlay.entry
+    if entry.locked then return end
     local frame = GetEntryFrame(entry)
     if not frame then return end
 
@@ -429,8 +568,32 @@ local function OnDragStart(overlay)
 
     dragRatio = scale / UIParent:GetEffectiveScale()
     local left, bottom, width, height = Private:ScrubSecrets(frame:GetRect()) -- a text display's size turns secret with its text
-    dragCenterX = left and width and (left + width / 2) * dragRatio or 0
-    dragCenterY = bottom and height and (bottom + height / 2) * dragRatio or 0
+    dragCenterX = left and width and (left + width / 2) * dragRatio or nil
+    dragCenterY = bottom and height and (bottom + height / 2) * dragRatio or nil
+
+    -- the box is what snaps, it can be bigger than the frame (a group's area)
+    local boxLeft, boxBottom, boxWidth, boxHeight = Private:ScrubSecrets(overlay:GetRect())
+    if boxLeft and boxBottom and boxWidth and boxHeight then
+        dragBox = { boxLeft, boxLeft + boxWidth, boxBottom, boxBottom + boxHeight, boxLeft + boxWidth / 2, boxBottom + boxHeight / 2 }
+    else
+        dragBox = nil
+    end
+    CollectSnapLines(entry.key)
+
+    if not guideX then
+        guideX = decorHost:CreateTexture(nil, 'OVERLAY')
+        pixel.SetPixelWidth(guideX, 1)
+        guideY = decorHost:CreateTexture(nil, 'OVERLAY')
+        pixel.SetPixelHeight(guideY, 1)
+        readout = decorHost:CreateFontString(nil, 'OVERLAY')
+        readout:SetFont(Private.Media.Fonts.Expressway, 12, 'OUTLINE')
+    end
+    guideX:SetColorTexture(Theme.accent[1], Theme.accent[2], Theme.accent[3], 0.8)
+    guideY:SetColorTexture(Theme.accent[1], Theme.accent[2], Theme.accent[3], 0.8)
+    readout:SetTextColor(1, 1, 1, 1)
+    readout:ClearAllPoints()
+    readout:SetPoint('TOP', overlay, 'BOTTOM', 0, -4)
+    readout:Show()
 
     dragDBX, dragDBY = Anchors:GetOffsets(entry.key)
     dragDeltaX, dragDeltaY = 0, 0
@@ -447,6 +610,7 @@ local function OnDragStop(overlay)
 
     isDragging = false
     dragUpdateFrame:Hide()
+    EndDragVisuals()
 
     local entry = dragEntry
     dragEntry = nil
@@ -461,10 +625,24 @@ local function OnOverlayEnter(overlay)
     if isDragging then return end
     overlay.isHovered = true
     Anchors:RefreshOverlayState(overlay.entry.key)
+
+    -- what a box does that its look doesn't say
+    local entry = overlay.entry
+    local hint = entry.locked and L['Its group places it, move the group instead.']
+        or HasChildren(entry.key) and L['Double-click to work inside this group.']
+    if hint then
+        GameTooltip:SetOwner(overlay, 'ANCHOR_TOP')
+        GameTooltip:SetText(entry.displayName, 1, 1, 1)
+        GameTooltip:AddLine(hint, Theme.textSecondary[1], Theme.textSecondary[2], Theme.textSecondary[3], true)
+        GameTooltip:Show()
+    end
 end
 
 local function OnOverlayLeave(overlay)
     overlay.isHovered = false
+    if GameTooltip:IsOwned(overlay) then
+        GameTooltip:Hide()
+    end
     if isDragging then return end
     Anchors:RefreshOverlayState(overlay.entry.key)
 end
@@ -474,14 +652,33 @@ local function OnOverlayMouseDown(overlay, button)
 end
 
 local function OnOverlayMouseUp(overlay, button)
-    if button == 'LeftButton' and not overlay.didDrag then Anchors:Select(overlay.entry.key) end
+    if button ~= 'LeftButton' or overlay.didDrag or Anchors.switching then return end
+
+    -- a second click on the same box opens its group
+    local key, now = overlay.entry.key, GetTime()
+    if overlay.lastClick and now - overlay.lastClick < DOUBLE_CLICK and HasChildren(key) then
+        overlay.lastClick = nil
+        Anchors:Focus(key)
+        return
+    end
+
+    overlay.lastClick = now
+    Anchors:Select(key)
 end
 
 ---@param overlay table
 local function PaintFill(overlay)
     local alpha = overlay.entry.bounds and BOUNDS_FILL_ALPHA or FILL_ALPHA
-    overlay:SetBackdropColor(Theme.bgDark[1], Theme.bgDark[2], Theme.bgDark[3], alpha)
+    overlay.fill:SetColorTexture(Theme.bgDark[1], Theme.bgDark[2], Theme.bgDark[3], alpha)
 end
+
+-- each edge: the two corners it runs between and the side it's thick along
+local EDGES = {
+    { 'TOPLEFT', 'TOPRIGHT', 'height' },
+    { 'BOTTOMLEFT', 'BOTTOMRIGHT', 'height' },
+    { 'TOPLEFT', 'BOTTOMLEFT', 'width' },
+    { 'TOPRIGHT', 'BOTTOMRIGHT', 'width' },
+}
 
 ---@param key string
 function Anchors:CreateOverlay(key)
@@ -496,16 +693,27 @@ function Anchors:CreateOverlay(key)
     local frame = GetEntryFrame(entry)
     if not frame then return end
 
-    local overlay = CreateFrame('Frame', 'NRSKNUI_Anchor_' .. key, overlayHost, 'BackdropTemplate')
-    overlay:SetBackdrop({
-        bgFile = 'Interface\\Buttons\\WHITE8X8',
-        edgeFile = 'Interface\\Buttons\\WHITE8X8',
-        edgeSize = BORDER_SIZE,
-        insets = { left = BORDER_SIZE, right = BORDER_SIZE, top = BORDER_SIZE, bottom = BORDER_SIZE },
-    })
+    -- Plain textures, no backdrop: a box hangs off its display, whose size turns secret while it holds an aura,
+    -- and Backdrop does arithmetic on it.
+    local overlay = CreateFrame('Frame', 'NRSKNUI_Anchor_' .. key, overlayHost)
     overlay.entry = entry
+    overlay.fill = overlay:CreateTexture(nil, 'BACKGROUND')
+    overlay.fill:SetAllPoints()
     PaintFill(overlay)
-    overlay:SetBackdropBorderColor(Theme.accent[1], Theme.accent[2], Theme.accent[3], 1)
+
+    overlay.edges = {}
+    for index, edge in ipairs(EDGES) do
+        local texture = overlay:CreateTexture(nil, 'BORDER')
+        pixel.SetPixelPoint(texture, edge[1], overlay, edge[1], 0, 0)
+        pixel.SetPixelPoint(texture, edge[2], overlay, edge[2], 0, 0)
+        if edge[3] == 'height' then
+            pixel.SetPixelHeight(texture, BORDER_SIZE)
+        else
+            pixel.SetPixelWidth(texture, BORDER_SIZE)
+        end
+        texture:SetColorTexture(Theme.accent[1], Theme.accent[2], Theme.accent[3], 1)
+        overlay.edges[index] = texture
+    end
 
     local text = overlay:CreateFontString(nil, 'OVERLAY')
     text:SetFont(Private.Media.Fonts.Expressway, TEXT_FONT_SIZE, 'OUTLINE')
@@ -519,7 +727,11 @@ function Anchors:CreateOverlay(key)
     overlay.isHovered = false
     overlay.animateBorder = Animations:CreateColorAnimator(
         overlay,
-        function(r, g, b, a) overlay:SetBackdropBorderColor(r, g, b, a) end,
+        function(r, g, b, a)
+            for _, texture in ipairs(overlay.edges) do
+                texture:SetColorTexture(r, g, b, a)
+            end
+        end,
         Theme.accent,
         STATE_DURATION
     )
@@ -582,10 +794,15 @@ end
 ---@param key string
 ---@param overlay NRSKNUI.AnchorOverlay
 local function ApplyOverlayState(key, overlay)
+    local entry = overlay.entry
     local selected = (Anchors.selectedKey == key)
+    local focused = (Anchors.focusKey == key)
 
-    -- Border colour, selection outranks hover.
-    local color = Theme.accent
+    -- the group being worked inside is only a backdrop to its displays
+    overlay:EnableMouse(not focused)
+
+    -- Border colour, selection outranks hover; one its group places is muted.
+    local color = entry.locked and Theme.textMuted or Theme.accent
     if selected then
         color = WHITE
     elseif overlay.isHovered then
@@ -599,9 +816,14 @@ local function ApplyOverlayState(key, overlay)
         overlay.text:SetTextColor(Theme.textSecondary[1], Theme.textSecondary[2], Theme.textSecondary[3], 1)
     end
 
+    -- a display inside a group is often icon sized, its name would cover its neighbours until it's pointed at
+    overlay.text:SetShown(not entry.parentKey or focused or selected or overlay.isHovered)
+
     -- Alpha, shift makes the selection see-through.
     local alpha = 1
-    if isDragging and dragEntry and dragEntry.key == key then
+    if focused then
+        alpha = FOCUS_ALPHA
+    elseif isDragging and dragEntry and dragEntry.key == key then
         alpha = DRAG_ALPHA
     elseif selected then
         if Anchors.isShiftFaded then alpha = SHIFT_FADE_ALPHA end
@@ -634,7 +856,54 @@ function Anchors:Select(key)
     if not key then Anchors.isShiftFaded = false end
 
     self:RefreshOverlayStates()
+    self:UpdateMarkers()
     self:UpdatePanel()
+end
+
+local markerOwn, markerTarget, markerLine -- made on the first selection
+
+---Mark the selected box's own anchor point and the point it hangs from, with a line between.
+function Anchors:UpdateMarkers()
+    local entry = Anchors.isActive and Anchors.selectedKey and Anchors.registry[Anchors.selectedKey]
+    local frame = entry and GetEntryFrame(entry)
+    local point, relTo, relPoint
+    if frame and frame:GetNumPoints() == 1 then
+        point, relTo, relPoint = frame:GetPoint(1)
+        relTo = relTo or UIParent
+    end
+
+    -- a frame the game locks can't be anchored to
+    if not (point and Private:CanAccessObject(relTo)) then
+        if markerOwn then
+            markerOwn:Hide()
+            markerTarget:Hide()
+            markerLine:Hide()
+        end
+        return
+    end
+
+    if not markerOwn then
+        markerOwn = decorHost:CreateTexture(nil, 'OVERLAY', nil, 7)
+        pixel.SetPixelSize(markerOwn, MARKER_SIZE, MARKER_SIZE)
+        markerTarget = decorHost:CreateTexture(nil, 'OVERLAY', nil, 7)
+        pixel.SetPixelSize(markerTarget, MARKER_SIZE, MARKER_SIZE)
+        markerLine = decorHost:CreateLine(nil, 'OVERLAY', nil, 6)
+        markerLine:SetThickness(1)
+    end
+
+    markerOwn:ClearAllPoints()
+    markerOwn:SetPoint('CENTER', frame, point, 0, 0)
+    markerTarget:ClearAllPoints()
+    markerTarget:SetPoint('CENTER', relTo, relPoint, 0, 0)
+    markerLine:SetStartPoint('CENTER', markerOwn)
+    markerLine:SetEndPoint('CENTER', markerTarget)
+
+    markerOwn:SetColorTexture(1, 1, 1, 1)
+    markerTarget:SetColorTexture(Theme.accent[1], Theme.accent[2], Theme.accent[3], 1)
+    markerLine:SetColorTexture(Theme.accent[1], Theme.accent[2], Theme.accent[3], 0.6)
+    markerOwn:Show()
+    markerTarget:Show()
+    markerLine:Show()
 end
 
 ---Moves the selected anchor by a whole-number offset delta.
@@ -645,6 +914,8 @@ function Anchors:Nudge(deltaX, deltaY)
         activeAddon:Print(L['No anchor selected. Click an overlay to select it.'])
         return
     end
+    local entry = Anchors.registry[Anchors.selectedKey]
+    if entry and entry.locked then return end
 
     -- SetOffsets re-syncs the overlay, the panel and the GUI sliders.
     local x, y = self:GetOffsets(Anchors.selectedKey)
@@ -689,6 +960,9 @@ keyHandler:SetScript('OnKeyDown', function(self, key)
         self:SetPropagateKeyboardInput(false)
         if Anchors.selectedKey then
             Anchors:Select(nil)
+        elseif Anchors.focusKey then
+            local focused = Anchors.registry[Anchors.focusKey]
+            Anchors:Focus(focused and focused.parentKey)
         else
             Anchors:Exit()
         end
@@ -722,6 +996,50 @@ end)
 
 -- Lifecycle --
 
+-- The active addon's anchors, previews and panel; overlays outlive a session, so ones from another view are put away.
+-- Boxes for what's in view, the rest put away.
+local function PlaceOverlays()
+    for key, entry in pairs(Anchors.registry) do
+        if InView(entry) then
+            Anchors:CreateOverlay(key)
+        elseif Anchors.overlays[key] then
+            Anchors.overlays[key]:Hide()
+        end
+    end
+end
+
+local function ShowView()
+    -- only the active addon previews, even with another addon's window put away behind the anchors
+    for _, addon in ipairs(addons) do
+        addon.PreviewManager:SetHidden(addon ~= activeAddon)
+    end
+    activeAddon.PreviewManager:SetAnchorsActive(true, Anchors.onlyModule)
+
+    Anchors.focusKey = nil
+    PlaceOverlays()
+
+    Anchors.selectedKey = nil
+    Anchors.isShiftFaded = false
+    Anchors:RefreshOverlayStates()
+    Anchors:UpdateMarkers()
+
+    Anchors:ShowPanel()
+    Anchors:RefreshTheme() -- overlays and panels outlive a session, the theme may have changed since
+    C_Timer.After(LAYOUT_SETTLE_DELAY, function() Anchors:OnExternalPositionChange() end)
+    Private:SendMessage('NRSKNUI_ANCHORS_CHANGED')
+end
+
+---Work inside a group: its own displays get boxes and the rest of the view steps away. nil goes back to the top.
+---@param key string?
+function Anchors:Focus(key)
+    if isDragging then return end -- the dragged box could leave the view under the mouse
+    Anchors.focusKey = key
+    self:Select(nil)
+    PlaceOverlays()
+    self:RefreshOverlayStates()
+    self:UpdatePanel()
+end
+
 ---@param aceModule? table show only this module's anchors, from its settings header; every anchor without it
 function Anchors:Enter(aceModule)
     if Anchors.isActive then return end
@@ -734,27 +1052,13 @@ function Anchors:Enter(aceModule)
     Anchors.onlyModule = aceModule
     activeAddon, Theme = self.addon, self.addon.Theme
 
-    -- the options step aside while positioning, Exit brings back the one that was open
-    for _, addon in ipairs(addons) do
-        for _, window in ipairs(addon.OptionWindows or {}) do
-            window:Suspend()
+    -- every settings window steps aside while positioning, Exit brings back the ones that were open
+    Anchors.suspended = {}
+    for _, window in ipairs(Private.Libs.KAJI.windows) do
+        if window:Suspend() then
+            Anchors.suspended[#Anchors.suspended + 1] = window
         end
     end
-
-    activeAddon.PreviewManager:SetAnchorsActive(true, aceModule)
-
-    -- overlays outlive a session, so one left from a wider view is put away
-    for key, entry in pairs(Anchors.registry) do
-        if InView(entry) then
-            self:CreateOverlay(key)
-        elseif Anchors.overlays[key] then
-            Anchors.overlays[key]:Hide()
-        end
-    end
-
-    Anchors.selectedKey = nil
-    Anchors.isShiftFaded = false
-    self:RefreshOverlayStates()
 
     ShowGrid()
     FadeOverlays(1)
@@ -764,42 +1068,84 @@ function Anchors:Enter(aceModule)
     eventHandler:RegisterEvent('PLAYER_REGEN_DISABLED')
     eventHandler:RegisterEvent('MODIFIER_STATE_CHANGED')
 
-    self:ShowPanel()
-    self:RefreshTheme() -- overlays and panels outlive a session, the theme may have changed since
-    C_Timer.After(LAYOUT_SETTLE_DELAY, function() Anchors:OnExternalPositionChange() end)
-    Private:SendMessage('NRSKNUI_ANCHORS_CHANGED')
+    ShowView()
+end
+
+---Hand the open anchors to another addon: its overlays, previews and panel take over, the windows stay put away.
+---@param addon table
+function Anchors:Switch(addon)
+    if not Anchors.isActive or addon == activeAddon or Anchors.switching or isDragging then return end
+    -- a token per switch, so a timer left from one that Exit cut short can't land in a later one
+    local switch = {}
+    Anchors.switching = switch
+
+    self:Select(nil)
+    local old = panels[activeAddon]
+    old.fader(0)
+    FadeOverlays(0)
+
+    -- the views swap while both are faded out, the previews with them; Exit or a new Enter on the way drops it
+    C_Timer.After(FADE_DURATION, function()
+        if Anchors.switching ~= switch then return end
+        Anchors.switching = nil
+
+        activeAddon.PreviewManager:SetAnchorsActive(false)
+        Anchors.onlyModule = nil
+        activeAddon, Theme = addon, addon.Theme
+        BuildGridLines() -- the centre lines take the accent
+        ShowView()
+        FadeOverlays(1)
+
+        -- the new panel takes the old one's place
+        local panel = panels[activeAddon]
+        panel:ClearAllPoints()
+        panel:SetPoint(old:GetPoint())
+    end)
 end
 
 function Anchors:Exit()
     if not Anchors.isActive then return end
     Anchors.isActive = false
+    Anchors.switching = nil
 
     isDragging = false
     dragUpdateFrame:Hide()
     dragEntry = nil
+    EndDragVisuals()
 
     self:Select(nil)
     Anchors.isShiftFaded = false
+    Anchors.focusKey = nil
 
     HideGrid()
     Anchors.onlyModule = nil
     activeAddon.PreviewManager:SetAnchorsActive(false)
+    for _, addon in ipairs(addons) do
+        addon.PreviewManager:SetHidden(false)
+    end
 
     FadeOverlays(0)
 
     keyHandler:Hide()
     eventHandler:UnregisterAllEvents()
     self:HidePanel()
-    for _, addon in ipairs(addons) do
-        for _, window in ipairs(addon.OptionWindows or {}) do
-            window:Resume()
-        end
+    for _, window in ipairs(Anchors.suspended or {}) do
+        window:Resume()
     end
+    Anchors.suspended = nil
     Private:SendMessage('NRSKNUI_ANCHORS_CHANGED')
 end
 
+-- a settings window opened while positioning ends it, the suspended windows come back with it
+Private.Libs.KAJI.beforeWindowShow = function()
+    Anchors:Exit()
+end
+
+---Open this addon's anchors, close them, or take them over when another addon's show.
 function Anchors:Toggle()
-    if Anchors.isActive then
+    if Anchors.isActive and self.addon ~= activeAddon then
+        self:Switch(self.addon)
+    elseif Anchors.isActive then
         self:Exit()
     else
         self:Enter()
@@ -814,9 +1160,6 @@ end
 
 -- Nudge Panel --
 
--- One per addon: Kaji widgets belong to the instance that built them and stay in its theme.
-local panels = {}
-
 function Anchors:CreatePanel()
     local panel = panels[activeAddon]
     if panel then return panel end
@@ -824,7 +1167,7 @@ function Anchors:CreatePanel()
     local GUI = activeAddon.GUI
     panel = CreateFrame('Frame', nil, UIParent, 'BackdropTemplate')
     panels[activeAddon] = panel
-    panel:SetSize(180, 180)
+    panel:SetSize(PANEL_WIDTH, PANEL_HEIGHT)
     panel:SetPoint('CENTER', UIParent, 'CENTER', 200, 0)
     panel:SetFrameStrata('FULLSCREEN_DIALOG')
     panel:SetFrameLevel(1001)
@@ -841,15 +1184,46 @@ function Anchors:CreatePanel()
     panel:SetBackdropColor(Theme.bgLight[1], Theme.bgLight[2], Theme.bgLight[3], 1)
     panel:SetBackdropBorderColor(Theme.border[1], Theme.border[2], Theme.border[3], 1)
 
-    local title = panel:CreateFontString(nil, 'OVERLAY')
-    title:SetPoint('TOP', panel, 'TOP', 0, -6)
+    -- one button per addon, this panel's own one lit; ShowPanel moves the body under it when it shows
+    if addons[2] then
+        local switcher = CreateFrame('Frame', nil, panel)
+        switcher:SetPoint('TOPLEFT', panel, 'TOPLEFT', 10, -8)
+        switcher:SetPoint('TOPRIGHT', panel, 'TOPRIGHT', -10, -8)
+        switcher:SetHeight(SWITCHER_HEIGHT - 8)
+        panel.switcher = switcher
+
+        local gap = 4
+        local width = (PANEL_WIDTH - 20 - (#addons - 1) * gap) / #addons
+        for index, addon in ipairs(addons) do
+            local button = GUI:CreateButton(switcher, (addon.name:gsub('^Norsken', '')), {
+                width = width,
+                height = SWITCHER_HEIGHT - 8,
+                bgColor = Theme.bgDark,
+                callback = function() Anchors:Switch(addon) end,
+            })
+            button:SetPoint('TOPLEFT', switcher, 'TOPLEFT', (index - 1) * (width + gap), 0)
+            button:SetSelected(addon == activeAddon)
+            button:SetTooltip(addon.name)
+        end
+    end
+
+    local body = CreateFrame('Frame', nil, panel)
+    body:SetPoint('TOPLEFT')
+    body:SetPoint('BOTTOMRIGHT')
+    panel.body = body
+
+    local title = body:CreateFontString(nil, 'OVERLAY')
+    title:SetPoint('TOP', body, 'TOP', 0, -6)
+    title:SetWidth(PANEL_WIDTH - 20)
+    title:SetWordWrap(false)
+    panel.title = title
     title:SetFont(Private.Media.Fonts.Expressway, 16, 'OUTLINE')
     title:SetShadowOffset(0, 0)
     title:SetShadowColor(0, 0, 0, 0)
     title:SetText(L['Nudge Tool'])
     title:SetTextColor(Theme.textSecondary[1], Theme.textSecondary[2], Theme.textSecondary[3], 1)
 
-    local selected = panel:CreateFontString(nil, 'OVERLAY')
+    local selected = body:CreateFontString(nil, 'OVERLAY')
     selected:SetPoint('TOP', title, 'BOTTOM', 0, -2)
     selected:SetFont(Private.Media.Fonts.Expressway, 12, 'OUTLINE')
     selected:SetShadowOffset(0, 0)
@@ -870,12 +1244,12 @@ function Anchors:CreatePanel()
         Anchors:SetOffsets(Anchors.selectedKey, x, y)
     end
 
-    local xBox = GUI:CreateEditBox(panel, L['X Offset:'], { inlineLabel = true, labelWidth = 60, callback = CommitOffsets })
-    xBox:SetPoint('TOPLEFT', panel, 'TOPLEFT', 10, -46)
-    xBox:SetPoint('TOPRIGHT', panel, 'TOPRIGHT', -10, -46)
+    local xBox = GUI:CreateEditBox(body, L['X Offset:'], { inlineLabel = true, labelWidth = 60, callback = CommitOffsets })
+    xBox:SetPoint('TOPLEFT', body, 'TOPLEFT', 10, -46)
+    xBox:SetPoint('TOPRIGHT', body, 'TOPRIGHT', -10, -46)
     panel.xBox = xBox
 
-    local yBox = GUI:CreateEditBox(panel, L['Y Offset:'], { inlineLabel = true, labelWidth = 60, callback = CommitOffsets })
+    local yBox = GUI:CreateEditBox(body, L['Y Offset:'], { inlineLabel = true, labelWidth = 60, callback = CommitOffsets })
     yBox:SetPoint('TOPLEFT', xBox, 'BOTTOMLEFT', 0, -4)
     yBox:SetPoint('TOPRIGHT', xBox, 'BOTTOMRIGHT', 0, -4)
     panel.yBox = yBox
@@ -893,7 +1267,7 @@ function Anchors:CreatePanel()
     panel.arrows = {}
 
     for index, arrow in ipairs(ARROWS) do
-        local button = GUI:CreateButton(panel, '', {
+        local button = GUI:CreateButton(body, '', {
             width = buttonSize,
             height = buttonSize,
             image = ARROW_TEXTURE,
@@ -906,17 +1280,17 @@ function Anchors:CreatePanel()
                 Anchors:Nudge(arrow.dx * step, arrow.dy * step)
             end,
         })
-        button:SetPoint('TOPLEFT', panel, 'TOP', -rowWidth / 2 + (index - 1) * (buttonSize + gap), -110)
+        button:SetPoint('TOPLEFT', body, 'TOP', -rowWidth / 2 + (index - 1) * (buttonSize + gap), -110)
         panel.arrows[index] = button
     end
 
-    local settings = GUI:CreateButton(panel, L['Open Settings'], {
+    local settings = GUI:CreateButton(body, L['Open Settings'], {
         width = 160,
         height = 24,
         bgColor = Theme.bgDark,
         callback = function() Anchors:OpenSelectedSettings() end,
     })
-    settings:SetPoint('BOTTOM', panel, 'BOTTOM', 0, 8)
+    settings:SetPoint('BOTTOM', body, 'BOTTOM', 0, 8)
     panel.settings = settings
 
     panel:Hide()
@@ -928,17 +1302,22 @@ function Anchors:UpdatePanel()
     local panel = panels[activeAddon]
     if not panel then return end
 
+    -- inside a group the title names it, Escape goes back up
+    local focused = Anchors.focusKey and Anchors.registry[Anchors.focusKey]
+    panel.title:SetText(focused and ('< ' .. focused.displayName) or L['Nudge Tool'])
+
     local entry = Anchors.selectedKey and Anchors.registry[Anchors.selectedKey]
 
-    if not entry then
-        panel.selected:SetText(L['Click to select'])
+    if not entry or entry.locked then
+        panel.selected:SetText(entry and entry.displayName or focused and L['Click to select, Esc to go back'] or L['Click to select'])
         panel.selected:SetTextColor(Theme.textSecondary[1], Theme.textSecondary[2], Theme.textSecondary[3], 1)
         panel.xBox:SetValue('--')
         panel.yBox:SetValue('--')
         panel.xBox:SetEnabled(false)
         panel.yBox:SetEnabled(false)
-        panel.settings:SetEnabled(false)
-        panel.settings:SetAlpha(0.4)
+        -- one its group places can't move, but its settings still open
+        panel.settings:SetEnabled(entry ~= nil)
+        panel.settings:SetAlpha(entry and 1 or 0.4)
         for _, arrow in ipairs(panel.arrows) do
             arrow:SetEnabled(false)
             arrow:SetAlpha(0.4)
@@ -964,6 +1343,16 @@ end
 
 function Anchors:ShowPanel()
     local panel = self:CreatePanel()
+
+    -- a view opened for one module stays on its addon
+    local switching = panel.switcher ~= nil and Anchors.onlyModule == nil
+    if panel.switcher then
+        panel.switcher:SetShown(switching)
+    end
+    local top = switching and SWITCHER_HEIGHT or 0
+    panel:SetHeight(PANEL_HEIGHT + top)
+    panel.body:SetPoint('TOPLEFT', panel, 'TOPLEFT', 0, -top)
+
     -- Populate before fading in, so the panel doesn't animate up showing stale values.
     self:UpdatePanel()
     panel.fader(1)

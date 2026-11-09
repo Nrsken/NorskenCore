@@ -1,10 +1,11 @@
 ## Interface: 120105, 120107
-## Title: |cffe51039Norsken|r|cffb3b3b3Core|r Options
+## Title: |cffe677f9Norsken|r|cffb3b3b3Core Options|r
 ## Notes: Settings parts the Norsken addons build their pages with. Stores no data.
 ## Category: |cffe51039Norsken|r |cffb3b3b3Addons|r
+## Group: NorskenCore
 ## Version: @project-version@
 ## Author: Norsken
-## IconTexture: Interface\AddOns\NorskenCore\Media\Logo\LogoRed.png
+## IconTexture: Interface\AddOns\NorskenCore\Media\Logo\LogoCore.png
 ## LoadOnDemand: 1
 ## Dependencies: NorskenCore
 

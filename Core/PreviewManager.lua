@@ -89,7 +89,7 @@ function PreviewManager:Refresh()
     local whole = {} -- module -> true, previewing as in the everything view on its own
     local showAll = false
 
-    if self.guiOpen or self.anchorsActive then
+    if (self.guiOpen or self.anchorsActive) and not self.hidden then
         showAll = self:ShouldShowAll()
 
         -- The everything view is a superset rather than a replacement: the open page still hands its
@@ -166,6 +166,15 @@ function PreviewManager:SetAnchorsActive(active, module)
     self:Refresh()
 end
 
+---Hide every preview while another addon's anchors show, whatever the window or page would want.
+---@param hidden boolean
+function PreviewManager:SetHidden(hidden)
+    if self.hidden == hidden then return end
+
+    self.hidden = hidden
+    self:Refresh()
+end
+
 ---The module header's Preview: pin one module's preview on across its pages or keep it off even on its own.
 ---Lasts until the window closes.
 ---@param module table
@@ -235,6 +244,7 @@ function Private:NewPreviewManager(addon)
         guiOpen = false,
         anchorsActive = false,
         anchorsModule = nil, -- the module the anchors view opened for, nil when it shows every anchor
+        hidden = false, -- another addon's anchors show
         forceAll = false,
         overrides = {}, -- module -> true (previews on every page) | false (never), from the module header
         currentPage = nil,

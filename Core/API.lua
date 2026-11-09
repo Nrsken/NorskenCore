@@ -13,6 +13,9 @@ _G.NorskenCore = API
 
 -- Addons --
 
+-- Compare with the TOC's X-NorskenCore-Minimum, see Version.lua
+API.Version = Private.API_VERSION
+
 ---Creates an addon object that reads this API through `__index`, so `object:RunWhenSafe()` works
 ---on the addon itself and what it stores of its own (`db`, `GUI`, `Theme`) stays its own.
 ---@param object table usually the addon's private table

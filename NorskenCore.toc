@@ -1,12 +1,12 @@
 ## Interface: 120105, 120107
-## Title: |cffe51039Norsken|r|cffb3b3b3Core|r
+## Title: |cffe677f9Norsken|r|cffb3b3b3Core|r
 ## Notes: Shared code for the Norsken addons
 ## Category: |cffe51039Norsken|r |cffb3b3b3Addons|r
 ## Version: @project-version@
 ## Author: Norsken
 ## SavedVariables: NorskenCoreDB
 ## OptionalDeps: Ace3, LibSharedMedia-3.0
-## IconTexture: Interface\AddOns\NorskenCore\Media\Logo\LogoRed.png
+## IconTexture: Interface\AddOns\NorskenCore\Media\Logo\LogoCore.png
 ## X-Curse-Project-ID: 1787589
 
 Libs/Init.xml

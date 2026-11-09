@@ -5,6 +5,7 @@
     <Script file='Player.lua' />
     <Script file='Localization.lua' />
     <Include file='..\Locales\Locales.xml' />
+    <Script file='Version.lua' />
     <Script file='Settings.lua' />
     <Script file='Enums.lua' />
     <Script file='Constants.lua' />

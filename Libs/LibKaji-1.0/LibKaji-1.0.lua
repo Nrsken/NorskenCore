@@ -53,6 +53,8 @@ assert(LibStub, MAJOR .. " requires LibStub")
 ---@field Animations LibKaji-1.0.Animations
 ---@field Pixel LibKaji-1.0.Pixel
 ---@field PixelMixin LibKaji-1.0.PixelMixin
+---@field windows KajiGUIWindowMixin[] every settings window, see Window.lua
+---@field beforeWindowShow fun(window: KajiGUIWindowMixin)? runs before any window shows
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end -- a newer or equal version is already loaded
 

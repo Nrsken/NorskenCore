@@ -52,6 +52,7 @@ local ResetCursor = ResetCursor
 local UIParent = UIParent
 local WorldFrame = WorldFrame
 local setmetatable = setmetatable
+local ipairs = ipairs
 
 local WHITE = 'Interface\\Buttons\\WHITE8X8'
 
@@ -189,13 +190,14 @@ function Chooser:_ApplyTheme()
     banner.cancel:SetText(format(L['%s or %s to cancel'], gui:ColorText(L['Right-click']), gui:ColorText(L['Esc'])))
 end
 
----Frames the chooser must never hand back: its own overlay and the window the pick came from.
+---Frames the chooser must never hand back: its own overlay and any settings window.
 ---@param frame Frame
 ---@return boolean
 function Chooser:_IsBlocked(frame)
     if frame == WorldFrame or IsUnder(frame, self.host) then return true end
-    local window = self.gui._window
-    if window and IsUnder(frame, window.frame) then return true end
+    for _, window in ipairs(lib.windows) do
+        if IsUnder(frame, window.frame) then return true end
+    end
     return IsUnder(frame, self.gui.overlay)
 end
 
@@ -308,10 +310,14 @@ function Chooser:Start(callback, initialValue)
     self.target = nil
     self.targetName = nil
 
-    -- The window covers most of what is worth picking, so it steps aside until the pick lands.
-    local window = self.gui._window
-    self.restoreWindow = window and window:IsShown() or false
-    if self.restoreWindow then window:Hide() end
+    -- the windows cover most of what is worth picking, so they step aside until the pick lands; suspended,
+    -- so previews stay up and nothing that waits for a close (a reload prompt) fires mid pick
+    self.suspended = {}
+    for _, window in ipairs(lib.windows) do
+        if window:Suspend() then
+            self.suspended[#self.suspended + 1] = window
+        end
+    end
 
     self.box:Hide()
     self.plate:Hide()
@@ -340,22 +346,20 @@ function Chooser:Stop(cancelled)
 
     local callback = self.callback
     local value = cancelled and self.initialValue or self.targetName
-    local restoreWindow = self.restoreWindow
 
     self.callback = nil
     self.initialValue = nil
     self.lastFocus = nil
     self.target = nil
     self.targetName = nil
-    self.restoreWindow = false
 
     -- Callback first: reopening the window rebuilds its page, which has to read the committed value.
     if callback then callback(value, false) end
 
-    if restoreWindow then
-        local window = self.gui._window
-        if window then window:Show() end
+    for _, window in ipairs(self.suspended or {}) do
+        window:Resume()
     end
+    self.suspended = nil
 end
 
 ---@return boolean

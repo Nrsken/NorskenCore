@@ -31,6 +31,9 @@ local UIParent = UIParent
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 
+-- every window any addon made, so something that clears the screen (anchors, the frame chooser) puts them all away
+lib.windows = lib.windows or {}
+
 ---@class KajiGUIWindowMixin
 ---@field gui KajiGUIInstance
 ---@field frame Frame & BackdropTemplate
@@ -409,15 +412,22 @@ function WindowMixin:Show()
         self._restored = true
     end
 
-    lib.ResetNoticePulses(self.gui)
-    self.gui._window = self -- the frame chooser steps around the window that's in use
+    -- whatever puts windows away (a positioning mode) ends first, which can bring this one back itself
+    if lib.beforeWindowShow then safecall(lib.beforeWindowShow, self) end
 
-    -- one settings window at a time across every addon, the previews follow a single page
-    local open = lib.openWindow
-    if open and open ~= self and open:IsShown() then
-        open:Hide()
+    -- still put away by something else: asked for, so it's back for good; no onShow, it never closed
+    if self._suspended then
+        self._suspended = nil
+        self.frame:Show()
+        if self._currentId then self:ShowPage(self._currentId) end
     end
-    lib.openWindow = self
+    if self:IsShown() then
+        self.frame:Raise()
+        self._showing = false
+        return
+    end
+
+    lib.ResetNoticePulses(self.gui)
 
     self.frame:Show()
     self.frame:Raise()
@@ -428,29 +438,35 @@ function WindowMixin:Show()
 end
 
 function WindowMixin:Hide()
+    self.reopenAfterCombat = nil -- closed on purpose, the end of combat doesn't bring it back
+
+    -- a suspended window is already off screen, so closing it is only the close itself
+    if self._suspended then
+        self._suspended = nil
+        if self._onClose then safecall(self._onClose) end
+        return
+    end
+
     self.frame:Hide() -- OnHide handles persistence + onClose
 end
 
 ---Steps aside without closing: no onClose, so previews and pending prompts stay as they are.
+---Counted, so a window two things put away comes back when the last of them resumes it.
+---@return boolean suspended false when it wasn't open, so the caller has nothing to resume
 function WindowMixin:Suspend()
-    if not self:IsShown() then return end
+    if not (self:IsShown() or self._suspended) then return false end
 
-    self._suspended = true
+    self._suspended = (self._suspended or 0) + 1
     self.frame:Hide()
+    return true
 end
 
 ---Brings a suspended window back on its page, rebuilt so it shows whatever changed meanwhile.
----If combat started on this frame the window's own combat guard hides it again.
 function WindowMixin:Resume()
     if not self._suspended then return end
 
-    self._suspended = false
-
-    -- another window opened meanwhile and there's only ever one, so this one closes for real
-    if lib.openWindow ~= self then
-        if self._onClose then safecall(self._onClose) end
-        return
-    end
+    self._suspended = self._suspended > 1 and self._suspended - 1 or nil
+    if self._suspended then return end
 
     self.frame:Show()
     self.frame:Raise()
@@ -635,9 +651,10 @@ function InstanceMixin:CreateGUIWindow(opts)
     combatFrame:SetScript("OnEvent", function(_, event)
         if event == "PLAYER_REGEN_DISABLED" then
             window.inCombat = true
-            if window:IsShown() then
-                window.reopenAfterCombat = true
+            -- one put away counts as open, or it would come back mid fight without ever having closed
+            if window:IsShown() or window._suspended then
                 window:Hide()
+                window.reopenAfterCombat = true
             end
         else
             window.inCombat = false
@@ -648,7 +665,6 @@ function InstanceMixin:CreateGUIWindow(opts)
         end
     end)
 
-    lib.window = window
-    gui._window = window -- instance-scoped handle, so lib code can reach the window it belongs to
+    lib.windows[#lib.windows + 1] = window
     return window
 end

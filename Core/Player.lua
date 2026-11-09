@@ -24,6 +24,7 @@ end
 -- Core enables first, so an addon's own OnEnable can read the spec
 function Private:OnEnable()
     UpdateSpec()
+    self:CheckAddonVersions() -- every addon that needs Core has loaded by now
 end
 
 Private.Libs.LS.RegisterPlayerSpecChange(Private, UpdateSpec)

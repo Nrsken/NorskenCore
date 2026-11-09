@@ -1,0 +1,54 @@
+package-as: NorskenCore
+enable-nolib-creation: no
+
+curse-id: 1787589
+
+# the shared options parts ship as their own LoadOnDemand folder
+move-folders:
+    NorskenCore/NorskenCore_Options: NorskenCore_Options
+
+externals:
+    Libs/Ace3/AceAddon-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceAddon-3.0
+    Libs/Ace3/AceDB-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceDB-3.0
+    Libs/Ace3/AceEvent-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceEvent-3.0
+    Libs/Ace3/AceSerializer-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceSerializer-3.0
+    Libs/Ace3/AceHook-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceHook-3.0
+    Libs/Ace3/AceTimer-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceTimer-3.0
+    Libs/LibSharedMedia-3.0: https://repos.curseforge.com/wow/libsharedmedia-3-0/trunk/LibSharedMedia-3.0
+    Libs/LibStub: https://repos.curseforge.com/wow/libstub/trunk
+    Libs/CallbackHandler-1.0: https://repos.curseforge.com/wow/callbackhandler/trunk/CallbackHandler-1.0
+    Libs/TaintLess:
+        url: https://www.townlong-yak.com/addons.git/taintless
+        commit: default
+    Libs/LibEditMode:
+        url: https://github.com/p3lim-wow/LibEditMode.git
+        tag: master
+    Libs/LibEditModeOverride:
+        url: https://github.com/plusmouse/LibEditModeOverride
+        tag: main
+    Libs/LibRangeCheck-3.0:
+        url: https://github.com/WeakAuras/LibRangeCheck-3.0.git
+        branch: main
+    Libs/LibDeflate:
+        url: https://github.com/SafeteeWoW/LibDeflate.git
+        tag: latest
+    Libs/LibCustomGlow-1.0:
+        url: https://github.com/Stanzilla/LibCustomGlow.git
+        branch: master
+    Libs/LibSpecialization:
+        url: https://github.com/BigWigsMods/LibSpecialization.git
+        tag: master
+
+ignore:
+    - README.md
+    - .git/
+    - .github/
+    - .vscode/
+    - .claude/
+    - .pkgmeta
+    - release.sh
+    - VERSION
+    - .gitignore
+    - .gitattributes
+    - .wowluarc.json
+    - spec/
