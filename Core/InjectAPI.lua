@@ -1,6 +1,6 @@
 ---@class NRSKNUI
 local Private = select(2, ...)
-local PixelMixin = Private.Libs.KAJI.PixelMixin
+local PixelMixin = Private.PixelMixin
 
 -- Injection API for adding methods to frame metatables.
 

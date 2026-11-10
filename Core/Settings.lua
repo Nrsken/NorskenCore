@@ -130,13 +130,19 @@ local defaults = {
 
 local hadSavedValues
 
+-- what's built from the settings, rebuilt whenever they change under it
+local function Rebuild()
+    Private:RefreshCurves()
+    Private:LoadCustomColors()
+    Private:RefreshAuraDurationFormatter()
+end
+
 function Private:OnInitialize()
     -- read before AceDB fills in the defaults: an addon's own settings only count on a fresh store
     local saved = _G.NorskenCoreDB
     hadSavedValues = saved ~= nil and saved.global ~= nil and next(saved.global) ~= nil
     self.sharedDB = LibStub('AceDB-3.0'):New('NorskenCoreDB', defaults, true)
-    self:RefreshCurves()
-    self:LoadCustomColors()
+    Rebuild()
 end
 
 ---@return NRSKNUI.SharedSettings shared
@@ -144,13 +150,24 @@ function Private:GetSharedSettings()
     return Private.sharedDB.global
 end
 
----A shared setting changed, whichever addon's window did it: every addon applies it in its own way.
+-- a drag in the shared pages calls in many times a second, re-applying every addon on each one drops frames
+local SETTLE_DELAY = 0.15
+local settleTimer
+
+---A shared setting changed, whichever addon's window did it: every addon applies it in its own way,
+---once the edits settle.
 ---@param font boolean? the global font was the one to change
 function Private:SharedSettingsChanged(font)
     if font then
         Private:SendMessage('NRSKNUI_PROFILE_FONT_CHANGED')
     end
-    Private:SendMessage('NRSKNUI_SHARED_SETTINGS_CHANGED')
+    if settleTimer then
+        settleTimer:Cancel()
+    end
+    settleTimer = C_Timer.NewTimer(SETTLE_DELAY, function()
+        settleTimer = nil
+        Private:SendMessage('NRSKNUI_SHARED_SETTINGS_CHANGED')
+    end)
 end
 
 ---@return table defaults what GetSharedSettings starts from
@@ -265,6 +282,7 @@ function Private:AdoptSharedSettings(globalMedia, colors, language)
     if language then
         shared.Language = language
     end
+    Rebuild()
     return true
 end
 
@@ -292,4 +310,9 @@ function Private:ApplySharedSettings(block)
             Merge(shared[section], block[section])
         end
     end
+    Rebuild()
+
+    -- every addon re-applies, not only the one importing; the font may have changed too
+    Private:SharedSettingsChanged(true)
+    Private:DeferUntilUnrestricted(0, function() Private:RefreshFontStyles() end)
 end

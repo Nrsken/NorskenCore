@@ -31,6 +31,7 @@ Private.Media = {
     Statusbars = {},
     Sounds = {},
     Solid = SOLID,
+    GUITextures = 'Interface\\AddOns\\NorskenCore\\Media\\GUITextures\\',
     FallbackFont = FALLBACK_FONT,
     FallbackSize = FALLBACK_SIZE,
     DefaultFont = DEFAULT_FONT_NAME,

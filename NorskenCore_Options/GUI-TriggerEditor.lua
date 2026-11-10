@@ -4,7 +4,7 @@ local Core = _G.NorskenCore
 local TriggerEditor = {}
 Core.GUITriggerEditor = TriggerEditor
 local L = Core.L
-local rowH = LibStub('LibKaji-1.0').DEFAULT_THEME.rowHeight
+local rowH = Core.KajiGUI.DEFAULT_THEME.rowHeight
 
 local AuraTriggers = Core.AuraTriggers
 local Premade = Core.AuraFiltersPremade
@@ -18,7 +18,7 @@ local tinsert, tremove = table.insert, table.remove
 local min, rad = math.min, math.rad
 local CopyTable = CopyTable
 
-local TEX = 'Interface\\AddOns\\NorskenCore\\Media\\GUITextures\\'
+local TEX = Core.Media.GUITextures
 local DELETE_COLOR = { 1, 0, 0 }
 
 -- A "trigger" here is one branch of the saved trigger: an aura group inside the display's container.

@@ -399,7 +399,7 @@ local STATES = {
     },
 }
 LoadConditions.STATES = STATES
-Private.Libs.KAJI.loadStates = STATES -- Kaji's load card can't reach Core, so it gets the list handed over
+Private.Kaji.loadStates = STATES -- the load card builds its state picker from this list
 
 local function CheckState(config)
     for _, state in ipairs(STATES) do

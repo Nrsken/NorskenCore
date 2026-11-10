@@ -4,8 +4,8 @@ local Core = _G.NorskenCore
 local Shared = {}
 Core.GUISharedPages = Shared
 local L = Core.L
-local KAJI = LibStub('LibKaji-1.0')
-local Theme = KAJI.DEFAULT_THEME
+local KajiGUI = Core.KajiGUI
+local Theme = KajiGUI.DEFAULT_THEME
 local rowH = Theme.rowHeight
 local rowHL = Theme.rowHeightLast
 
@@ -203,7 +203,7 @@ local PREVIEW_TYPE = 'NUITexturePreview'
 local PREVIEW_BAR_HEIGHT = 22
 local PREVIEW_FILL = 0.62
 local PREVIEW_PAD = 12 -- checker showing around the bar, so the backdrop and border sit on it
-local PREVIEW_CHECKER = 'Interface\\AddOns\\NorskenCore\\Media\\GUITextures\\PreviewChecker.png'
+local PREVIEW_CHECKER = Core.Media.GUITextures .. 'PreviewChecker.png'
 
 -- GUI-only sentinel for the flat backdrop, the db stores nil.
 local FLAT_BACKGROUND = '__FLAT'
@@ -234,7 +234,7 @@ function PreviewMixin:Refresh()
     self.spark:SetPoint('CENTER', self.bar:GetStatusBarTexture(), 'RIGHT', 0, 0)
 end
 
-KAJI:RegisterWidgetType(PREVIEW_TYPE, function()
+KajiGUI:RegisterWidgetType(PREVIEW_TYPE, function()
     local frame = Mixin(CreateFrame('Frame'), PreviewMixin)
 
     -- Checkerboard so a translucent backdrop doesn't vanish into the card's dark fill.

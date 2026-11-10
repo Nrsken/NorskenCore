@@ -4,7 +4,7 @@ local Core = _G.NorskenCore
 local SpellList = {}
 Core.GUISpellList = SpellList
 local L = Core.L
-local rowH = LibStub('LibKaji-1.0').DEFAULT_THEME.rowHeight
+local rowH = Core.KajiGUI.DEFAULT_THEME.rowHeight
 local Premade = Core.AuraFiltersPremade
 
 local ipairs, pairs, tonumber, tostring, next = ipairs, pairs, tonumber, tostring, next
@@ -21,7 +21,7 @@ local ICON_SIZE = 24
 local BUTTON_ROW_HEIGHT = 30
 local CROSS_WIDTH = 0.06
 local UNKNOWN_ICON = 134400
-local CROSS = 'Interface\\AddOns\\NorskenCore\\Media\\GUITextures\\NorskenCustomCrossv3.png'
+local CROSS = Core.Media.GUITextures .. 'NorskenCustomCrossv3.png'
 local DELETE_COLOR = { 1, 0, 0 }
 
 local states = setmetatable({}, { __mode = 'k' })

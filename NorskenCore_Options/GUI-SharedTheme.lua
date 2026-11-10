@@ -2,7 +2,7 @@
 local Core = _G.NorskenCore
 local Shared = Core.GUISharedPages
 local L = Core.L
-local Theme = LibStub('LibKaji-1.0').DEFAULT_THEME
+local Theme = Core.KajiGUI.DEFAULT_THEME
 local rowH = Theme.rowHeight
 local rowHL = Theme.rowHeightLast
 

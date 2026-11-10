@@ -55,4 +55,5 @@ ignore:
     - .gitignore
     - .gitattributes
     - .wowluarc.json
+    - .Types/
     - spec/

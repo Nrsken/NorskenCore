@@ -93,6 +93,23 @@ API.SharedSettingsChanged = Private.SharedSettingsChanged
 API.EncodeTable = Private.EncodeTable
 API.DecodeTable = Private.DecodeTable
 
+-- Pixel --
+
+-- frames get the same functions as methods, see InjectAPI.lua
+API.Pixel = Private.Pixel
+
+-- KajiGUI --
+
+-- what the options addons build with besides their own GUI object, built here since KajiGUI loads just before
+Private.KajiGUI = {
+    DEFAULT_THEME = Private.Kaji.DEFAULT_THEME,
+    RegisterWidgetType = Private.Kaji.RegisterWidgetType,
+    CreateItemTree = Private.Kaji.CreateItemTree,
+    TalentTreeSections = Private.Kaji.TalentTreeSections,
+    TalentTreeHeight = Private.Kaji.TalentTreeHeight,
+}
+API.KajiGUI = Private.KajiGUI
+
 -- Media --
 
 API.Media = Private.Media

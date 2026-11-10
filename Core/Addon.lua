@@ -63,7 +63,7 @@ function Private.SetupAddon(object, name, themeStore)
         object.Version = DEV_VERSION
     end
 
-    object.GUI = Private.Libs.KAJI:New({
+    object.GUI = Private.Kaji:New({
         store = themeStore,
         classColorProvider = function() return object:GetClassColor(object.MyClass) end,
     })

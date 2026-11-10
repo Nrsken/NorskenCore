@@ -1,8 +1,8 @@
 ---@class NRSKNUI
 local Private = select(2, ...)
 local L = Private.L
-local Animations = Private.Libs.KAJI.Animations
-local pixel = Private.Libs.KAJI.Pixel
+local Animations = Private.Animations
+local pixel = Private.Pixel
 ---@class NRSKNUI.Anchors
 ---@field addon table the addon this handle belongs to, see NewAnchors
 local Anchors = {}
@@ -41,7 +41,7 @@ local Theme       -- its theme, only one addon's overlays and panel exist on scr
 -- nudge panels, one per addon: Kaji widgets belong to the instance that built them and stay in its theme
 local panels = {}
 
-local ARROW_TEXTURE = 'Interface\\AddOns\\NorskenCore\\Media\\GUITextures\\collapse.tga'
+local ARROW_TEXTURE = Private.Media.GUITextures .. 'collapse.tga'
 
 -- Overlay Config
 local FILL_ALPHA = 0.8
@@ -1054,7 +1054,7 @@ function Anchors:Enter(aceModule)
 
     -- every settings window steps aside while positioning, Exit brings back the ones that were open
     Anchors.suspended = {}
-    for _, window in ipairs(Private.Libs.KAJI.windows) do
+    for _, window in ipairs(Private.Kaji.windows) do
         if window:Suspend() then
             Anchors.suspended[#Anchors.suspended + 1] = window
         end
@@ -1137,7 +1137,7 @@ function Anchors:Exit()
 end
 
 -- a settings window opened while positioning ends it, the suspended windows come back with it
-Private.Libs.KAJI.beforeWindowShow = function()
+Private.Kaji.beforeWindowShow = function()
     Anchors:Exit()
 end
 
