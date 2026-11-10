@@ -81,8 +81,8 @@ function InstanceMixin:CreatePageHeader(parent, opts)
     header.frame = frame
 
     local panel = CreateFrame('Frame', nil, frame, 'BackdropTemplate')
-    pixel.SetPixelPoint(panel, 'TOPLEFT', frame, 'TOPLEFT', MARGIN, -MARGIN)
-    pixel.SetPixelPoint(panel, 'BOTTOMRIGHT', frame, 'BOTTOMRIGHT', -MARGIN, 0)
+    panel:NCSetPoint('TOPLEFT', frame, 'TOPLEFT', MARGIN, -MARGIN)
+    panel:NCSetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', -MARGIN, 0)
     Kaji.SetBackdrop(panel, gui, { bg = 'bgMedium', border = 'border', edgeSize = 'borderSize' })
 
     -- Dressing --
@@ -90,12 +90,12 @@ function InstanceMixin:CreatePageHeader(parent, opts)
     -- the dot field: right of the slash and above the track, so the line is its edge, thickening toward the right end
     local halftone = panel:CreateTexture(nil, 'BACKGROUND', nil, 3)
     halftone:SetTexture(theme.headerHalftoneTexture, 'CLAMP', 'REPEAT')
-    pixel.SetPixelSnap(halftone)
+    halftone:NCDisablePixelSnap()
 
     -- cuts the field along the slash; past the slash's box it stays whole
     local cut = panel:CreateMaskTexture()
     cut:SetTexture(theme.diagonalMask, 'CLAMPTOWHITE', 'CLAMPTOWHITE')
-    pixel.SetPixelSnap(cut)
+    cut:NCDisablePixelSnap()
     halftone:AddMaskTexture(cut)
 
     local fieldLeft, fieldBottom = 0, 0 -- set by Render, down and across from the panel's top left
@@ -126,13 +126,13 @@ function InstanceMixin:CreatePageHeader(parent, opts)
             else
                 if not tick then
                     tick = panel:CreateTexture(nil, 'ARTWORK')
-                    pixel.SetPixelSnap(tick)
+                    tick:NCDisablePixelSnap()
                     ticks[i] = tick
                 end
                 tick:SetColorTexture(c[1], c[2], c[3], 1)
-                pixel.SetPixelSize(tick, PATH, (i - 1) % 5 == 0 and TICK_MAJOR or TICK_MINOR)
+                tick:NCSetSize(PATH, (i - 1) % 5 == 0 and TICK_MAJOR or TICK_MINOR)
                 tick:ClearAllPoints()
-                pixel.SetPixelPoint(tick, 'TOPLEFT', panel, 'TOPLEFT', rulerLeft + (i - 1) * TICK_STEP, -rulerTop)
+                tick:NCSetPoint('TOPLEFT', panel, 'TOPLEFT', rulerLeft + (i - 1) * TICK_STEP, -rulerTop)
                 tick:Show()
             end
         end
@@ -148,15 +148,15 @@ function InstanceMixin:CreatePageHeader(parent, opts)
     -- the faint index running off the right edge behind the dots and tabs;
     -- a frame deeper than the clipping one, since that clips its children
     local ghostClip = CreateFrame('Frame', nil, panel)
-    pixel.SetPixelInside(ghostClip, panel, 0, 0)
+    ghostClip:NCSetInside(panel, 0, 0)
     ghostClip:SetClipsChildren(true)
 
     local ghostHolder = CreateFrame('Frame', nil, ghostClip)
-    pixel.SetPixelInside(ghostHolder, ghostClip, 0, 0)
+    ghostHolder:NCSetInside(ghostClip, 0, 0)
 
     local ghost = ghostHolder:CreateFontString(nil, 'BACKGROUND')
     gui:ApplyFont(ghost, GHOST_SIZE)
-    pixel.SetPixelPoint(ghost, 'RIGHT', panel, 'RIGHT', GHOST_BLEED, 0)
+    ghost:NCSetPoint('RIGHT', panel, 'RIGHT', GHOST_BLEED, 0)
 
     -- grows to the right from a fixed edge: centred in its own fractional width, the first letter shifted per title
     local title = panel:CreateFontString(nil, 'OVERLAY')
@@ -166,14 +166,14 @@ function InstanceMixin:CreatePageHeader(parent, opts)
 
     -- the underline: out from the title, down the slash, then along under the tabs
     local underline = panel:CreateTexture(nil, 'ARTWORK')
-    pixel.SetPixelHeight(underline, PATH)
-    pixel.SetPixelSnap(underline)
+    underline:NCSetHeight(PATH)
+    underline:NCDisablePixelSnap()
 
     local dive = panel:CreateLine(nil, 'ARTWORK')
 
     local track = panel:CreateTexture(nil, 'ARTWORK')
-    pixel.SetPixelHeight(track, PATH)
-    pixel.SetPixelSnap(track)
+    track:NCSetHeight(PATH)
+    track:NCDisablePixelSnap()
 
     -- State --
 
@@ -225,7 +225,7 @@ function InstanceMixin:CreatePageHeader(parent, opts)
         button.label = button:CreateFontString(nil, 'OVERLAY')
         button.label:SetJustifyH('LEFT')
         gui:ApplyFont(button.label, 'small')
-        pixel.SetPixelPoint(button.label, 'LEFT', button, 'LEFT', 0, 0)
+        button.label:NCSetPoint('LEFT', button, 'LEFT', 0, 0)
         -- the selection's fade drives the label alone, no line
         Kaji.CreateRowSelection(button, theme, 'bottom', 'none')
         button:SetScript('OnUpdate', function(self, elapsed)
@@ -266,10 +266,10 @@ function InstanceMixin:CreatePageHeader(parent, opts)
             button.label:SetText(def.text)
             Kaji.SetTooltip(button, gui, def.text, def.tooltip)
             local w, h = button.label:GetStringWidth(), button.label:GetStringHeight()
-            pixel.SetPixelSize(button, w, h)
+            button:NCSetSize(w, h)
             height = max(height, h)
             button:ClearAllPoints()
-            pixel.SetPixelPoint(button, 'BOTTOMLEFT', actionRow, 'BOTTOMLEFT', x, 0)
+            button:NCSetPoint('BOTTOMLEFT', actionRow, 'BOTTOMLEFT', x, 0)
             button:Show()
             -- a render follows a page change or a theme change, never a click, so the line snaps
             ApplyAction(button, true)
@@ -287,7 +287,7 @@ function InstanceMixin:CreatePageHeader(parent, opts)
                 local m = theme.textMuted
                 separator:SetTextColor(m[1], m[2], m[3], dimmed and DIM_ALPHA or 1)
                 separator:ClearAllPoints()
-                pixel.SetPixelPoint(separator, 'LEFT', actionRow, 'LEFT', x, 0)
+                separator:NCSetPoint('LEFT', actionRow, 'LEFT', x, 0)
                 separator:Show()
                 x = x + separator:GetStringWidth()
             elseif separator then
@@ -308,7 +308,7 @@ function InstanceMixin:CreatePageHeader(parent, opts)
 
     -- the tab row: label-width tabs at the track's right end, + after the last
     local row = CreateFrame('Frame', nil, panel)
-    pixel.SetPixelHeight(row, TAB_HEIGHT)
+    row:NCSetHeight(TAB_HEIGHT)
 
     ---A tab's label: textSecondary at rest, lightening while hovered, the accent as it's selected.
     local function PaintLabel(tab)
@@ -331,11 +331,11 @@ function InstanceMixin:CreatePageHeader(parent, opts)
     ---A tab standing on the panel's track; its stretch of it lights in the line style when selected.
     local function CreateTab()
         local tab = CreateFrame('Button', nil, row)
-        pixel.SetPixelHeight(tab, TAB_HEIGHT)
+        tab:NCSetHeight(TAB_HEIGHT)
         tab:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
         tab.label = tab:CreateFontString(nil, 'OVERLAY')
         gui:ApplyFont(tab.label, 'normal') -- SetText errors on a FontString with no font yet
-        pixel.SetPixelPoint(tab.label, 'CENTER', tab, 'CENTER', 0, 0)
+        tab.label:NCSetPoint('CENTER', tab, 'CENTER', 0, 0)
         Kaji.CreateRowSelection(tab, theme, 'bottom', true)
 
         tab:SetScript('OnUpdate', function(self, elapsed)
@@ -368,13 +368,13 @@ function InstanceMixin:CreatePageHeader(parent, opts)
     local tabs = {}
 
     local plus = CreateFrame('Button', nil, row)
-    pixel.SetPixelSize(plus, TAB_HEIGHT, TAB_HEIGHT)
+    plus:NCSetSize(TAB_HEIGHT, TAB_HEIGHT)
     plus.icon = plus:CreateTexture(nil, 'ARTWORK')
     plus.icon:SetTexture(theme.plusTexture)
     plus.icon:SetTexCoord(CROSS_CROP, 1 - CROSS_CROP, CROSS_CROP, 1 - CROSS_CROP)
-    pixel.SetPixelSize(plus.icon, CROSS * (1 - CROSS_CROP * 2), CROSS * (1 - CROSS_CROP * 2))
-    pixel.SetPixelSnap(plus.icon)
-    pixel.SetPixelPoint(plus.icon, 'CENTER', plus, 'CENTER', 0, 0)
+    plus.icon:NCSetSize(CROSS * (1 - CROSS_CROP * 2), CROSS * (1 - CROSS_CROP * 2))
+    plus.icon:NCDisablePixelSnap()
+    plus.icon:NCSetPoint('CENTER', plus, 'CENTER', 0, 0)
 
     ---@param hovered boolean?
     function plus:Paint(hovered)
@@ -412,9 +412,9 @@ function InstanceMixin:CreatePageHeader(parent, opts)
             tab.selected = def.value == selectedTab
             tab.label:SetText(def.text)
             local width = floor(tab.label:GetStringWidth() + TAB_PAD * 2 + 0.5)
-            pixel.SetPixelWidth(tab, width)
+            tab:NCSetWidth(width)
             tab:ClearAllPoints()
-            pixel.SetPixelPoint(tab, 'BOTTOMLEFT', row, 'BOTTOMLEFT', x, 0)
+            tab:NCSetPoint('BOTTOMLEFT', row, 'BOTTOMLEFT', x, 0)
             tab:EnableMouse(on)
             if not on then
                 tab.hovered = nil
@@ -432,7 +432,7 @@ function InstanceMixin:CreatePageHeader(parent, opts)
         plus:EnableMouse(on)
         plus:Paint()
         plus:ClearAllPoints()
-        pixel.SetPixelPoint(plus, 'BOTTOMLEFT', row, 'BOTTOMLEFT', x, 0)
+        plus:NCSetPoint('BOTTOMLEFT', row, 'BOTTOMLEFT', x, 0)
         if addDef then
             x = x + TAB_HEIGHT
         end
@@ -465,7 +465,7 @@ function InstanceMixin:CreatePageHeader(parent, opts)
                 end
             end,
         })
-        pixel.SetPixelWidth(switch, switch.toggle:GetWidth())
+        switch:NCSetWidth(switch.toggle:GetWidth())
         -- no on-state glow up here, so the lit tab stays the header's loudest accent
         switch.glow:SetAlpha(0)
         switchFor = switchDef.msgText
@@ -485,14 +485,14 @@ function InstanceMixin:CreatePageHeader(parent, opts)
         EnsureSwitch()
         -- under the title, centred on the tab row; the toggle hangs 14 below the checkbox's empty label line
         switch:ClearAllPoints()
-        pixel.SetPixelPoint(switch, 'TOPLEFT', panel, 'TOPLEFT', INSET, -rowTop + 14 - (TAB_HEIGHT - switch.toggle:GetHeight()) / 2)
+        switch:NCSetPoint('TOPLEFT', panel, 'TOPLEFT', INSET, -rowTop + 14 - (TAB_HEIGHT - switch.toggle:GetHeight()) / 2)
         switch:Show()
         switch:SetValue(switchDef.value and true or false, true)
         switch:SetEnabled(switchDef.enabled ~= false)
         switchLabel:SetText(switchDef.text or '')
         switchLabel:SetTextColor(theme.textSecondary[1], theme.textSecondary[2], theme.textSecondary[3], 1)
         switchLabel:ClearAllPoints()
-        pixel.SetPixelPoint(switchLabel, 'LEFT', switch.toggle, 'RIGHT', theme.paddingMedium, 0)
+        switchLabel:NCSetPoint('LEFT', switch.toggle, 'RIGHT', theme.paddingMedium, 0)
         return INSET + switch.toggle:GetWidth() + theme.paddingMedium + switchLabel:GetStringWidth()
     end
 
@@ -569,22 +569,22 @@ function InstanceMixin:CreatePageHeader(parent, opts)
         halftone:SetVertexColor(theme.textMuted[1], theme.textMuted[2], theme.textMuted[3], theme.halftoneAlpha)
 
         local actionWidth, actionHeight = LayoutActions()
-        pixel.SetPixelSize(actionRow, actionWidth, max(actionHeight, 1))
+        actionRow:NCSetSize(actionWidth, max(actionHeight, 1))
         actionRow:ClearAllPoints()
-        pixel.SetPixelPoint(actionRow, 'TOPLEFT', panel, 'TOPLEFT', INSET, -TOP)
+        actionRow:NCSetPoint('TOPLEFT', panel, 'TOPLEFT', INSET, -TOP)
 
         local titleTop = TOP + (actionHeight > 0 and actionHeight + ACTION_GAP or 0)
         title:ClearAllPoints()
-        pixel.SetPixelPoint(title, 'TOPLEFT', panel, 'TOPLEFT', INSET, -titleTop)
+        title:NCSetPoint('TOPLEFT', panel, 'TOPLEFT', INSET, -titleTop)
         -- the hairlines sit on whole pixels so the slash between them steps evenly
         local titleBottom = pixel.ToPixelGrid(titleTop + title:GetStringHeight() + UNDER_GAP) -- where the underline runs
         local rowTop = titleBottom + LINE_GAP
         local trackBottom = pixel.ToPixelGrid(rowTop + TAB_HEIGHT)
 
         local rowWidth = LayoutTabs()
-        pixel.SetPixelWidth(row, rowWidth)
+        row:NCSetWidth(rowWidth)
         row:ClearAllPoints()
-        pixel.SetPixelPoint(row, 'BOTTOMRIGHT', panel, 'TOPRIGHT', -INSET, -trackBottom)
+        row:NCSetPoint('BOTTOMRIGHT', panel, 'TOPRIGHT', -INSET, -trackBottom)
 
         -- the slash clears whichever is longer, the title or the switch's label
         local labelRight = LayoutSwitch(rowTop)
@@ -596,11 +596,11 @@ function InstanceMixin:CreatePageHeader(parent, opts)
         track:SetColorTexture(c[1], c[2], c[3], 1)
         dive:SetColorTexture(c[1], c[2], c[3], 1)
         underline:ClearAllPoints()
-        pixel.SetPixelPoint(underline, 'BOTTOMLEFT', panel, 'TOPLEFT', INSET, -titleBottom)
-        pixel.SetPixelPoint(underline, 'BOTTOMRIGHT', panel, 'TOPLEFT', top, -titleBottom)
+        underline:NCSetPoint('BOTTOMLEFT', panel, 'TOPLEFT', INSET, -titleBottom)
+        underline:NCSetPoint('BOTTOMRIGHT', panel, 'TOPLEFT', top, -titleBottom)
         track:ClearAllPoints()
-        pixel.SetPixelPoint(track, 'BOTTOMLEFT', panel, 'TOPLEFT', bottom, -trackBottom)
-        pixel.SetPixelPoint(track, 'BOTTOMRIGHT', panel, 'TOPRIGHT', -INSET, -trackBottom)
+        track:NCSetPoint('BOTTOMLEFT', panel, 'TOPLEFT', bottom, -trackBottom)
+        track:NCSetPoint('BOTTOMRIGHT', panel, 'TOPRIGHT', -INSET, -trackBottom)
         -- exactly one physical pixel through the hairlines' centres, so the corners meet without a notch
         local px = pixel.ToPixelGrid(1)
         dive:SetThickness(px)
@@ -609,11 +609,11 @@ function InstanceMixin:CreatePageHeader(parent, opts)
 
         fieldLeft, fieldBottom = top, trackBottom
         halftone:ClearAllPoints()
-        pixel.SetPixelPoint(halftone, 'TOPLEFT', panel, 'TOPLEFT', top, -theme.borderSize)
-        pixel.SetPixelPoint(halftone, 'BOTTOMRIGHT', panel, 'TOPRIGHT', -theme.borderSize, -trackBottom)
+        halftone:NCSetPoint('TOPLEFT', panel, 'TOPLEFT', top, -theme.borderSize)
+        halftone:NCSetPoint('BOTTOMRIGHT', panel, 'TOPRIGHT', -theme.borderSize, -trackBottom)
         cut:ClearAllPoints()
-        pixel.SetPixelPoint(cut, 'TOPLEFT', panel, 'TOPLEFT', top, -titleBottom)
-        pixel.SetPixelPoint(cut, 'BOTTOMRIGHT', panel, 'TOPLEFT', bottom, -trackBottom)
+        cut:NCSetPoint('TOPLEFT', panel, 'TOPLEFT', top, -titleBottom)
+        cut:NCSetPoint('BOTTOMRIGHT', panel, 'TOPLEFT', bottom, -trackBottom)
         LayoutField()
         rulerLeft, rulerTop = bottom, trackBottom
         LayoutRuler()

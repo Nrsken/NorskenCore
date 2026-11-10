@@ -76,9 +76,9 @@ function InstanceMixin:CreateScrollbar(scrollFrame, options)
     local anchorFrame = options.anchorToScrollFrame and scrollFrame or parent
 
     local scrollbar = CreateFrame("Slider", nil, parent, "BackdropTemplate") --[[@as KajiGUIScrollbarMixin]]
-    pixel.SetPixelPoint(scrollbar, "TOPRIGHT", anchorFrame, "TOPRIGHT", -padding.right, -padding.top)
-    pixel.SetPixelPoint(scrollbar, "BOTTOMRIGHT", anchorFrame, "BOTTOMRIGHT", -padding.right, padding.bottom)
-    pixel.SetPixelWidth(scrollbar, width)
+    scrollbar:NCSetPoint("TOPRIGHT", anchorFrame, "TOPRIGHT", -padding.right, -padding.top)
+    scrollbar:NCSetPoint("BOTTOMRIGHT", anchorFrame, "BOTTOMRIGHT", -padding.right, padding.bottom)
+    scrollbar:NCSetWidth(width)
     scrollbar:SetBackdrop(SCROLLBAR_BACKDROP)
     scrollbar:SetOrientation("VERTICAL")
 
@@ -93,8 +93,8 @@ function InstanceMixin:CreateScrollbar(scrollFrame, options)
     scrollbar.thumb = thumb
 
     local thumbBorder = CreateFrame("Frame", nil, scrollbar, "BackdropTemplate")
-    pixel.SetPixelPoint(thumbBorder, "TOPLEFT", thumb, 0, 0)
-    pixel.SetPixelPoint(thumbBorder, "BOTTOMRIGHT", thumb, 0, 0)
+    thumbBorder:NCSetPoint("TOPLEFT", thumb, 0, 0)
+    thumbBorder:NCSetPoint("BOTTOMRIGHT", thumb, 0, 0)
     thumbBorder:SetBackdrop(BORDER_ONLY_BACKDROP)
     scrollbar.thumbBorder = thumbBorder
 

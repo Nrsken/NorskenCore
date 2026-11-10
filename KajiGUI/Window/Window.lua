@@ -64,31 +64,31 @@ local function BuildHeader(window, logoCfg)
     local gui, theme, parent = window.gui, window.gui.theme, window.frame
 
     local header = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    pixel.SetPixelHeight(header, theme.headerHeight)
-    pixel.SetPixelPoint(header, "TOPLEFT", parent, "TOPLEFT", 0, 0)
-    pixel.SetPixelPoint(header, "TOPRIGHT", parent, "TOPRIGHT", 0, 0)
+    header:NCSetHeight(theme.headerHeight)
+    header:NCSetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+    header:NCSetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
     header:SetBackdrop({ bgFile = WHITE })
     Kaji.AddSurfaceTexture(header, gui)
 
     local bottomBorder = header:CreateTexture(nil, "BORDER")
-    pixel.SetPixelHeight(bottomBorder, theme.borderSize)
-    pixel.SetPixelPoint(bottomBorder, "BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
-    pixel.SetPixelPoint(bottomBorder, "BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
+    bottomBorder:NCSetHeight(theme.borderSize)
+    bottomBorder:NCSetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
+    bottomBorder:NCSetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
 
     Kaji.AddTopSheen(header, gui)
 
     local layerTex = {}
     if logoCfg then
         local container = CreateFrame("Frame", nil, header)
-        pixel.SetPixelSize(container, 180, 32)
-        pixel.SetPixelPoint(container, "LEFT", header, "LEFT", theme.paddingLarge, -1)
+        container:NCSetSize(180, 32)
+        container:NCSetPoint("LEFT", header, "LEFT", theme.paddingLarge, -1)
 
         for i, layer in ipairs(logoCfg.layers or {}) do
             local t = container:CreateTexture(nil, "ARTWORK")
-            pixel.SetPixelSize(t, layer.size, layer.size)
-            pixel.SetPixelPoint(t, ParseAnchor(layer.anchor, container, layerTex))
+            t:NCSetSize(layer.size, layer.size)
+            t:NCSetPoint(ParseAnchor(layer.anchor, container, layerTex))
             t:SetTexture(layer.texture)
-            pixel.SetPixelSnap(t)
+            t:NCDisablePixelSnap()
             layerTex[i] = t
             layer._tex = t
             layer._paintGlow = Kaji.AddIconGlow(container, t, layer.size, layer.size, layer.glow, gui)
@@ -96,7 +96,7 @@ local function BuildHeader(window, logoCfg)
 
         if logoCfg.version then
             local v = header:CreateFontString(nil, "OVERLAY")
-            pixel.SetPixelPoint(v, ParseAnchor(logoCfg.versionAnchor, container, layerTex))
+            v:NCSetPoint(ParseAnchor(logoCfg.versionAnchor, container, layerTex))
             v:SetFont("Fonts\\FRIZQT__.TTF", theme.fontSizeSmall or 10, "")
             v:SetText(logoCfg.version)
             v:SetJustifyH("LEFT")
@@ -141,26 +141,26 @@ local function BuildFooter(window)
     local gui, theme, parent = window.gui, window.gui.theme, window.frame
 
     local footer = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    pixel.SetPixelHeight(footer, theme.footerHeight)
-    pixel.SetPixelPoint(footer, "BOTTOMLEFT", parent, "BOTTOMLEFT", 0, 0)
-    pixel.SetPixelPoint(footer, "BOTTOMRIGHT", parent, "BOTTOMRIGHT", 0, 0)
+    footer:NCSetHeight(theme.footerHeight)
+    footer:NCSetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 0, 0)
+    footer:NCSetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", 0, 0)
     footer:SetBackdrop({ bgFile = WHITE })
     Kaji.AddSurfaceTexture(footer, gui)
 
     local topBorder = footer:CreateTexture(nil, "BORDER")
-    pixel.SetPixelHeight(topBorder, theme.borderSize)
-    pixel.SetPixelPoint(topBorder, "TOPLEFT", footer, "TOPLEFT", 0, 0)
-    pixel.SetPixelPoint(topBorder, "TOPRIGHT", footer, "TOPRIGHT", 0, 0)
+    topBorder:NCSetHeight(theme.borderSize)
+    topBorder:NCSetPoint("TOPLEFT", footer, "TOPLEFT", 0, 0)
+    topBorder:NCSetPoint("TOPRIGHT", footer, "TOPRIGHT", 0, 0)
 
     local handle = CreateFrame("Button", nil, footer)
-    pixel.SetPixelSize(handle, 23, 23)
-    pixel.SetPixelPoint(handle, "BOTTOMRIGHT", footer, "BOTTOMRIGHT", -2, 2)
+    handle:NCSetSize(23, 23)
+    handle:NCSetPoint("BOTTOMRIGHT", footer, "BOTTOMRIGHT", -2, 2)
     handle:EnableMouse(true)
 
     local htex = handle:CreateTexture(nil, "OVERLAY")
     htex:SetAllPoints()
     htex:SetTexture(theme.resizeHandleTexture)
-    pixel.SetPixelSnap(htex)
+    htex:NCDisablePixelSnap()
 
     local function HandleColor(hover)
         local c = hover and theme.accent or theme.textSecondary
@@ -217,15 +217,15 @@ function WindowMixin:AddHeaderButton(config)
     local width = config.width or size
 
     local btn = CreateFrame("Button", nil, header)
-    pixel.SetPixelSize(btn, width, config.height or size)
-    pixel.SetPixelPoint(btn, "RIGHT", header, "RIGHT", self._headerCursor, config.yOffset or 0)
+    btn:NCSetSize(width, config.height or size)
+    btn:NCSetPoint("RIGHT", header, "RIGHT", self._headerCursor, config.yOffset or 0)
     self._headerCursor = self._headerCursor - width - theme.paddingSmall
     if config.strata then btn:SetFrameStrata(config.strata) end
 
     local tex = btn:CreateTexture(nil, "ARTWORK")
     tex:SetAllPoints()
     tex:SetTexture(config.icon)
-    pixel.SetPixelSnap(tex)
+    tex:NCDisablePixelSnap()
     if config.rotation then tex:SetRotation(rad(config.rotation)) end
     btn:SetNormalTexture(tex)
     local paintGlow = Kaji.AddIconGlow(btn, tex, width, config.height or size, config.glow, gui, config.rotation and rad(config.rotation))
@@ -279,19 +279,19 @@ function WindowMixin:AddFooterSocial(config)
     local width = config.width or 68
 
     local btn = CreateFrame("Button", nil, footer)
-    pixel.SetPixelSize(btn, width, 21)
-    pixel.SetPixelPoint(btn, "LEFT", footer, "LEFT", self._footerCursor, 0)
+    btn:NCSetSize(width, 21)
+    btn:NCSetPoint("LEFT", footer, "LEFT", self._footerCursor, 0)
     self._footerCursor = self._footerCursor + width + theme.paddingMedium
 
     local tex = btn:CreateTexture(nil, "ARTWORK")
-    pixel.SetPixelSize(tex, 21, 21)
-    pixel.SetPixelPoint(tex, "LEFT", btn, "LEFT", 0, 0)
+    tex:NCSetSize(21, 21)
+    tex:NCSetPoint("LEFT", btn, "LEFT", 0, 0)
     tex:SetTexture(config.icon)
-    pixel.SetPixelSnap(tex)
+    tex:NCDisablePixelSnap()
     local paintGlow = Kaji.AddIconGlow(btn, tex, 21, 21, config.glow, gui)
 
     local label = btn:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(label, "LEFT", tex, "RIGHT", theme.paddingSmall, 1)
+    label:NCSetPoint("LEFT", tex, "RIGHT", theme.paddingSmall, 1)
     gui:ApplyFont(label, "normal")
     label:SetText(config.text or "")
     label:SetShadowColor(0, 0, 0, 0)
@@ -339,8 +339,8 @@ function WindowMixin:SetSidebar(config, opts)
 
     -- Inset the content to the right of the sidebar column.
     self.contentContainer:ClearAllPoints()
-    pixel.SetPixelPoint(self.contentContainer, "TOPLEFT", frame, "TOPLEFT", theme.sidebarWidth, -theme.headerHeight)
-    pixel.SetPixelPoint(self.contentContainer, "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, theme.footerHeight)
+    self.contentContainer:NCSetPoint("TOPLEFT", frame, "TOPLEFT", theme.sidebarWidth, -theme.headerHeight)
+    self.contentContainer:NCSetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, theme.footerHeight)
 
     -- the search tops the sidebar's panel, the list under it; the scrollbar's track runs past it, so it steps aside
     local sidebar, search
@@ -350,8 +350,8 @@ function WindowMixin:SetSidebar(config, opts)
         if not search then return end
 
         search:ClearAllPoints()
-        pixel.SetPixelPoint(search, "TOPLEFT", sidebar.panel, "TOPLEFT", theme.borderSize, -theme.borderSize)
-        pixel.SetPixelPoint(search, "TOPRIGHT", sidebar.panel, "TOPRIGHT", -(shown and theme.scrollbarWidth or theme.borderSize), -theme.borderSize)
+        search:NCSetPoint("TOPLEFT", sidebar.panel, "TOPLEFT", theme.borderSize, -theme.borderSize)
+        search:NCSetPoint("TOPRIGHT", sidebar.panel, "TOPRIGHT", -(shown and theme.scrollbarWidth or theme.borderSize), -theme.borderSize)
     end
 
     sidebar = gui:CreateSidebar(frame, {
@@ -375,9 +375,9 @@ function WindowMixin:SetSidebar(config, opts)
             self:SavePosition()
         end,
     })
-    pixel.SetPixelPoint(sidebar.frame, "TOPLEFT", frame, "TOPLEFT", 0, -theme.headerHeight)
-    pixel.SetPixelPoint(sidebar.frame, "BOTTOMLEFT", frame, "BOTTOMLEFT", 0, theme.footerHeight)
-    pixel.SetPixelWidth(sidebar.frame, theme.sidebarWidth)
+    sidebar.frame:NCSetPoint("TOPLEFT", frame, "TOPLEFT", 0, -theme.headerHeight)
+    sidebar.frame:NCSetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, theme.footerHeight)
+    sidebar.frame:NCSetWidth(theme.sidebarWidth)
     self.sidebar = sidebar
 
     search = gui:CreateSearchBox(sidebar.panel, {
@@ -514,10 +514,10 @@ function WindowMixin:RestorePosition()
     if data.frame then
         local f = data.frame
         self.frame:ClearAllPoints()
-        pixel.SetPixelPoint(self.frame, f.point or "CENTER", UIParent, f.relativePoint or "CENTER", f.xOffset or 0, f.yOffset or 50)
+        self.frame:NCSetPoint(f.point or "CENTER", UIParent, f.relativePoint or "CENTER", f.xOffset or 0, f.yOffset or 50)
         -- Clamped so a size saved under an older/smaller layout can never restore below the current minimum.
         if f.width and f.height then
-            pixel.SetPixelSize(self.frame, max(f.width, self._minW or 0), max(f.height, self._minH or 0))
+            self.frame:NCSetSize(max(f.width, self._minW or 0), max(f.height, self._minH or 0))
         end
     end
     if data.currentPage then self._currentId = data.currentPage end
@@ -533,8 +533,8 @@ end
 ---The frame is not clamped to the screen, so this is the escape hatch for one dragged out of view.
 function WindowMixin:ResetPosition()
     self.frame:ClearAllPoints()
-    pixel.SetPixelPoint(self.frame, "CENTER", UIParent, "CENTER", 0, 50)
-    pixel.SetPixelSize(self.frame, self._defW, self._defH)
+    self.frame:NCSetPoint("CENTER", UIParent, "CENTER", 0, 50)
+    self.frame:NCSetSize(self._defW, self._defH)
     -- The saved position is now the default one, so a later Show has nothing left to restore.
     self._restored = true
     self:SavePosition()
@@ -577,8 +577,8 @@ function InstanceMixin:CreateGUIWindow(opts)
     local minH = (opts.minSize and opts.minSize[2]) or h
 
     local frame = CreateFrame("Frame", opts.name, UIParent, "BackdropTemplate")
-    pixel.SetPixelSize(frame, w, h)
-    pixel.SetPixelPoint(frame, "CENTER", UIParent, "CENTER", 0, 50)
+    frame:NCSetSize(w, h)
+    frame:NCSetPoint("CENTER", UIParent, "CENTER", 0, 50)
     frame:SetFrameStrata("DIALOG")
     frame:SetToplevel(true)
     frame:SetClampedToScreen(false)
@@ -589,7 +589,7 @@ function InstanceMixin:CreateGUIWindow(opts)
     -- Border only: header, sidebar, footer and content each paint their own single fill. A base fill
     -- here would stack under all of them, and translucent theme colours would compound.
     frame:SetBackdrop({ edgeFile = WHITE, edgeSize = theme.borderSize })
-    pixel.SetPixelSnap(frame)
+    frame:NCDisablePixelSnap()
 
     -- Frames don't clip their own regions; the glow's clear centre leaves the translucent window undarkened.
     local shadow = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
@@ -625,8 +625,8 @@ function InstanceMixin:CreateGUIWindow(opts)
 
     -- Content fills the area between header and footer. SetSidebar insets the left edge later.
     local container = CreateFrame("Frame", nil, frame)
-    pixel.SetPixelPoint(container, "TOPLEFT", frame, "TOPLEFT", 0, -theme.headerHeight)
-    pixel.SetPixelPoint(container, "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, theme.footerHeight)
+    container:NCSetPoint("TOPLEFT", frame, "TOPLEFT", 0, -theme.headerHeight)
+    container:NCSetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, theme.footerHeight)
     window.contentContainer = container
     window.content = gui:CreateContentHost(container, {})
 

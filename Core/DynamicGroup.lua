@@ -274,16 +274,16 @@ local function PositionChildren(group)
         local controlPoint = rec.controlPoint
         local pos = positions[rec]
         if pos then
-            controlPoint:NUISetPixelSize(max(rec.width, 1), max(rec.height, 1))
+            controlPoint:NCSetSize(max(rec.width, 1), max(rec.height, 1))
             controlPoint:ClearAllPoints()
-            controlPoint:NUISetPixelPoint(point, group, point, pos[1], pos[2])
+            controlPoint:NCSetPoint(point, group, point, pos[1], pos[2])
             controlPoint:Show()
         else
             controlPoint:Hide()
         end
     end
 
-    group:NUISetPixelSize(max(width, Default(config.MinWidth, 1)), max(height, Default(config.MinHeight, 1)))
+    group:NCSetSize(max(width, Default(config.MinWidth, 1)), max(height, Default(config.MinHeight, 1)))
 end
 
 ---Run a full layout pass and sort active children, compute positions and apply them.
@@ -301,8 +301,8 @@ end
 ---Request a layout pass, either immediately or via the scheduled update if available.
 ---@param group NRSKNUI.DynamicGroup
 local function RequestLayout(group)
-    if group.NUIScheduleUpdate then
-        group:NUIScheduleUpdate()
+    if group.NCScheduleUpdate then
+        group:NCScheduleUpdate()
     else
         RunLayout(group)
     end
@@ -367,7 +367,7 @@ function GroupMixin:AttachChild(child, key, order)
 
     child:SetParent(controlPoint)
     child:ClearAllPoints()
-    child:NUISetPixelPoint('CENTER', controlPoint, 'CENTER')
+    child:NCSetPoint('CENTER', controlPoint, 'CENTER')
 
     tinsert(self._children, rec)
     self._byChild[child] = rec
@@ -654,7 +654,7 @@ function GroupMixin:UpdateGroupPosition(source, grow, extraX, extraY)
     local point = posConfig.SelfPoint or self:GetResolvedAnchor(grow or source.Grow)
 
     self:ClearAllPoints()
-    self:NUISetPixelPoint(point, parent, posConfig.AnchorTo or 'CENTER', (posConfig.XOffset or 0) + (extraX or 0), (posConfig.YOffset or 0) + (extraY or 0))
+    self:NCSetPoint(point, parent, posConfig.AnchorTo or 'CENTER', (posConfig.XOffset or 0) + (extraX or 0), (posConfig.YOffset or 0) + (extraY or 0))
     self:SetFrameStrata(source.Strata or 'MEDIUM')
 end
 
@@ -688,8 +688,8 @@ function Private:CreateDynamicGroup(name, parent, config)
         controlPoint:ClearAllPoints()
     end)
 
-    if group.NUISetScheduledUpdate then
-        group:NUISetScheduledUpdate(function()
+    if group.NCSetScheduledUpdate then
+        group:NCSetScheduledUpdate(function()
             if group._needSort or group._needPosition then
                 RunLayout(group)
             end

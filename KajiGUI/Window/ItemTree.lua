@@ -111,9 +111,9 @@ end
 ---@return KajiGUITreeSmallButton
 local function SmallButton(theme, parent, texture, size)
     local button = CreateFrame('Button', nil, parent) --[[@as KajiGUITreeSmallButton]]
-    button:NUISetPixelSize(size, size)
+    button:NCSetSize(size, size)
     local tex = button:CreateTexture(nil, 'ARTWORK')
-    tex:NUISetPixelSnap()
+    tex:NCDisablePixelSnap()
     tex:SetAllPoints()
     tex:SetTexture(texture)
     button.tex = tex
@@ -149,12 +149,12 @@ local function CreateTree(gui, parent, opts)
     local onSelect = opts.onSelect
 
     local frame = CreateFrame('Frame', nil, parent)
-    frame:NUISetPixelWidth(WIDTH)
+    frame:NCSetWidth(WIDTH)
 
     -- the page list's panel, inset as it is: flush right, where the page's own card inset is the gap
     local panel = CreateFrame('Frame', nil, frame, 'BackdropTemplate')
-    panel:NUISetPixelPoint('TOPLEFT', frame, 'TOPLEFT', pad, -pad)
-    panel:NUISetPixelPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', 0, pad)
+    panel:NCSetPoint('TOPLEFT', frame, 'TOPLEFT', pad, -pad)
+    panel:NCSetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', 0, pad)
     local RestylePanel = Kaji.CreatePanelChrome(panel, gui)
 
     local tree = {
@@ -181,8 +181,8 @@ local function CreateTree(gui, parent, opts)
     ---@param scrollbarShown boolean
     local function AnchorSearch(scrollbarShown)
         searchBox:ClearAllPoints()
-        searchBox:NUISetPixelPoint('TOPLEFT', panel, 'TOPLEFT', theme.borderSize, -theme.borderSize)
-        searchBox:NUISetPixelPoint('TOPRIGHT', panel, 'TOPRIGHT', -(scrollbarShown and theme.scrollbarWidth or theme.borderSize), -theme.borderSize)
+        searchBox:NCSetPoint('TOPLEFT', panel, 'TOPLEFT', theme.borderSize, -theme.borderSize)
+        searchBox:NCSetPoint('TOPRIGHT', panel, 'TOPRIGHT', -(scrollbarShown and theme.scrollbarWidth or theme.borderSize), -theme.borderSize)
     end
     AnchorSearch(false)
 
@@ -192,11 +192,11 @@ local function CreateTree(gui, parent, opts)
     -- a padding under its search, these sections start flush, so the gap is made here
     local scrollFrame = CreateFrame('ScrollFrame', nil, panel)
     scrollFrame:SetClipsChildren(true)
-    scrollFrame:NUISetPixelPoint('TOPLEFT', searchBox, 'BOTTOMLEFT', 0, -pad)
-    scrollFrame:NUISetPixelPoint('BOTTOMRIGHT', panel, 'BOTTOMRIGHT', -theme.borderSize, theme.borderSize)
+    scrollFrame:NCSetPoint('TOPLEFT', searchBox, 'BOTTOMLEFT', 0, -pad)
+    scrollFrame:NCSetPoint('BOTTOMRIGHT', panel, 'BOTTOMRIGHT', -theme.borderSize, theme.borderSize)
 
     local scrollChild = CreateFrame('Frame', nil, scrollFrame)
-    scrollChild:NUISetPixelHeight(1)
+    scrollChild:NCSetHeight(1)
     scrollFrame:SetScrollChild(scrollChild)
 
     local scrollbar = gui:CreateScrollbar(scrollFrame, {
@@ -215,7 +215,7 @@ local function CreateTree(gui, parent, opts)
         end
         local w = scrollFrame:GetWidth()
         if w and w > 0 then
-            scrollChild:NUISetPixelWidth(w - (scrollbarVisible and theme.scrollbarWidth or 0))
+            scrollChild:NCSetWidth(w - (scrollbarVisible and theme.scrollbarWidth or 0))
         end
         scrollFrame:UpdateScrollChildRect()
     end
@@ -245,7 +245,7 @@ local function CreateTree(gui, parent, opts)
     ---@return KajiGUITreeRow
     local function CreateRow()
         local row = CreateFrame('Button', nil, scrollChild) --[[@as KajiGUITreeRow]]
-        row:NUISetPixelHeight(ROW_HEIGHT)
+        row:NCSetHeight(ROW_HEIGHT)
         row:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
         row:RegisterForDrag('LeftButton')
 
@@ -277,20 +277,20 @@ local function CreateTree(gui, parent, opts)
         row.down:SetScript('OnClick', function() tree.sd.onMoveInGroup(row.data.key, 1) end)
 
         row.iconBorder = row:CreateTexture(nil, 'ARTWORK', nil, -1)
-        row.iconBorder:NUISetPixelSnap()
-        row.iconBorder:NUISetPixelSize(ICON_SIZE, ICON_SIZE)
+        row.iconBorder:NCDisablePixelSnap()
+        row.iconBorder:NCSetSize(ICON_SIZE, ICON_SIZE)
         row.iconBorder:SetColorTexture(0, 0, 0, 1)
 
         row.icon = row:CreateTexture(nil, 'ARTWORK')
-        row.icon:NUISetPixelSnap()
-        row.icon:NUISetPixelSize(ICON_SIZE - 2, ICON_SIZE - 2)
-        row.icon:NUISetPixelPoint('CENTER', row.iconBorder, 'CENTER', 0, 0)
+        row.icon:NCDisablePixelSnap()
+        row.icon:NCSetSize(ICON_SIZE - 2, ICON_SIZE - 2)
+        row.icon:NCSetPoint('CENTER', row.iconBorder, 'CENTER', 0, 0)
         row.icon:SetTexCoord(ICON_CROP, 1 - ICON_CROP, ICON_CROP, 1 - ICON_CROP)
 
         -- A display's WeakAuras-style picture (a mini bar, a group's blocks), drawn over the icon square.
         row.canvas = CreateFrame('Frame', nil, row)
-        row.canvas:NUISetPixelSize(ICON_SIZE - 2, ICON_SIZE - 2)
-        row.canvas:NUISetPixelPoint('CENTER', row.iconBorder, 'CENTER', 0, 0)
+        row.canvas:NCSetSize(ICON_SIZE - 2, ICON_SIZE - 2)
+        row.canvas:NCSetPoint('CENTER', row.iconBorder, 'CENTER', 0, 0)
 
         row.title = row:CreateFontString(nil, 'OVERLAY')
         row.title:SetJustifyH('LEFT')
@@ -370,12 +370,12 @@ local function CreateTree(gui, parent, opts)
         local left = child and data.depth * CHILD_INDENT or 1
 
         row.bg:ClearAllPoints()
-        row.bg:NUISetPixelPoint('TOPLEFT', row, 'TOPLEFT', left, 0)
-        row.bg:NUISetPixelPoint('BOTTOMRIGHT', row, 'BOTTOMRIGHT', 0, 0)
+        row.bg:NCSetPoint('TOPLEFT', row, 'TOPLEFT', left, 0)
+        row.bg:NCSetPoint('BOTTOMRIGHT', row, 'BOTTOMRIGHT', 0, 0)
         local bar = row.selection.bar
         bar:ClearAllPoints()
-        bar:NUISetPixelPoint('TOPLEFT', row.bg, 'TOPLEFT', 0, 0)
-        bar:NUISetPixelPoint('BOTTOMLEFT', row.bg, 'BOTTOMLEFT', 0, 0)
+        bar:NCSetPoint('TOPLEFT', row.bg, 'TOPLEFT', 0, 0)
+        bar:NCSetPoint('BOTTOMLEFT', row.bg, 'BOTTOMLEFT', 0, 0)
 
         local muted = theme.textMuted
         local reorder = child and not data.fixed
@@ -387,18 +387,18 @@ local function CreateTree(gui, parent, opts)
         row.iconBorder:ClearAllPoints()
         if reorder then
             row.up:ClearAllPoints(); row.ungroup:ClearAllPoints(); row.down:ClearAllPoints()
-            row.up:NUISetPixelPoint('TOPLEFT', row.bg, 'TOPLEFT', 0, 0)
-            row.ungroup:NUISetPixelPoint('LEFT', row.bg, 'LEFT', 0, 0)
-            row.down:NUISetPixelPoint('BOTTOMLEFT', row.bg, 'BOTTOMLEFT', 0, 0)
+            row.up:NCSetPoint('TOPLEFT', row.bg, 'TOPLEFT', 0, 0)
+            row.ungroup:NCSetPoint('LEFT', row.bg, 'LEFT', 0, 0)
+            row.down:NCSetPoint('BOTTOMLEFT', row.bg, 'BOTTOMLEFT', 0, 0)
             row.up:SetEnabled(not tree.locked and data.canMoveUp == true)
             row.down:SetEnabled(not tree.locked and data.canMoveDown == true)
             row.ungroup:SetEnabled(not tree.locked)
             if not data.canMoveUp then row.up.tex:SetVertexColor(muted[1], muted[2], muted[3], 0.4) end
             if not data.canMoveDown then row.down.tex:SetVertexColor(muted[1], muted[2], muted[3], 0.4) end
-            row.iconBorder:NUISetPixelPoint('LEFT', row.bg, 'LEFT', ARROW_SIZE + 2, 0)
+            row.iconBorder:NCSetPoint('LEFT', row.bg, 'LEFT', ARROW_SIZE + 2, 0)
         else
             -- a pixel past the selection bar, so the bar and the icon read as one edge
-            row.iconBorder:NUISetPixelPoint('LEFT', row.bg, 'LEFT', ACCENT_BAR_WIDTH + 1, 0)
+            row.iconBorder:NCSetPoint('LEFT', row.bg, 'LEFT', ACCENT_BAR_WIDTH + 1, 0)
         end
 
         row.icon:SetTexture(data.icon or 134400)
@@ -417,9 +417,9 @@ local function CreateTree(gui, parent, opts)
         row.title:SetText(data.text or '')
         row.title:ClearAllPoints()
         if stateLine then
-            row.title:NUISetPixelPoint('TOPLEFT', row.iconBorder, 'TOPRIGHT', 6, -2)
+            row.title:NCSetPoint('TOPLEFT', row.iconBorder, 'TOPRIGHT', 6, -2)
         else
-            row.title:NUISetPixelPoint('LEFT', row.iconBorder, 'RIGHT', 6, 0)
+            row.title:NCSetPoint('LEFT', row.iconBorder, 'RIGHT', 6, 0)
         end
 
         row.expand:ClearAllPoints()
@@ -434,11 +434,11 @@ local function CreateTree(gui, parent, opts)
             row.expand.tipTitle = data.expanded and L['Collapse'] or L['Expand']
             row.expand.tipText = hasChildren and (data.expanded and L["Hide this group's children"] or L["Show this group's children"])
                 or L['Expansion is disabled because this group has no children']
-            row.expand:NUISetPixelPoint('BOTTOMLEFT', row.iconBorder, 'BOTTOMRIGHT', 6, 3)
-            row.state:NUISetPixelPoint('LEFT', row.expand, 'RIGHT', 6, 0)
+            row.expand:NCSetPoint('BOTTOMLEFT', row.iconBorder, 'BOTTOMRIGHT', 6, 3)
+            row.state:NCSetPoint('LEFT', row.expand, 'RIGHT', 6, 0)
         else
             row.expand:Hide()
-            row.state:NUISetPixelPoint('BOTTOMLEFT', row.iconBorder, 'BOTTOMRIGHT', 8, 6)
+            row.state:NCSetPoint('BOTTOMLEFT', row.iconBorder, 'BOTTOMRIGHT', 8, 6)
         end
 
         row.state:SetShown(data.loadState ~= nil)
@@ -452,7 +452,7 @@ local function CreateTree(gui, parent, opts)
         row.eye:ClearAllPoints()
         row.eye:SetShown(data.preview ~= nil)
         row.eye:SetEnabled(not tree.locked)
-        row.eye:NUISetPixelPoint('RIGHT', row, 'RIGHT', -pad, 0)
+        row.eye:NCSetPoint('RIGHT', row, 'RIGHT', -pad, 0)
         if data.preview == 2 then
             row.eye.tex:SetVertexColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
         elseif data.preview == 1 then
@@ -470,9 +470,9 @@ local function CreateTree(gui, parent, opts)
         local marker = row._noticeMarker
         local edge = marker and marker:IsShown() and marker or data.preview ~= nil and row.eye or nil
         if edge then
-            row.title:NUISetPixelPoint('RIGHT', edge, 'LEFT', -4, 0)
+            row.title:NCSetPoint('RIGHT', edge, 'LEFT', -4, 0)
         else
-            row.title:NUISetPixelPoint('RIGHT', row, 'RIGHT', -pad, 0)
+            row.title:NCSetPoint('RIGHT', row, 'RIGHT', -pad, 0)
         end
 
         row.dropFill:Hide()
@@ -485,22 +485,22 @@ local function CreateTree(gui, parent, opts)
     ---@return KajiGUITreeSection
     local function CreateSection()
         local section = CreateFrame('Frame', nil, scrollChild, 'BackdropTemplate') --[[@as KajiGUITreeSection]]
-        section:NUISetPixelHeight(SECTION_HEIGHT)
+        section:NCSetHeight(SECTION_HEIGHT)
         -- the band shares the panel's fill, so it's outlined the way a button is to stand off it
         Kaji.SetBackdrop(section, gui, { bg = 'bgMedium', border = 'widgetBorder', edgeSize = 'borderSize' })
 
         section.label = section:CreateFontString(nil, 'OVERLAY')
         section.label:SetJustifyH('LEFT')
-        section.label:NUISetPixelPoint('LEFT', section, 'LEFT', 6, 0)
+        section.label:NCSetPoint('LEFT', section, 'LEFT', 6, 0)
 
         section.collapse = SmallButton(theme, section, MEDIA .. 'minus-sign.png', SMALL_BUTTON - 2)
-        section.collapse:NUISetPixelPoint('RIGHT', section, 'RIGHT', -pad, 0)
+        section.collapse:NCSetPoint('RIGHT', section, 'RIGHT', -pad, 0)
         section.collapse:SetScript('OnClick', function()
             tree:ToggleExpanded(section.data.key, section.data.collapsed == true)
         end)
 
         section.eye = SmallButton(theme, section, MEDIA .. 'eye.png', SMALL_BUTTON + 2)
-        section.eye:NUISetPixelPoint('RIGHT', section.collapse, 'LEFT', -6, 0)
+        section.eye:NCSetPoint('RIGHT', section.collapse, 'LEFT', -6, 0)
         section.eye:SetScript('OnClick', function() tree.sd.onSectionPreview(section.data.key) end)
 
         return section
@@ -592,7 +592,7 @@ local function CreateTree(gui, parent, opts)
                 y = y + item.height + ROW_GAP
             end
         end
-        scrollChild:NUISetPixelHeight(mmax(y, 1))
+        scrollChild:NCSetHeight(mmax(y, 1))
         UpdateScrollbar()
     end
 
@@ -785,9 +785,9 @@ local function CreateTree(gui, parent, opts)
         renameBox:SetParent(row)
         renameBox:SetFrameLevel(row:GetFrameLevel() + 5)
         renameBox:ClearAllPoints()
-        renameBox:NUISetPixelHeight(18)
-        renameBox:NUISetPixelPoint('TOPLEFT', row.title, 'TOPLEFT', -4, 2)
-        renameBox:NUISetPixelPoint('RIGHT', row, 'RIGHT', -pad, 0)
+        renameBox:NCSetHeight(18)
+        renameBox:NCSetPoint('TOPLEFT', row.title, 'TOPLEFT', -4, 2)
+        renameBox:NCSetPoint('RIGHT', row, 'RIGHT', -pad, 0)
         row.title:Hide()
         renameBox:SetText(row.data.text or '')
         renameBox:Show()
@@ -800,24 +800,24 @@ local function CreateTree(gui, parent, opts)
     local ghost = CreateFrame('Frame', nil, UIParent, 'BackdropTemplate')
     ghost:SetFrameStrata('TOOLTIP')
     ghost:SetBackdrop(BOX_BACKDROP)
-    ghost:NUISetPixelHeight(ROW_HEIGHT)
+    ghost:NCSetHeight(ROW_HEIGHT)
     ghost:Hide()
 
     local ghostIcon = ghost:CreateTexture(nil, 'ARTWORK')
-    ghostIcon:NUISetPixelSnap()
-    ghostIcon:NUISetPixelSize(ICON_SIZE - 4, ICON_SIZE - 4)
-    ghostIcon:NUISetPixelPoint('LEFT', ghost, 'LEFT', 2, 0)
+    ghostIcon:NCDisablePixelSnap()
+    ghostIcon:NCSetSize(ICON_SIZE - 4, ICON_SIZE - 4)
+    ghostIcon:NCSetPoint('LEFT', ghost, 'LEFT', 2, 0)
     ghostIcon:SetTexCoord(ICON_CROP, 1 - ICON_CROP, ICON_CROP, 1 - ICON_CROP)
 
     local ghostLabel = ghost:CreateFontString(nil, 'OVERLAY')
-    ghostLabel:NUISetPixelPoint('LEFT', ghostIcon, 'RIGHT', 6, 0)
+    ghostLabel:NCSetPoint('LEFT', ghostIcon, 'RIGHT', 6, 0)
 
     local dropLayer = CreateFrame('Frame', nil, scrollChild)
     dropLayer:SetAllPoints(scrollChild)
     dropLayer:SetFrameLevel(scrollChild:GetFrameLevel() + 20)
     local dropLine = dropLayer:CreateTexture(nil, 'OVERLAY')
-    dropLine:NUISetPixelSnap()
-    dropLine:NUISetPixelHeight(2)
+    dropLine:NCDisablePixelSnap()
+    dropLine:NCSetHeight(2)
     dropLine:Hide()
 
     local function ClearDropMarks()
@@ -834,8 +834,8 @@ local function CreateTree(gui, parent, opts)
         local accent = theme.accent
         if drag.position == 'into' then
             row.dropFill:ClearAllPoints()
-            row.dropFill:NUISetPixelPoint('TOPLEFT', row.iconBorder, 'TOPRIGHT', 2, 0)
-            row.dropFill:NUISetPixelPoint('BOTTOMRIGHT', row, 'BOTTOMRIGHT', -1, 1)
+            row.dropFill:NCSetPoint('TOPLEFT', row.iconBorder, 'TOPRIGHT', 2, 0)
+            row.dropFill:NCSetPoint('BOTTOMRIGHT', row, 'BOTTOMRIGHT', -1, 1)
             row.dropFill:SetColorTexture(accent[1], accent[2], accent[3], 0.2)
             row.dropFill:Show()
             return
@@ -845,8 +845,8 @@ local function CreateTree(gui, parent, opts)
         local offset = drag.position == 'before' and ROW_GAP / 2 or -ROW_GAP / 2
         dropLine:SetColorTexture(accent[1], accent[2], accent[3], 1)
         dropLine:ClearAllPoints()
-        dropLine:NUISetPixelPoint('LEFT', row.bg, edge .. 'LEFT', 0, offset)
-        dropLine:NUISetPixelPoint('RIGHT', row, edge .. 'RIGHT', 0, offset)
+        dropLine:NCSetPoint('LEFT', row.bg, edge .. 'LEFT', 0, offset)
+        dropLine:NCSetPoint('RIGHT', row, edge .. 'RIGHT', 0, offset)
         dropLine:Show()
     end
 
@@ -928,7 +928,7 @@ local function CreateTree(gui, parent, opts)
 
         ghost:SetBackdropColor(theme.bgMedium[1], theme.bgMedium[2], theme.bgMedium[3], 0.95)
         ghost:SetBackdropBorderColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
-        ghost:NUISetPixelWidth(row:GetWidth())
+        ghost:NCSetWidth(row:GetWidth())
         ghostIcon:SetTexture(row.data.icon or 134400)
         gui:ApplyFont(ghostLabel, 'normal')
         ghostLabel:SetText(#keys > 1 and format(L['%d Displays'], #keys) or row.data.text or '')

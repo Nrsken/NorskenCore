@@ -245,27 +245,27 @@ KajiGUI:RegisterWidgetType(PREVIEW_TYPE, function()
     checker:SetAllPoints()
 
     local holder = CreateFrame('Frame', nil, frame)
-    holder:NUISetPixelHeight(PREVIEW_BAR_HEIGHT)
-    holder:NUISetPixelPoint('LEFT', frame, 'LEFT', PREVIEW_PAD, 0)
-    holder:NUISetPixelPoint('RIGHT', frame, 'RIGHT', -PREVIEW_PAD, 0)
-    holder:NUICreateBackdrop(true)
+    holder:NCSetHeight(PREVIEW_BAR_HEIGHT)
+    holder:NCSetPoint('LEFT', frame, 'LEFT', PREVIEW_PAD, 0)
+    holder:NCSetPoint('RIGHT', frame, 'RIGHT', -PREVIEW_PAD, 0)
+    holder:NCCreateBackdrop(true)
     frame.holder = holder
 
     local bar = CreateFrame('StatusBar', nil, holder)
-    bar:NUISetPixelPoint('TOPLEFT', holder, 'TOPLEFT', 1, -1)
-    bar:NUISetPixelPoint('BOTTOMRIGHT', holder, 'BOTTOMRIGHT', -1, 1)
+    bar:NCSetPoint('TOPLEFT', holder, 'TOPLEFT', 1, -1)
+    bar:NCSetPoint('BOTTOMRIGHT', holder, 'BOTTOMRIGHT', -1, 1)
     bar:SetMinMaxValues(0, 1)
     bar:SetValue(PREVIEW_FILL)
     frame.bar = bar
 
     local spark = bar:CreateTexture(nil, 'OVERLAY')
-    spark:NUISetPixelSnap()
+    spark:NCDisablePixelSnap()
     spark:SetBlendMode('ADD')
     frame.spark = spark
 
     local borders = CreateFrame('Frame', nil, holder)
     borders:SetAllPoints(holder)
-    borders:NUIAddBorders()
+    borders:NCAddBorders()
     frame.borders = borders
 
     return frame

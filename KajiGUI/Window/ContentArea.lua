@@ -98,7 +98,7 @@ local function ClearScrollChild(gui, scrollChild)
     for _, child in ipairs({ scrollChild:GetChildren() }) do
         gui:ReleaseWidget(child)
     end
-    pixel.SetPixelHeight(scrollChild, 1)
+    scrollChild:NCSetHeight(1)
 end
 
 local TAB_HPAD = 14 -- horizontal padding on each side of a tab label
@@ -125,13 +125,13 @@ local function CreateTabStrip(gui, parent, opts)
     local ROW_HEIGHT = theme.barControlHeight
 
     local frame = CreateFrame("Frame", nil, parent)
-    pixel.SetPixelPoint(frame, "TOPLEFT", parent, "TOPLEFT", 0, 0)
-    pixel.SetPixelHeight(frame, MARGIN + EDGE * 2 + ROW_HEIGHT)
+    frame:NCSetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+    frame:NCSetHeight(MARGIN + EDGE * 2 + ROW_HEIGHT)
 
     -- one panel for the whole strip, like the module header's; the tabs are text on it
     local panel = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-    pixel.SetPixelPoint(panel, "TOPLEFT", frame, "TOPLEFT", MARGIN, -MARGIN)
-    pixel.SetPixelPoint(panel, "BOTTOMRIGHT", frame, "BOTTOMRIGHT", -MARGIN - rightReserve, 0)
+    panel:NCSetPoint("TOPLEFT", frame, "TOPLEFT", MARGIN, -MARGIN)
+    panel:NCSetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -MARGIN - rightReserve, 0)
     Kaji.SetBackdrop(panel, gui, { bg = "bgMedium", border = "border", edgeSize = "borderSize" })
     local cornerTicks = Kaji.CreateCornerTicks(panel, panel, theme)
 
@@ -142,7 +142,7 @@ local function CreateTabStrip(gui, parent, opts)
     local leftInset, topInset, stripWidth = 0, 0, 0
     local function ApplyWidth()
         stripWidth = mmax(0, (parent:GetWidth() or 0) - leftInset)
-        pixel.SetPixelWidth(frame, stripWidth)
+        frame:NCSetWidth(stripWidth)
     end
     ApplyWidth()
 
@@ -150,7 +150,7 @@ local function CreateTabStrip(gui, parent, opts)
     local function SetLeftInset(inset)
         leftInset = inset
         frame:ClearAllPoints()
-        pixel.SetPixelPoint(frame, "TOPLEFT", parent, "TOPLEFT", inset, -topInset)
+        frame:NCSetPoint("TOPLEFT", parent, "TOPLEFT", inset, -topInset)
         ApplyWidth()
     end
 
@@ -204,14 +204,14 @@ local function CreateTabStrip(gui, parent, opts)
 
     local function CreateTab()
         local tab = CreateFrame("Button", nil, panel)
-        pixel.SetPixelHeight(tab, ROW_HEIGHT)
+        tab:NCSetHeight(ROW_HEIGHT)
         tab:RegisterForClicks("LeftButtonUp")
         -- the line style, as the header's role tabs, but on a panel of its own so the two rows don't read alike
         Kaji.CreateRowSelection(tab, theme, "bottom", true)
 
         local label = tab:CreateFontString(nil, "OVERLAY")
         gui:ApplyFont(label, "normal")
-        pixel.SetPixelPoint(label, "CENTER", tab, "CENTER", 0, 0)
+        label:NCSetPoint("CENTER", tab, "CENTER", 0, 0)
         label:SetJustifyH("CENTER")
         label:SetWordWrap(false)
         tab.label = label
@@ -336,8 +336,8 @@ local function CreateTabStrip(gui, parent, opts)
                 local tab = active[i]
                 local tabWidth = widths[i] * shrink + extra
                 tab:ClearAllPoints()
-                pixel.SetPixelPoint(tab, "TOPLEFT", panel, "TOPLEFT", x, -y)
-                pixel.SetPixelWidth(tab, tabWidth)
+                tab:NCSetPoint("TOPLEFT", panel, "TOPLEFT", x, -y)
+                tab:NCSetWidth(tabWidth)
                 x = x + tabWidth
             end
             starttab = endtab + 1
@@ -350,7 +350,7 @@ local function CreateTabStrip(gui, parent, opts)
         -- change: resizing the strip every tick reflows the whole page behind it.
         if numrows ~= currentRows then
             currentRows = numrows
-            pixel.SetPixelHeight(frame, MARGIN + EDGE * 2 + numrows * ROW_HEIGHT)
+            frame:NCSetHeight(MARGIN + EDGE * 2 + numrows * ROW_HEIGHT)
         end
     end
 
@@ -454,9 +454,9 @@ function InstanceMixin:CreateContentHost(parent, opts)
         end
         if not header then return end
         header:ClearAllPoints()
-        pixel.SetPixelPoint(header, "TOPLEFT", frame, "TOPLEFT", 0, 0)
-        pixel.SetPixelPoint(header, "TOPRIGHT", frame, "TOPRIGHT", 0, 0)
-        pixel.SetPixelHeight(header, headerHeight)
+        header:NCSetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+        header:NCSetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
+        header:NCSetHeight(headerHeight)
     end
 
     -- Scroll region fills the host (clean mode), starts below the tab strip (tabs mode)
@@ -464,26 +464,26 @@ function InstanceMixin:CreateContentHost(parent, opts)
     local function AnchorScrollTop()
         AnchorHeader()
         scrollFrame:ClearAllPoints()
-        pixel.SetPixelPoint(scrollFrame, "TOPLEFT", frame, "TOPLEFT", 0, -headerHeight)
-        pixel.SetPixelPoint(scrollFrame, "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+        scrollFrame:NCSetPoint("TOPLEFT", frame, "TOPLEFT", 0, -headerHeight)
+        scrollFrame:NCSetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
     end
     local function AnchorScrollBelow(stripFrame)
         AnchorHeader()
         scrollFrame:ClearAllPoints()
-        pixel.SetPixelPoint(scrollFrame, "TOPLEFT", stripFrame, "BOTTOMLEFT", 0, 0)
-        pixel.SetPixelPoint(scrollFrame, "TOPRIGHT", stripFrame, "BOTTOMRIGHT", 0, 0)
-        pixel.SetPixelPoint(scrollFrame, "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+        scrollFrame:NCSetPoint("TOPLEFT", stripFrame, "BOTTOMLEFT", 0, 0)
+        scrollFrame:NCSetPoint("TOPRIGHT", stripFrame, "BOTTOMRIGHT", 0, 0)
+        scrollFrame:NCSetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
     end
     local function AnchorScrollBeside(sidebarFrame)
         AnchorHeader()
         scrollFrame:ClearAllPoints()
-        pixel.SetPixelPoint(scrollFrame, "TOPLEFT", sidebarFrame, "TOPRIGHT", 0, 0)
-        pixel.SetPixelPoint(scrollFrame, "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+        scrollFrame:NCSetPoint("TOPLEFT", sidebarFrame, "TOPRIGHT", 0, 0)
+        scrollFrame:NCSetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
     end
     AnchorScrollTop()
 
     local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-    pixel.SetPixelHeight(scrollChild, 1)
+    scrollChild:NCSetHeight(1)
     scrollFrame:SetScrollChild(scrollChild)
 
     -- Anchored to the scroll region, not the host, so it starts below the tab strip in tabs mode.
@@ -499,7 +499,7 @@ function InstanceMixin:CreateContentHost(parent, opts)
     local scrollbarVisible = false
     local function ApplyScrollChildWidth()
         local w = frame:GetWidth() - sidebarInset
-        pixel.SetPixelWidth(scrollChild, scrollbarVisible and (w - scrollbarWidth) or w)
+        scrollChild:NCSetWidth(scrollbarVisible and (w - scrollbarWidth) or w)
     end
 
     local function UpdateScrollbar()
@@ -587,8 +587,8 @@ function InstanceMixin:CreateContentHost(parent, opts)
     local function AnchorMiniSidebar()
         local msf = miniSidebar.frame
         msf:ClearAllPoints()
-        pixel.SetPixelPoint(msf, "TOPLEFT", frame, "TOPLEFT", 0, -headerHeight)
-        pixel.SetPixelPoint(msf, "BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+        msf:NCSetPoint("TOPLEFT", frame, "TOPLEFT", 0, -headerHeight)
+        msf:NCSetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
     end
 
     local function OnColumnSelect(key, item)

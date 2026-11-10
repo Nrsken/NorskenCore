@@ -135,7 +135,7 @@ function SlimCheckboxMixin:LayoutContent(width)
     local y = floor((self:GetHeight() - size) / 2 / mult) * mult
 
     self.box:ClearAllPoints()
-    pixel.SetPixelPoint(self.box, "TOPLEFT", self, "TOPLEFT", x, -y)
+    self.box:NCSetPoint("TOPLEFT", self, "TOPLEFT", x, -y)
 end
 
 ---@param width number
@@ -176,7 +176,7 @@ end
 function SlimCheckboxMixin:OnAcquire(parent, labelText, config)
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, config.height or BOX_SIZE + 4)
+    self:NCSetHeight(config.height or BOX_SIZE + 4)
     self.explicitHeight = true
 
     -- mixed shows unticked, so a click ticks them all
@@ -240,8 +240,8 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.box = box
 
     local label = row:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(label, "LEFT", box, "RIGHT", LABEL_GAP, 0)
-    pixel.SetPixelPoint(label, "RIGHT", row, "RIGHT", 0, 0)
+    label:NCSetPoint("LEFT", box, "RIGHT", LABEL_GAP, 0)
+    label:NCSetPoint("RIGHT", row, "RIGHT", 0, 0)
     label:SetJustifyH("LEFT")
     label:SetWordWrap(false)
     gui:ApplyFont(label, "normal")

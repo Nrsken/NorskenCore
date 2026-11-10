@@ -22,7 +22,6 @@ local Private = select(2, ...)
 local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local pixel = Private.Pixel
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin
@@ -64,9 +63,9 @@ function SeparatorMixin:OnAcquire(parent, labelText, config)
 
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, height)
-    pixel.SetPixelPoint(self, "TOPLEFT", parent, "TOPLEFT", 0, 0)
-    pixel.SetPixelPoint(self, "TOPRIGHT", parent, "TOPRIGHT", 0, 0)
+    self:NCSetHeight(height)
+    self:NCSetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+    self:NCSetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
 
     self._useLabel = useLabel
     local centered = useLabel and config.centered == true
@@ -74,10 +73,10 @@ function SeparatorMixin:OnAcquire(parent, labelText, config)
     label:ClearAllPoints()
     if centered then
         self.gui:ApplyFont(label, "small")
-        pixel.SetPixelPoint(label, "CENTER", self, "CENTER", 0, 0)
+        label:NCSetPoint("CENTER", self, "CENTER", 0, 0)
     else
         self.gui:ApplyFont(label, "medium")
-        pixel.SetPixelPoint(label, "BOTTOMLEFT", self, "BOTTOMLEFT", 0, LABEL_BOTTOM)
+        label:NCSetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", 0, LABEL_BOTTOM)
     end
     label:SetText(useLabel and (labelText or "") or "")
     label:SetShown(useLabel)
@@ -102,34 +101,34 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     separator.gui = gui
 
     local texture = separator:CreateTexture(nil, "ARTWORK")
-    pixel.SetPixelHeight(texture, gui.theme.borderSize)
+    texture:NCSetHeight(gui.theme.borderSize)
     texture:SetColorTexture(1, 1, 1, 1)
-    pixel.SetPixelSnap(texture)
-    pixel.SetPixelPoint(texture, "LEFT", separator, "LEFT", 0, 0)
-    pixel.SetPixelPoint(texture, "RIGHT", separator, "RIGHT", 0, 0)
+    texture:NCDisablePixelSnap()
+    texture:NCSetPoint("LEFT", separator, "LEFT", 0, 0)
+    texture:NCSetPoint("RIGHT", separator, "RIGHT", 0, 0)
     separator.texture = texture
 
     -- Always created: a recycled separator may later be the labelled variant.
     local label = separator:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(label, "BOTTOMLEFT", separator, "BOTTOMLEFT", 0, LABEL_BOTTOM)
+    label:NCSetPoint("BOTTOMLEFT", separator, "BOTTOMLEFT", 0, LABEL_BOTTOM)
     gui:ApplyFont(label, "medium")
     label:Hide()
     separator.label = label
 
     -- Centred on the label, so the heading reads as one line: "Filters ──────".
     local rule = separator:CreateTexture(nil, "ARTWORK")
-    pixel.SetPixelHeight(rule, gui.theme.borderSize)
-    pixel.SetPixelPoint(rule, "LEFT", label, "RIGHT", RULE_GAP, 0)
-    pixel.SetPixelPoint(rule, "RIGHT", separator, "RIGHT", 0, 0)
-    pixel.SetPixelSnap(rule)
+    rule:NCSetHeight(gui.theme.borderSize)
+    rule:NCSetPoint("LEFT", label, "RIGHT", RULE_GAP, 0)
+    rule:NCSetPoint("RIGHT", separator, "RIGHT", 0, 0)
+    rule:NCDisablePixelSnap()
     rule:Hide()
     separator.rule = rule
 
     local ruleLeft = separator:CreateTexture(nil, "ARTWORK")
-    pixel.SetPixelHeight(ruleLeft, gui.theme.borderSize)
-    pixel.SetPixelPoint(ruleLeft, "LEFT", separator, "LEFT", 0, 0)
-    pixel.SetPixelPoint(ruleLeft, "RIGHT", label, "LEFT", -RULE_GAP, 0)
-    pixel.SetPixelSnap(ruleLeft)
+    ruleLeft:NCSetHeight(gui.theme.borderSize)
+    ruleLeft:NCSetPoint("LEFT", separator, "LEFT", 0, 0)
+    ruleLeft:NCSetPoint("RIGHT", label, "LEFT", -RULE_GAP, 0)
+    ruleLeft:NCDisablePixelSnap()
     ruleLeft:Hide()
     separator.ruleLeft = ruleLeft
 

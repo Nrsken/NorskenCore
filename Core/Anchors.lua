@@ -2,7 +2,6 @@
 local Private = select(2, ...)
 local L = Private.L
 local Animations = Private.Animations
-local pixel = Private.Pixel
 ---@class NRSKNUI.Anchors
 ---@field addon table the addon this handle belongs to, see NewAnchors
 local Anchors = {}
@@ -484,13 +483,13 @@ local function ShowGuides(x, y)
     guideY:SetShown(y ~= nil)
     if x then
         guideX:ClearAllPoints()
-        pixel.SetPixelPoint(guideX, 'TOP', overlayHost, 'TOPLEFT', x, 0)
-        pixel.SetPixelPoint(guideX, 'BOTTOM', overlayHost, 'BOTTOMLEFT', x, 0)
+        guideX:NCSetPoint('TOP', overlayHost, 'TOPLEFT', x, 0)
+        guideX:NCSetPoint('BOTTOM', overlayHost, 'BOTTOMLEFT', x, 0)
     end
     if y then
         guideY:ClearAllPoints()
-        pixel.SetPixelPoint(guideY, 'LEFT', overlayHost, 'BOTTOMLEFT', 0, y)
-        pixel.SetPixelPoint(guideY, 'RIGHT', overlayHost, 'BOTTOMRIGHT', 0, y)
+        guideY:NCSetPoint('LEFT', overlayHost, 'BOTTOMLEFT', 0, y)
+        guideY:NCSetPoint('RIGHT', overlayHost, 'BOTTOMRIGHT', 0, y)
     end
 end
 
@@ -582,9 +581,9 @@ local function OnDragStart(overlay)
 
     if not guideX then
         guideX = decorHost:CreateTexture(nil, 'OVERLAY')
-        pixel.SetPixelWidth(guideX, 1)
+        guideX:NCSetWidth(1)
         guideY = decorHost:CreateTexture(nil, 'OVERLAY')
-        pixel.SetPixelHeight(guideY, 1)
+        guideY:NCSetHeight(1)
         readout = decorHost:CreateFontString(nil, 'OVERLAY')
         readout:SetFont(Private.Media.Fonts.Expressway, 12, 'OUTLINE')
     end
@@ -704,12 +703,12 @@ function Anchors:CreateOverlay(key)
     overlay.edges = {}
     for index, edge in ipairs(EDGES) do
         local texture = overlay:CreateTexture(nil, 'BORDER')
-        pixel.SetPixelPoint(texture, edge[1], overlay, edge[1], 0, 0)
-        pixel.SetPixelPoint(texture, edge[2], overlay, edge[2], 0, 0)
+        texture:NCSetPoint(edge[1], overlay, edge[1], 0, 0)
+        texture:NCSetPoint(edge[2], overlay, edge[2], 0, 0)
         if edge[3] == 'height' then
-            pixel.SetPixelHeight(texture, BORDER_SIZE)
+            texture:NCSetHeight(BORDER_SIZE)
         else
-            pixel.SetPixelWidth(texture, BORDER_SIZE)
+            texture:NCSetWidth(BORDER_SIZE)
         end
         texture:SetColorTexture(Theme.accent[1], Theme.accent[2], Theme.accent[3], 1)
         overlay.edges[index] = texture
@@ -884,9 +883,9 @@ function Anchors:UpdateMarkers()
 
     if not markerOwn then
         markerOwn = decorHost:CreateTexture(nil, 'OVERLAY', nil, 7)
-        pixel.SetPixelSize(markerOwn, MARKER_SIZE, MARKER_SIZE)
+        markerOwn:NCSetSize(MARKER_SIZE, MARKER_SIZE)
         markerTarget = decorHost:CreateTexture(nil, 'OVERLAY', nil, 7)
-        pixel.SetPixelSize(markerTarget, MARKER_SIZE, MARKER_SIZE)
+        markerTarget:NCSetSize(MARKER_SIZE, MARKER_SIZE)
         markerLine = decorHost:CreateLine(nil, 'OVERLAY', nil, 6)
         markerLine:SetThickness(1)
     end
@@ -1369,7 +1368,7 @@ function Anchors:ShowPanel()
         local width = (PANEL_WIDTH - 20 - (#switchable - 1) * gap) / #switchable
         for index, addon in ipairs(switchable) do
             local button = panel.switchButtons[addon]
-            button:NUISetPixelWidth(width)
+            button:NCSetWidth(width)
             button:ClearAllPoints()
             button:SetPoint('TOPLEFT', panel.switcher, 'TOPLEFT', (index - 1) * (width + gap), 0)
         end

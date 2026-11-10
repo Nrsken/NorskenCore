@@ -21,7 +21,6 @@ local Kaji = Private.Kaji
 local InstanceMixin = Kaji.InstanceMixin
 local Animations = Private.Animations
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin
@@ -89,21 +88,21 @@ function EditBoxMixin:OnAcquire(parent, labelText, config)
 
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, inlineLabel and 24 or 34)
+    self:NCSetHeight(inlineLabel and 24 or 34)
 
     -- The label sits left of the box or above it; both layouts re-anchor from scratch so
     -- a recycled widget cannot keep the other one's points.
     self.label:ClearAllPoints()
     self.container:ClearAllPoints()
     if inlineLabel then
-        pixel.SetPixelPoint(self.label, "LEFT", self, "LEFT", 0, 0)
-        pixel.SetPixelWidth(self.label, labelWidth)
-        pixel.SetPixelPoint(self.container, "TOPLEFT", self, "TOPLEFT", labelWidth, 0)
-        pixel.SetPixelPoint(self.container, "TOPRIGHT", self, "TOPRIGHT", 0, 0)
+        self.label:NCSetPoint("LEFT", self, "LEFT", 0, 0)
+        self.label:NCSetWidth(labelWidth)
+        self.container:NCSetPoint("TOPLEFT", self, "TOPLEFT", labelWidth, 0)
+        self.container:NCSetPoint("TOPRIGHT", self, "TOPRIGHT", 0, 0)
     else
-        pixel.SetPixelPoint(self.label, "TOPLEFT", self, "TOPLEFT", 0, 1)
-        pixel.SetPixelPoint(self.container, "TOPLEFT", self, "TOPLEFT", 0, -14)
-        pixel.SetPixelPoint(self.container, "TOPRIGHT", self, "TOPRIGHT", 0, -14)
+        self.label:NCSetPoint("TOPLEFT", self, "TOPLEFT", 0, 1)
+        self.container:NCSetPoint("TOPLEFT", self, "TOPLEFT", 0, -14)
+        self.container:NCSetPoint("TOPRIGHT", self, "TOPRIGHT", 0, -14)
     end
 
     self.label:SetText(labelText or "")
@@ -165,7 +164,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.label = label
 
     local container = CreateFrame("Frame", nil, row, "BackdropTemplate")
-    pixel.SetPixelHeight(container, 24)
+    container:NCSetHeight(24)
     Kaji.SetBackdrop(container, gui, { bg = "bgDark", bgAlpha = 0.9, border = "widgetBorder", borderAlpha = 1 })
     row.container = container
 
@@ -173,8 +172,8 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     -- that off, so a freshly built box would steal the keyboard the moment it is shown.
     local editBox = CreateFrame("EditBox", nil, container)
     editBox:SetAutoFocus(false)
-    pixel.SetPixelPoint(editBox, "TOPLEFT", container, "TOPLEFT", 6, -4)
-    pixel.SetPixelPoint(editBox, "BOTTOMRIGHT", container, "BOTTOMRIGHT", -6, 4)
+    editBox:NCSetPoint("TOPLEFT", container, "TOPLEFT", 6, -4)
+    editBox:NCSetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -6, 4)
     editBox:SetFontObject("GameFontNormal")
     row.editBox = editBox
 

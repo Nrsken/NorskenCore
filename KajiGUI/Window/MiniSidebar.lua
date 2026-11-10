@@ -45,7 +45,6 @@ local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 
 ---@class KajiGUIMiniSidebarRow : Button
 ---@field key any
@@ -120,23 +119,23 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
     local pad = theme.paddingSmall
 
     local frame = CreateFrame('Frame', nil, parent)
-    pixel.SetPixelWidth(frame, DEFAULT_WIDTH)
+    frame:NCSetWidth(DEFAULT_WIDTH)
 
     -- a panel like the module header's, inset as it is; flush right, where the page's own card inset is the gap
     local panel = CreateFrame('Frame', nil, frame, 'BackdropTemplate')
-    pixel.SetPixelPoint(panel, 'TOPLEFT', frame, 'TOPLEFT', pad, -pad)
-    pixel.SetPixelPoint(panel, 'BOTTOMRIGHT', frame, 'BOTTOMRIGHT', 0, pad)
+    panel:NCSetPoint('TOPLEFT', frame, 'TOPLEFT', pad, -pad)
+    panel:NCSetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', 0, pad)
     local RestyleChrome = Kaji.CreatePanelChrome(panel, gui)
 
     local scrollFrame = CreateFrame('ScrollFrame', nil, panel)
     scrollFrame:SetFrameLevel(panel:GetFrameLevel() + 5)
     scrollFrame:SetClipsChildren(true)
     -- inside the panel's border, which the list would otherwise scroll over
-    pixel.SetPixelPoint(scrollFrame, 'TOPLEFT', panel, 'TOPLEFT', theme.borderSize, -theme.borderSize)
-    pixel.SetPixelPoint(scrollFrame, 'BOTTOMRIGHT', panel, 'BOTTOMRIGHT', -theme.borderSize, theme.borderSize)
+    scrollFrame:NCSetPoint('TOPLEFT', panel, 'TOPLEFT', theme.borderSize, -theme.borderSize)
+    scrollFrame:NCSetPoint('BOTTOMRIGHT', panel, 'BOTTOMRIGHT', -theme.borderSize, theme.borderSize)
 
     local scrollChild = CreateFrame('Frame', nil, scrollFrame)
-    pixel.SetPixelHeight(scrollChild, 1)
+    scrollChild:NCSetHeight(1)
     scrollChild:SetFrameLevel(scrollFrame:GetFrameLevel() + 1)
     scrollFrame:SetScrollChild(scrollChild)
 
@@ -152,7 +151,7 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
     local function UpdateScrollChildWidth()
         local w = panel:GetWidth()
         if not w or w <= 0 then return end
-        pixel.SetPixelWidth(scrollChild, scrollbarVisible and (w - theme.scrollbarWidth - theme.borderSize) or (w - theme.borderSize * 2))
+        scrollChild:NCSetWidth(scrollbarVisible and (w - theme.scrollbarWidth - theme.borderSize) or (w - theme.borderSize * 2))
     end
     local function UpdateScrollbar()
         scrollbarVisible = scrollbar:UpdateVisibility(scrollChild:GetHeight(), scrollFrame:GetHeight())
@@ -207,27 +206,27 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
 
     local function CreateItem()
         local item = CreateFrame('Button', nil, scrollChild) --[[@as KajiGUIMiniSidebarRow]]
-        pixel.SetPixelHeight(item, ITEM_HEIGHT)
+        item:NCSetHeight(ITEM_HEIGHT)
         item:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
 
         Kaji.CreateRowSelection(item, theme)
 
         local glyph = item:CreateTexture(nil, 'ARTWORK')
-        pixel.SetPixelSize(glyph, GLYPH_SIZE, GLYPH_SIZE)
-        pixel.SetPixelPoint(glyph, 'LEFT', item, 'LEFT', TEXT_INSET, 0)
-        pixel.SetPixelSnap(glyph)
+        glyph:NCSetSize(GLYPH_SIZE, GLYPH_SIZE)
+        glyph:NCSetPoint('LEFT', item, 'LEFT', TEXT_INSET, 0)
+        glyph:NCDisablePixelSnap()
         glyph:SetTexture(theme.plusTexture)
         glyph:Hide()
         item.glyph = glyph
 
         local iconBorder = item:CreateTexture(nil, 'ARTWORK', nil, -1)
-        pixel.SetPixelSize(iconBorder, ICON_SIZE, ICON_SIZE)
+        iconBorder:NCSetSize(ICON_SIZE, ICON_SIZE)
         iconBorder:Hide()
         item.iconBorder = iconBorder
 
         local icon = item:CreateTexture(nil, 'ARTWORK')
-        pixel.SetPixelSize(icon, ICON_SIZE - 2, ICON_SIZE - 2)
-        pixel.SetPixelPoint(icon, 'CENTER', iconBorder, 'CENTER', 0, 0)
+        icon:NCSetSize(ICON_SIZE - 2, ICON_SIZE - 2)
+        icon:NCSetPoint('CENTER', iconBorder, 'CENTER', 0, 0)
         icon:SetTexCoord(ICON_CROP, 1 - ICON_CROP, ICON_CROP, 1 - ICON_CROP)
         icon:Hide()
         item.icon = icon
@@ -301,7 +300,7 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
 
     local function CreateHeader()
         local header = CreateFrame('Button', nil, scrollChild) --[[@as KajiGUIMiniSidebarRow]]
-        pixel.SetPixelHeight(header, HEAD_HEIGHT)
+        header:NCSetHeight(HEAD_HEIGHT)
         header:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
 
         local dropBg = header:CreateTexture(nil, 'BACKGROUND', nil, 1)
@@ -312,19 +311,19 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
         local label = header:CreateFontString(nil, 'OVERLAY')
         label:SetJustifyH('LEFT')
         label:SetWordWrap(false)
-        pixel.SetPixelPoint(label, 'LEFT', header, 'LEFT', TEXT_INSET, 0)
+        label:NCSetPoint('LEFT', header, 'LEFT', TEXT_INSET, 0)
         header.label = label
 
         -- the section's size reads on after its name
         local count = header:CreateFontString(nil, 'OVERLAY')
-        pixel.SetPixelPoint(count, 'BOTTOMLEFT', label, 'BOTTOMRIGHT', 6, 1)
+        count:NCSetPoint('BOTTOMLEFT', label, 'BOTTOMRIGHT', 6, 1)
         header.count = count
 
         local arrow = header:CreateTexture(nil, 'OVERLAY')
-        pixel.SetPixelSize(arrow, CHEVRON_SIZE, CHEVRON_SIZE)
+        arrow:NCSetSize(CHEVRON_SIZE, CHEVRON_SIZE)
         arrow:SetTexture(theme.stepperTexture)
-        pixel.SetPixelSnap(arrow)
-        pixel.SetPixelPoint(arrow, 'RIGHT', header, 'RIGHT', -TEXT_INSET, 0)
+        arrow:NCDisablePixelSnap()
+        arrow:NCSetPoint('RIGHT', header, 'RIGHT', -TEXT_INSET, 0)
         header.arrow = arrow
         header.lit, header.litTo = 0, 0
 
@@ -343,12 +342,12 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
 
     local function CreateLabel()
         local label = CreateFrame('Frame', nil, scrollChild)
-        pixel.SetPixelHeight(label, HEAD_HEIGHT)
+        label:NCSetHeight(HEAD_HEIGHT)
 
         local text = label:CreateFontString(nil, 'OVERLAY')
         text:SetJustifyH('LEFT')
         text:SetWordWrap(false)
-        pixel.SetPixelPoint(text, 'LEFT', label, 'LEFT', TEXT_INSET, 0)
+        text:NCSetPoint('LEFT', label, 'LEFT', TEXT_INSET, 0)
         label.text = text
 
         return label
@@ -414,8 +413,8 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
         item:SetFrameLevel(host:GetFrameLevel() + 2)
         item:ClearAllPoints()
         if yOffset then
-            pixel.SetPixelPoint(item, 'TOPLEFT', host, 'TOPLEFT', 0, -yOffset)
-            pixel.SetPixelPoint(item, 'TOPRIGHT', host, 'TOPRIGHT', 0, -yOffset)
+            item:NCSetPoint('TOPLEFT', host, 'TOPLEFT', 0, -yOffset)
+            item:NCSetPoint('TOPRIGHT', host, 'TOPRIGHT', 0, -yOffset)
         end
         item.key = data.key
         item.item = data
@@ -429,27 +428,27 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
         if data.action then
             local ac = theme.accent
             item.glyph:ClearAllPoints()
-            pixel.SetPixelPoint(item.glyph, 'LEFT', item, 'LEFT', inset, 0)
+            item.glyph:NCSetPoint('LEFT', item, 'LEFT', inset, 0)
             item.glyph:SetVertexColor(ac[1], ac[2], ac[3], 1)
             item.iconBorder:Hide()
             item.icon:Hide()
-            pixel.SetPixelPoint(item.label, 'LEFT', item.glyph, 'RIGHT', 6, 0)
+            item.label:NCSetPoint('LEFT', item.glyph, 'RIGHT', 6, 0)
         elseif data.icon then
             local border = data.accent or ICON_BORDER
             item.iconBorder:SetColorTexture(border[1], border[2], border[3], 1)
             item.iconBorder:ClearAllPoints()
-            pixel.SetPixelPoint(item.iconBorder, 'LEFT', item, 'LEFT', inset, 0)
+            item.iconBorder:NCSetPoint('LEFT', item, 'LEFT', inset, 0)
             item.iconBorder:Show()
             item.icon:SetTexture(data.icon)
             ApplyIconLook(item.icon, data)
             item.icon:Show()
-            pixel.SetPixelPoint(item.label, 'LEFT', item.iconBorder, 'RIGHT', 6, 0)
+            item.label:NCSetPoint('LEFT', item.iconBorder, 'RIGHT', 6, 0)
         else
             item.iconBorder:Hide()
             item.icon:Hide()
-            pixel.SetPixelPoint(item.label, 'LEFT', item, 'LEFT', inset, 0)
+            item.label:NCSetPoint('LEFT', item, 'LEFT', inset, 0)
         end
-        pixel.SetPixelPoint(item.label, 'RIGHT', item, 'RIGHT', -pad, 0)
+        item.label:NCSetPoint('RIGHT', item, 'RIGHT', -pad, 0)
 
         item.icon:SetDesaturated(data.disabled == true)
         item.icon:SetAlpha(data.disabled and DISABLED_ALPHA or 1)
@@ -482,7 +481,7 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
         local gaps = 6 * 2 + TEXT_INSET -- before the count, before the chevron and the chevron's own inset
         local room = scrollChild:GetWidth() - TEXT_INSET - header.count:GetStringWidth() - CHEVRON_SIZE - gaps
         if room > 0 and header.label:GetStringWidth() > room then
-            pixel.SetPixelWidth(header.label, room)
+            header.label:NCSetWidth(room)
         end
         PaintHeader(header)
         header.dropBg:SetColorTexture(theme.accent[1], theme.accent[2], theme.accent[3], DROP_TINT_ALPHA)
@@ -502,8 +501,8 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
     -- flush with the panel's border, so the selection's bar sits on the panel's edge; a head's rows step in
     local function Place(block, y, x)
         block:ClearAllPoints()
-        pixel.SetPixelPoint(block, 'TOPLEFT', scrollChild, 'TOPLEFT', x or 0, -y)
-        pixel.SetPixelPoint(block, 'TOPRIGHT', scrollChild, 'TOPRIGHT', 0, -y)
+        block:NCSetPoint('TOPLEFT', scrollChild, 'TOPLEFT', x or 0, -y)
+        block:NCSetPoint('TOPRIGHT', scrollChild, 'TOPRIGHT', 0, -y)
     end
 
     local function AcquireGroup()
@@ -521,7 +520,7 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
                 -- a caption's rows never fold, a section's follow its animation
                 local height = mfloor(block.full * (block.section and SectionProgress(block.section) or 1) + 0.5)
                 Place(block.frame, y, ROW_STEP)
-                pixel.SetPixelHeight(block.frame, mmax(height, 1))
+                block.frame:NCSetHeight(mmax(height, 1))
                 block.frame:SetShown(height > 0)
                 y = y + height
             else
@@ -530,7 +529,7 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
                 y = y + block.height
             end
         end
-        pixel.SetPixelHeight(scrollChild, y + pad)
+        scrollChild:NCSetHeight(y + pad)
         UpdateScrollbar()
     end
 
@@ -730,9 +729,9 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
         renameBox:SetParent(row)
         renameBox:SetFrameLevel(row:GetFrameLevel() + 5)
         renameBox:ClearAllPoints()
-        pixel.SetPixelHeight(renameBox, row:GetHeight() - 6)
-        pixel.SetPixelPoint(renameBox, 'LEFT', row.label, 'LEFT', -4, 0)
-        pixel.SetPixelPoint(renameBox, 'RIGHT', row, 'RIGHT', -pad, 0)
+        renameBox:NCSetHeight(row:GetHeight() - 6)
+        renameBox:NCSetPoint('LEFT', row.label, 'LEFT', -4, 0)
+        renameBox:NCSetPoint('RIGHT', row, 'RIGHT', -pad, 0)
         row.label:Hide()
         renameBox:SetText(row.item and row.item.text or '')
         renameBox:Show()
@@ -745,12 +744,12 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
     local ghost = CreateFrame('Frame', nil, UIParent, 'BackdropTemplate')
     ghost:SetFrameStrata('TOOLTIP')
     ghost:SetBackdrop(BOX_BACKDROP)
-    pixel.SetPixelHeight(ghost, ITEM_HEIGHT)
+    ghost:NCSetHeight(ITEM_HEIGHT)
     ghost:Hide()
 
     local ghostIcon = ghost:CreateTexture(nil, 'ARTWORK')
-    pixel.SetPixelSize(ghostIcon, ICON_SIZE - 2, ICON_SIZE - 2)
-    pixel.SetPixelPoint(ghostIcon, 'LEFT', ghost, 'LEFT', 7, 0)
+    ghostIcon:NCSetSize(ICON_SIZE - 2, ICON_SIZE - 2)
+    ghostIcon:NCSetPoint('LEFT', ghost, 'LEFT', 7, 0)
     ghostIcon:SetTexCoord(ICON_CROP, 1 - ICON_CROP, ICON_CROP, 1 - ICON_CROP)
 
     local ghostLabel = ghost:CreateFontString(nil, 'OVERLAY')
@@ -762,8 +761,8 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
     dropLayer:SetAllPoints(scrollChild)
     dropLayer:SetFrameLevel(scrollChild:GetFrameLevel() + 20)
     local dropLine = dropLayer:CreateTexture(nil, 'OVERLAY')
-    pixel.SetPixelHeight(dropLine, DROP_LINE_HEIGHT)
-    pixel.SetPixelSnap(dropLine)
+    dropLine:NCSetHeight(DROP_LINE_HEIGHT)
+    dropLine:NCDisablePixelSnap()
     dropLine:Hide()
 
     local function ShowDropMark(drag, row)
@@ -776,8 +775,8 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
         local y = drag.position == 'before' and (ITEM_SPACING + DROP_LINE_HEIGHT) / 2 or -(ITEM_SPACING + DROP_LINE_HEIGHT) / 2
         dropLine:SetColorTexture(theme.accent[1], theme.accent[2], theme.accent[3], 1)
         dropLine:ClearAllPoints()
-        pixel.SetPixelPoint(dropLine, 'LEFT', row, edge .. 'LEFT', 0, y)
-        pixel.SetPixelPoint(dropLine, 'RIGHT', row, edge .. 'RIGHT', 0, y)
+        dropLine:NCSetPoint('LEFT', row, edge .. 'LEFT', 0, y)
+        dropLine:NCSetPoint('RIGHT', row, edge .. 'RIGHT', 0, y)
         dropLine:Show()
     end
 
@@ -883,7 +882,7 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
 
         ghost:SetBackdropColor(theme.bgMedium[1], theme.bgMedium[2], theme.bgMedium[3], 0.95)
         ghost:SetBackdropBorderColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
-        pixel.SetPixelWidth(ghost, row:GetWidth())
+        ghost:NCSetWidth(row:GetWidth())
         ghostIcon:SetTexture(data.icon)
         ApplyIconLook(ghostIcon, data)
         ghostIcon:SetShown(data.icon ~= nil)
@@ -891,8 +890,8 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
         ghostLabel:SetText(data.text or '')
         ghostLabel:SetTextColor(theme.textPrimary[1], theme.textPrimary[2], theme.textPrimary[3], 1)
         ghostLabel:ClearAllPoints()
-        pixel.SetPixelPoint(ghostLabel, 'LEFT', data.icon and ghostIcon or ghost, data.icon and 'RIGHT' or 'LEFT', 6, 0)
-        pixel.SetPixelPoint(ghostLabel, 'RIGHT', ghost, 'RIGHT', -pad, 0)
+        ghostLabel:NCSetPoint('LEFT', data.icon and ghostIcon or ghost, data.icon and 'RIGHT' or 'LEFT', 6, 0)
+        ghostLabel:NCSetPoint('RIGHT', ghost, 'RIGHT', -pad, 0)
         ghost:Show()
         -- Keyboard capture is protected in combat; Escape simply does not cancel there.
         if not InCombatLockdown() then ghost:EnableKeyboard(true) end
@@ -926,7 +925,7 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
             self.expanded = sd._expanded
             wipe(self.anims)
         end
-        pixel.SetPixelWidth(frame, sd.width or DEFAULT_WIDTH)
+        frame:NCSetWidth(sd.width or DEFAULT_WIDTH)
         self.renderItem = sd.renderItem
         self.onContextMenu = sd.onContextMenu
         self.onToggle = sd.onToggle

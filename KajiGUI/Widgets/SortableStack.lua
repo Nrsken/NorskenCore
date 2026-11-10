@@ -28,7 +28,6 @@ local Private = select(2, ...)
 local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local pixel = Private.Pixel
 local safecall = Kaji.safecall
 local Animations = Private.Animations
 
@@ -207,12 +206,12 @@ function StackMixin:AcquireRow(index)
     local theme = gui.theme
 
     row = CreateFrame("Button", nil, self) --[[@as KajiGUISortableStackRow]]
-    pixel.SetPixelHeight(row, ROW_HEIGHT)
+    row:NCSetHeight(ROW_HEIGHT)
     row.stack = self
 
     local stripe = row:CreateTexture(nil, "BACKGROUND")
-    pixel.SetPixelPoint(stripe, "TOPLEFT", row, "TOPLEFT", -STRIPE_BLEED, 0)
-    pixel.SetPixelPoint(stripe, "BOTTOMRIGHT", row, "BOTTOMRIGHT", STRIPE_BLEED, 0)
+    stripe:NCSetPoint("TOPLEFT", row, "TOPLEFT", -STRIPE_BLEED, 0)
+    stripe:NCSetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", STRIPE_BLEED, 0)
     row.stripe = stripe
 
     -- Hover leaves the background alone, so the zebra never breaks; only a moved row washes, briefly.
@@ -225,8 +224,8 @@ function StackMixin:AcquireRow(index)
     end, FLASH_TIME)
 
     local iconBorder = row:CreateTexture(nil, "ARTWORK", nil, 1)
-    pixel.SetPixelSize(iconBorder, ICON_SIZE, ICON_SIZE)
-    pixel.SetPixelPoint(iconBorder, "LEFT", row, "LEFT", 0, 0)
+    iconBorder:NCSetSize(ICON_SIZE, ICON_SIZE)
+    iconBorder:NCSetPoint("LEFT", row, "LEFT", 0, 0)
     iconBorder:SetColorTexture(0, 0, 0, 1)
     row.iconBorder = iconBorder
 
@@ -251,10 +250,10 @@ function StackMixin:AcquireRow(index)
     row.steps = {}
     for i, dir in ipairs({ 1, -1 }) do
         local step = CreateFrame("Button", nil, row)
-        pixel.SetPixelSize(step, STEP_BUTTON, ROW_HEIGHT)
-        pixel.SetPixelPoint(step, "RIGHT", row, "RIGHT", -(2 - i) * STEP_BUTTON, 0)
+        step:NCSetSize(STEP_BUTTON, ROW_HEIGHT)
+        step:NCSetPoint("RIGHT", row, "RIGHT", -(2 - i) * STEP_BUTTON, 0)
         local stepIcon = step:CreateTexture(nil, "ARTWORK")
-        pixel.SetPixelSize(stepIcon, STEP_SIZE, STEP_SIZE)
+        stepIcon:NCSetSize(STEP_SIZE, STEP_SIZE)
         stepIcon:SetPoint("CENTER")
         stepIcon:SetTexture(theme.stepperTexture)
         stepIcon:SetRotation(dir > 0 and mpi or 0)
@@ -316,8 +315,8 @@ function StackMixin:AcquireRow(index)
         if t >= 1 then
             driver:Hide()
             row:ClearAllPoints()
-            pixel.SetPixelPoint(row, "TOPLEFT", self, "TOPLEFT", driver.toX, -driver.toY)
-            pixel.SetPixelPoint(row, "TOPRIGHT", self, "TOPRIGHT", 0, -driver.toY)
+            row:NCSetPoint("TOPLEFT", self, "TOPLEFT", driver.toX, -driver.toY)
+            row:NCSetPoint("TOPRIGHT", self, "TOPRIGHT", 0, -driver.toY)
         end
     end)
 
@@ -331,18 +330,18 @@ function StackMixin:AcquireCaption(index)
     if caption then return caption end
 
     caption = CreateFrame("Frame", nil, self)
-    pixel.SetPixelHeight(caption, CAPTION_HEIGHT)
+    caption:NCSetHeight(CAPTION_HEIGHT)
     local text = caption:CreateFontString(nil, "OVERLAY")
     text:SetJustifyH("LEFT")
-    pixel.SetPixelPoint(text, "LEFT", caption, "LEFT", CHILD_INDENT, 0)
+    text:NCSetPoint("LEFT", caption, "LEFT", CHILD_INDENT, 0)
     self.gui:ApplyFont(text, "small")
     caption.text = text
 
     local rule = caption:CreateTexture(nil, "ARTWORK")
-    pixel.SetPixelHeight(rule, 1)
-    pixel.SetPixelPoint(rule, "LEFT", text, "RIGHT", TEXT_GAP, 0)
-    pixel.SetPixelPoint(rule, "RIGHT", caption, "RIGHT", 0, 0)
-    pixel.SetPixelSnap(rule)
+    rule:NCSetHeight(1)
+    rule:NCSetPoint("LEFT", text, "RIGHT", TEXT_GAP, 0)
+    rule:NCSetPoint("RIGHT", caption, "RIGHT", 0, 0)
+    rule:NCDisablePixelSnap()
     caption.rule = rule
 
     self.captions[index] = caption
@@ -359,7 +358,7 @@ function StackMixin:AcquireLine(kind, index)
     if tex then return tex end
 
     tex = self:CreateTexture(nil, "ARTWORK")
-    pixel.SetPixelSnap(tex)
+    tex:NCDisablePixelSnap()
     pool[index] = tex
     return tex
 end
@@ -381,8 +380,8 @@ function StackMixin:PlaceRow(row, item, x, y, striped, last)
     if hasIcon then
         local inset = bare and 0 or 1
         row.icon:ClearAllPoints()
-        pixel.SetPixelPoint(row.icon, "TOPLEFT", row.iconBorder, "TOPLEFT", inset, -inset)
-        pixel.SetPixelPoint(row.icon, "BOTTOMRIGHT", row.iconBorder, "BOTTOMRIGHT", -inset, inset)
+        row.icon:NCSetPoint("TOPLEFT", row.iconBorder, "TOPLEFT", inset, -inset)
+        row.icon:NCSetPoint("BOTTOMRIGHT", row.iconBorder, "BOTTOMRIGHT", -inset, inset)
         row.icon:SetTexture(item.icon)
         local coords, tint = item.iconCoords, item.iconColor
         if coords then
@@ -400,13 +399,13 @@ function StackMixin:PlaceRow(row, item, x, y, striped, last)
     row.label:ClearAllPoints()
     row.description:ClearAllPoints()
     if hasDescription then
-        pixel.SetPixelPoint(row.label, "BOTTOMLEFT", row, "LEFT", textX, 1)
-        pixel.SetPixelPoint(row.label, "RIGHT", row, "RIGHT", textRight, 0)
-        pixel.SetPixelPoint(row.description, "TOPLEFT", row, "LEFT", textX, -1)
-        pixel.SetPixelPoint(row.description, "RIGHT", row, "RIGHT", textRight, 0)
+        row.label:NCSetPoint("BOTTOMLEFT", row, "LEFT", textX, 1)
+        row.label:NCSetPoint("RIGHT", row, "RIGHT", textRight, 0)
+        row.description:NCSetPoint("TOPLEFT", row, "LEFT", textX, -1)
+        row.description:NCSetPoint("RIGHT", row, "RIGHT", textRight, 0)
     else
-        pixel.SetPixelPoint(row.label, "LEFT", row, "LEFT", textX, 0)
-        pixel.SetPixelPoint(row.label, "RIGHT", row, "RIGHT", textRight, 0)
+        row.label:NCSetPoint("LEFT", row, "LEFT", textX, 0)
+        row.label:NCSetPoint("RIGHT", row, "RIGHT", textRight, 0)
     end
     row.label:SetText(item.text or "")
     row.description:SetText(hasDescription and item.description or "")
@@ -426,8 +425,8 @@ function StackMixin:PlaceRow(row, item, x, y, striped, last)
     else
         row.glide:Hide()
         row:ClearAllPoints()
-        pixel.SetPixelPoint(row, "TOPLEFT", self, "TOPLEFT", x, -y)
-        pixel.SetPixelPoint(row, "TOPRIGHT", self, "TOPRIGHT", 0, -y)
+        row:NCSetPoint("TOPLEFT", self, "TOPLEFT", x, -y)
+        row:NCSetPoint("TOPRIGHT", self, "TOPRIGHT", 0, -y)
     end
 end
 
@@ -480,8 +479,8 @@ function StackMixin:Render()
             captionCount = captionCount + 1
             local caption = self:AcquireCaption(captionCount)
             caption:ClearAllPoints()
-            pixel.SetPixelPoint(caption, "TOPLEFT", self, "TOPLEFT", 0, -y)
-            pixel.SetPixelPoint(caption, "TOPRIGHT", self, "TOPRIGHT", 0, -y)
+            caption:NCSetPoint("TOPLEFT", self, "TOPLEFT", 0, -y)
+            caption:NCSetPoint("TOPRIGHT", self, "TOPRIGHT", 0, -y)
             local text = config.sharedCaption and format(config.sharedCaption, group.label or "") or (group.label or "")
             caption.text:SetText(strupper(text))
             caption.text:SetTextColor(theme.textMuted[1], theme.textMuted[2], theme.textMuted[3], 1)
@@ -493,9 +492,9 @@ function StackMixin:Render()
                 Place(item, CHILD_INDENT, y)
                 local middle = y + ROW_HEIGHT / 2
                 local elbow = Line("elbow")
-                pixel.SetPixelHeight(elbow, 1)
-                pixel.SetPixelPoint(elbow, "LEFT", self, "TOPLEFT", SPINE_X, -middle)
-                pixel.SetPixelPoint(elbow, "RIGHT", self, "TOPLEFT", CHILD_INDENT - 3, -middle)
+                elbow:NCSetHeight(1)
+                elbow:NCSetPoint("LEFT", self, "TOPLEFT", SPINE_X, -middle)
+                elbow:NCSetPoint("RIGHT", self, "TOPLEFT", CHILD_INDENT - 3, -middle)
                 stops[#stops + 1] = { y = middle, half = 0, spine = true }
                 y = y + ROW_HEIGHT
             end
@@ -510,9 +509,9 @@ function StackMixin:Render()
                 local top, bottom = a.y + a.half, b.y - b.half
                 if bottom > top then
                     local seg = Line("spine")
-                    pixel.SetPixelWidth(seg, 1)
-                    pixel.SetPixelPoint(seg, "TOP", self, "TOPLEFT", SPINE_X, -top)
-                    pixel.SetPixelHeight(seg, bottom - top)
+                    seg:NCSetWidth(1)
+                    seg:NCSetPoint("TOP", self, "TOPLEFT", SPINE_X, -top)
+                    seg:NCSetHeight(bottom - top)
                 end
             end
         end
@@ -559,7 +558,7 @@ function StackMixin:Render()
     end
 
     local height = y > 0 and y or ROW_HEIGHT
-    pixel.SetPixelHeight(self, height)
+    self:NCSetHeight(height)
     local owner = self:GetParent()
     if owner and owner.SetWidgetHeight then owner:SetWidgetHeight(self, height) end
 end
@@ -616,8 +615,8 @@ function StackMixin:ShowDropMark(row)
         self.dropLine:Hide()
         self._lineY = nil
         self.intoMark:ClearAllPoints()
-        pixel.SetPixelPoint(self.intoMark, "TOPLEFT", row, "TOPLEFT", -STRIPE_BLEED, 0)
-        pixel.SetPixelPoint(self.intoMark, "BOTTOMRIGHT", row, "BOTTOMRIGHT", STRIPE_BLEED, 0)
+        self.intoMark:NCSetPoint("TOPLEFT", row, "TOPLEFT", -STRIPE_BLEED, 0)
+        self.intoMark:NCSetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", STRIPE_BLEED, 0)
         self.intoFade(INTO_ALPHA, 0)
         return
     end
@@ -696,7 +695,7 @@ function StackMixin:BeginDrag(row)
     self.drag = { key = row.key }
     self.ghost:SetBackdropColor(theme.bgMedium[1], theme.bgMedium[2], theme.bgMedium[3], 0.95)
     self.ghost:SetBackdropBorderColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
-    pixel.SetPixelWidth(self.ghost, row:GetWidth())
+    self.ghost:NCSetWidth(row:GetWidth())
     self.gui:ApplyFont(self.ghostLabel, "normal")
     self.ghostLabel:SetText(row.item.text or "")
     self.ghostLabel:SetTextColor(theme.textPrimary[1], theme.textPrimary[2], theme.textPrimary[3], 1)
@@ -802,7 +801,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     stack.overlay = overlay
 
     local dropLine = overlay:CreateTexture(nil, "OVERLAY")
-    pixel.SetPixelHeight(dropLine, DROP_LINE)
+    dropLine:NCSetHeight(DROP_LINE)
     dropLine:Hide()
     stack.dropLine = dropLine
 
@@ -818,7 +817,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local ghost = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
     ghost:SetFrameStrata("TOOLTIP")
     ghost:SetBackdrop(GHOST_BACKDROP)
-    pixel.SetPixelHeight(ghost, ROW_HEIGHT)
+    ghost:NCSetHeight(ROW_HEIGHT)
     ghost:Hide()
     stack.ghost = ghost
     stack.ghostFade = Tween(ghost, function(a) ghost:SetAlpha(a) end, 0.12)
@@ -826,8 +825,8 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local ghostLabel = ghost:CreateFontString(nil, "OVERLAY")
     ghostLabel:SetJustifyH("LEFT")
     ghostLabel:SetWordWrap(false)
-    pixel.SetPixelPoint(ghostLabel, "LEFT", ghost, "LEFT", 10, 0)
-    pixel.SetPixelPoint(ghostLabel, "RIGHT", ghost, "RIGHT", -6, 0)
+    ghostLabel:NCSetPoint("LEFT", ghost, "LEFT", 10, 0)
+    ghostLabel:NCSetPoint("RIGHT", ghost, "RIGHT", -6, 0)
     stack.ghostLabel = ghostLabel
 
     local dragFrame = CreateFrame("Frame", nil, stack)

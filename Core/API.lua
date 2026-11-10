@@ -95,7 +95,7 @@ API.DecodeTable = Private.DecodeTable
 
 -- Pixel --
 
--- frames get the same functions as methods, see InjectAPI.lua
+-- the values and whole-frame helpers; placing a region is the injected NC methods
 API.Pixel = Private.Pixel
 
 -- KajiGUI --

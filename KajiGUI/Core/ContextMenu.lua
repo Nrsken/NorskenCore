@@ -39,7 +39,6 @@ local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 
 local RunNextFrame = RunNextFrame
 local CreateFrame = CreateFrame
@@ -122,11 +121,11 @@ local function NewPanel(gui, parent)
             item = {}
 
             item.tex = frame:CreateTexture(nil, 'ARTWORK')
-            pixel.SetPixelHeight(item.tex, theme.borderSize)
+            item.tex:NCSetHeight(theme.borderSize)
 
             item.button = CreateFrame('Button', nil, frame, 'BackdropTemplate')
             item.button:SetBackdrop(BACKDROP)
-            pixel.SetPixelHeight(item.button, ITEM_HEIGHT)
+            item.button:NCSetHeight(ITEM_HEIGHT)
             item.button:SetFrameLevel(frame:GetFrameLevel() + 1)
 
             item.hover = item.button:CreateTexture(nil, 'BACKGROUND', nil, 1)
@@ -134,22 +133,22 @@ local function NewPanel(gui, parent)
             item.hover:SetTexture('Interface\\Buttons\\WHITE8X8')
             item.hover:Hide()
             item.bar = item.button:CreateTexture(nil, 'ARTWORK')
-            pixel.SetPixelWidth(item.bar, HOVER_BAR_WIDTH)
-            pixel.SetPixelPoint(item.bar, 'TOPLEFT', item.button, 'TOPLEFT', 0, 0)
-            pixel.SetPixelPoint(item.bar, 'BOTTOMLEFT', item.button, 'BOTTOMLEFT', 0, 0)
+            item.bar:NCSetWidth(HOVER_BAR_WIDTH)
+            item.bar:NCSetPoint('TOPLEFT', item.button, 'TOPLEFT', 0, 0)
+            item.bar:NCSetPoint('BOTTOMLEFT', item.button, 'BOTTOMLEFT', 0, 0)
             item.bar:Hide()
 
             item.arrow = item.button:CreateTexture(nil, 'ARTWORK')
-            pixel.SetPixelSize(item.arrow, ARROW_SIZE, ARROW_SIZE)
-            pixel.SetPixelPoint(item.arrow, 'RIGHT', item.button, 'RIGHT', -TEXT_INSET, 0)
+            item.arrow:NCSetSize(ARROW_SIZE, ARROW_SIZE)
+            item.arrow:NCSetPoint('RIGHT', item.button, 'RIGHT', -TEXT_INSET, 0)
             item.arrow:SetTexture(theme.stepperTexture)
             item.arrow:SetRotation(pi / 2) -- the texture points down at rotation 0
-            pixel.SetPixelSnap(item.arrow)
+            item.arrow:NCDisablePixelSnap()
 
             item.text = item.button:CreateFontString(nil, 'OVERLAY')
             item.text:SetJustifyH('LEFT')
             item.text:SetWordWrap(false)
-            pixel.SetPixelPoint(item.text, 'LEFT', item.button, 'LEFT', TEXT_INSET, 0)
+            item.text:NCSetPoint('LEFT', item.button, 'LEFT', TEXT_INSET, 0)
 
             item.button:SetScript('OnEnter', function(self)
                 if item.submenu and self:IsEnabled() then
@@ -187,8 +186,8 @@ local function NewPanel(gui, parent)
 
             if entry.divider then
                 item.tex:ClearAllPoints()
-                pixel.SetPixelPoint(item.tex, 'TOPLEFT', frame, 'TOPLEFT', pad, -(y + (DIVIDER_HEIGHT - theme.borderSize) / 2))
-                pixel.SetPixelPoint(item.tex, 'TOPRIGHT', frame, 'TOPRIGHT', -pad, -(y + (DIVIDER_HEIGHT - theme.borderSize) / 2))
+                item.tex:NCSetPoint('TOPLEFT', frame, 'TOPLEFT', pad, -(y + (DIVIDER_HEIGHT - theme.borderSize) / 2))
+                item.tex:NCSetPoint('TOPRIGHT', frame, 'TOPRIGHT', -pad, -(y + (DIVIDER_HEIGHT - theme.borderSize) / 2))
                 y = y + DIVIDER_HEIGHT
             else
                 gui:ApplyFont(item.text, 'normal')
@@ -201,7 +200,7 @@ local function NewPanel(gui, parent)
                 item.submenu = entry.submenu
                 item.arrow:SetShown(entry.submenu ~= nil)
                 local rightInset = TEXT_INSET + (entry.submenu and ARROW_SIZE + TEXT_INSET or 0)
-                pixel.SetPixelPoint(item.text, 'RIGHT', item.button, 'RIGHT', -rightInset, 0)
+                item.text:NCSetPoint('RIGHT', item.button, 'RIGHT', -rightInset, 0)
 
                 local onClick = entry.onClick
                 item.button:SetScript('OnClick', function()
@@ -214,8 +213,8 @@ local function NewPanel(gui, parent)
                 end)
 
                 item.button:ClearAllPoints()
-                pixel.SetPixelPoint(item.button, 'TOPLEFT', frame, 'TOPLEFT', 1, -y)
-                pixel.SetPixelPoint(item.button, 'TOPRIGHT', frame, 'TOPRIGHT', -1, -y)
+                item.button:NCSetPoint('TOPLEFT', frame, 'TOPLEFT', 1, -y)
+                item.button:NCSetPoint('TOPRIGHT', frame, 'TOPRIGHT', -1, -y)
 
                 width = max(width, item.text:GetStringWidth() + TEXT_INSET + rightInset)
                 y = y + ITEM_HEIGHT
@@ -229,7 +228,7 @@ local function NewPanel(gui, parent)
         end
 
         self:Restyle()
-        pixel.SetPixelSize(frame, min(width, MAX_WIDTH), y + pad)
+        frame:NCSetSize(min(width, MAX_WIDTH), y + pad)
     end
 
     ---Opens a row's submenu beside it, on the left when the right side has no room.
@@ -248,9 +247,9 @@ local function NewPanel(gui, parent)
         childFrame:ClearAllPoints()
         local right = item.button:GetRight()
         if right and right + childFrame:GetWidth() > UIParent:GetRight() then
-            pixel.SetPixelPoint(childFrame, 'TOPRIGHT', item.button, 'TOPLEFT', -1, 1)
+            childFrame:NCSetPoint('TOPRIGHT', item.button, 'TOPLEFT', -1, 1)
         else
-            pixel.SetPixelPoint(childFrame, 'TOPLEFT', item.button, 'TOPRIGHT', 1, 1)
+            childFrame:NCSetPoint('TOPLEFT', item.button, 'TOPRIGHT', 1, 1)
         end
         childFrame:Show()
     end

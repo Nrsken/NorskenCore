@@ -37,7 +37,6 @@ local Kaji = Private.Kaji
 local InstanceMixin = Kaji.InstanceMixin
 local Animations = Private.Animations
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 local L = Private.L
 
 local CreateFrame = CreateFrame
@@ -231,7 +230,7 @@ function ButtonMixin:LayoutContent()
 
     if not self._hasIcon then
         self.text:ClearAllPoints()
-        pixel.SetPixelPoint(self.text, "CENTER")
+        self.text:NCSetPoint("CENTER")
         return
     end
 
@@ -243,11 +242,11 @@ function ButtonMixin:LayoutContent()
     if not width or width <= 0 then return end
 
     self.icon:ClearAllPoints()
-    pixel.SetPixelPoint(self.icon, "LEFT", self, "LEFT", (width - self._iconSpan) / 2, self._iconYOffset)
+    self.icon:NCSetPoint("LEFT", self, "LEFT", (width - self._iconSpan) / 2, self._iconYOffset)
 
     self.text:ClearAllPoints()
     if hasText then
-        pixel.SetPixelPoint(self.text, "LEFT", self.icon, "RIGHT", ICON_TEXT_GAP, 0)
+        self.text:NCSetPoint("LEFT", self.icon, "RIGHT", ICON_TEXT_GAP, 0)
     end
 end
 
@@ -294,8 +293,8 @@ function ButtonMixin:OnAcquire(parent, buttonText, config)
     self:ClearAllPoints()
     -- Reparenting resets the button's level; keep the glow host one under it.
     self._glowHost:SetFrameLevel(math.max(self:GetFrameLevel() - 1, 0))
-    pixel.SetPixelHeight(self, config.height or 24)
-    pixel.SetPixelWidth(self, config.width or 120)
+    self:NCSetHeight(config.height or 24)
+    self:NCSetWidth(config.width or 120)
     self.explicitHeight = config.height and true or nil
 
     self._bgColor = config.bgColor or theme.bgMedium
@@ -334,7 +333,7 @@ function ButtonMixin:OnAcquire(parent, buttonText, config)
     -- The icon always exists; only its content and visibility change between uses.
     self.icon:SetShown(self._hasIcon)
     if self._hasIcon then
-        pixel.SetPixelSize(self.icon, imageSize, imageSize)
+        self.icon:NCSetSize(imageSize, imageSize)
         if atlas then
             self.icon:SetAtlas(atlas, false)
         else

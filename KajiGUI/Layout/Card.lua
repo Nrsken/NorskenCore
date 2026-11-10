@@ -98,8 +98,8 @@ local function PlaceRow(row, host, left, top, right)
         left, top, right = left - BODY_BLEED, top - BODY_BLEED, right + BODY_BLEED
     end
     row:ClearAllPoints()
-    pixel.SetPixelPoint(row, "TOPLEFT", host, "TOPLEFT", left, -top)
-    pixel.SetPixelPoint(row, "TOPRIGHT", host, "TOPRIGHT", right, -top)
+    row:NCSetPoint("TOPLEFT", host, "TOPLEFT", left, -top)
+    row:NCSetPoint("TOPRIGHT", host, "TOPRIGHT", right, -top)
 end
 
 ---Lays a body's rows out and sizes the body to the open part of them, then reflows the card.
@@ -119,7 +119,7 @@ local function RelayoutBody(body)
     local progress = card:GetSectionProgress(body._key)
     local height = floor(y * progress + 0.5)
     body._layoutHeight = height
-    pixel.SetPixelHeight(body, max(height + BODY_BLEED, 1))
+    body:NCSetHeight(max(height + BODY_BLEED, 1))
     body:SetClipsChildren(progress < 1)
     body:SetShown(height > 0)
     if body._parentBody then
@@ -255,7 +255,7 @@ function CardMixin:Relayout()
     end
 
     self.currentY = y
-    pixel.SetPixelHeight(self.content, y > 0 and y or 1)
+    self.content:NCSetHeight(y > 0 and y or 1)
     self:UpdateHeight()
 end
 
@@ -280,7 +280,7 @@ end
 
 function CardMixin:UpdateHeight()
     local totalHeight = self.headerHeight + self.currentY + self.gui.theme.paddingSmall * 2
-    pixel.SetPixelHeight(self, totalHeight)
+    self:NCSetHeight(totalHeight)
     self.contentHeight = totalHeight
 end
 
@@ -312,8 +312,8 @@ function CardMixin:Reset()
     self.currentY = 0
     self.contentHeight = 0
     self._leadPad = nil
-    pixel.SetPixelHeight(self.content, 1)
-    pixel.SetPixelHeight(self, self.headerHeight + self.gui.theme.paddingMedium * 2)
+    self.content:NCSetHeight(1)
+    self:NCSetHeight(self.headerHeight + self.gui.theme.paddingMedium * 2)
 end
 
 ---Dims the card when disabled by the state manager. A card whose inner controls gate
@@ -384,8 +384,8 @@ function CardMixin:SetHeaderButton(config)
     if not button then
         button = CreateFrame("Button", nil, self.header)
         local icon = button:CreateTexture(nil, "ARTWORK")
-        pixel.SetPixelInside(icon, button, 0, 0)
-        pixel.SetPixelSnap(icon)
+        icon:NCSetInside(button, 0, 0)
+        icon:NCDisablePixelSnap()
         button.icon = icon
         button:SetScript("OnEnter", function(b)
             local text = self.gui.theme.textPrimary
@@ -403,8 +403,8 @@ function CardMixin:SetHeaderButton(config)
 
     local size = config.size or 16
     button:ClearAllPoints()
-    pixel.SetPixelSize(button, size, size)
-    pixel.SetPixelPoint(button, "RIGHT", self.header, "RIGHT", -self.gui.theme.paddingMedium, 0)
+    button:NCSetSize(size, size)
+    button:NCSetPoint("RIGHT", self.header, "RIGHT", -self.gui.theme.paddingMedium, 0)
     if config.atlas then
         button.icon:SetAtlas(config.atlas, false)
     else
@@ -444,11 +444,11 @@ function CardMixin:OnAcquire(parent, title, config)
     self:SetParent(parent)
     self:ClearAllPoints()
     if config.width then
-        pixel.SetPixelWidth(self, config.width)
-        pixel.SetPixelPoint(self, "TOPLEFT", parent, "TOPLEFT", theme.paddingSmall, -yOffset)
+        self:NCSetWidth(config.width)
+        self:NCSetPoint("TOPLEFT", parent, "TOPLEFT", theme.paddingSmall, -yOffset)
     else
-        pixel.SetPixelPoint(self, "TOPLEFT", parent, "TOPLEFT", theme.paddingSmall, -yOffset)
-        pixel.SetPixelPoint(self, "RIGHT", parent, "RIGHT", -theme.paddingSmall, 0)
+        self:NCSetPoint("TOPLEFT", parent, "TOPLEFT", theme.paddingSmall, -yOffset)
+        self:NCSetPoint("RIGHT", parent, "RIGHT", -theme.paddingSmall, 0)
     end
 
     self._yOffset = yOffset
@@ -468,11 +468,11 @@ function CardMixin:OnAcquire(parent, title, config)
     self:LayoutHeaderCut()
 
     self.content:ClearAllPoints()
-    pixel.SetPixelPoint(self.content, "TOPLEFT", self, "TOPLEFT",
+    self.content:NCSetPoint("TOPLEFT", self, "TOPLEFT",
         theme.paddingMedium, -self.headerHeight - theme.paddingSmall)
-    pixel.SetPixelPoint(self.content, "TOPRIGHT", self, "TOPRIGHT",
+    self.content:NCSetPoint("TOPRIGHT", self, "TOPRIGHT",
         -theme.paddingMedium, -self.headerHeight - theme.paddingSmall)
-    pixel.SetPixelHeight(self.content, 1)
+    self.content:NCSetHeight(1)
 
     self:SetAlpha(1)
     self.header:SetAlpha(1)
@@ -515,13 +515,13 @@ Kaji:RegisterWidgetType(CARD_TYPE, function(gui)
     card._yOffset = 0
 
     local header = CreateFrame("Frame", nil, card)
-    pixel.SetPixelHeight(header, HEADER_HEIGHT)
-    pixel.SetPixelPoint(header, "TOPLEFT", card, "TOPLEFT", 0, 0)
-    pixel.SetPixelPoint(header, "TOPRIGHT", card, "TOPRIGHT", 0, 0)
+    header:NCSetHeight(HEADER_HEIGHT)
+    header:NCSetPoint("TOPLEFT", card, "TOPLEFT", 0, 0)
+    header:NCSetPoint("TOPRIGHT", card, "TOPRIGHT", 0, 0)
     card.header = header
 
     local band = header:CreateTexture(nil, "BACKGROUND")
-    pixel.SetPixelInside(band, header, 0, 0)
+    band:NCSetInside(header, 0, 0)
     card.band = band
 
     -- a 45° slash across the band just past the title, as the portrait skins' tabs; LayoutHeaderCut places it
@@ -529,19 +529,19 @@ Kaji:RegisterWidgetType(CARD_TYPE, function(gui)
 
     -- the band's foot, running on past the cut to the card's edge
     local baseline = header:CreateTexture(nil, "BORDER")
-    pixel.SetPixelHeight(baseline, theme.borderSize)
-    pixel.SetPixelPoint(baseline, "BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
-    pixel.SetPixelPoint(baseline, "BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
-    pixel.SetPixelSnap(baseline)
+    baseline:NCSetHeight(theme.borderSize)
+    baseline:NCSetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
+    baseline:NCSetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
+    baseline:NCDisablePixelSnap()
     card.baseline = baseline
 
     local titleText = header:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(titleText, "LEFT", header, "LEFT", theme.paddingMedium, 0)
+    titleText:NCSetPoint("LEFT", header, "LEFT", theme.paddingMedium, 0)
     gui:ApplyFont(titleText, "large")
     card.titleText = titleText
 
     local content = CreateFrame("Frame", nil, card)
-    pixel.SetPixelHeight(content, 1)
+    content:NCSetHeight(1)
     content:EnableMouse(false)
     card.content = content
 
@@ -550,7 +550,7 @@ Kaji:RegisterWidgetType(CARD_TYPE, function(gui)
 
     -- Own frame above the header band, which would otherwise cover the top-left ticks.
     local corners = CreateFrame("Frame", nil, card)
-    pixel.SetPixelInside(corners, card, 0, 0)
+    corners:NCSetInside(card, 0, 0)
     corners:EnableMouse(false)
     card.corners = corners
 
@@ -594,7 +594,7 @@ function RowMixin:SetContentHeight(height)
 
     self._rowHeight = height
     self._layoutHeight = height
-    pixel.SetPixelHeight(self, height)
+    self:NCSetHeight(height)
 
     local card = self._card
     if not card then return end
@@ -634,7 +634,7 @@ function RowMixin:AddWidget(widget, widthPct, spacing, xOffset, yOffset, fixedWi
     widget:SetParent(self)
 
     if not widget.explicitHeight then
-        pixel.SetPixelHeight(widget, self._rowHeight)
+        widget:NCSetHeight(self._rowHeight)
     end
 
     widget._widthPct = widthPct
@@ -676,8 +676,8 @@ function RowMixin:LayoutWidgets(width)
             x = indent + width * widget._columnAt
         end
         widget:ClearAllPoints()
-        pixel.SetPixelPoint(widget, "TOPLEFT", self, "TOPLEFT", x + (widget._xOffset or 0), widget._yOffset or 0)
-        pixel.SetPixelWidth(widget, widgetWidth)
+        widget:NCSetPoint("TOPLEFT", self, "TOPLEFT", x + (widget._xOffset or 0), widget._yOffset or 0)
+        widget:NCSetWidth(widgetWidth)
         -- Widgets that derive their inner layout from their width are told directly, for the
         -- same reason: an unchanged width raises no OnSizeChanged for them either.
         if widget.OnLayout then widget:OnLayout(widgetWidth) end
@@ -694,7 +694,7 @@ function RowMixin:OnAcquire(parent, _, config)
 
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, height)
+    self:NCSetHeight(height)
     self._rowHeight = height
     self:SetAlpha(1)
     self:Show()
@@ -705,10 +705,10 @@ end
 function RowMixin:SetDivider(shown)
     if shown and not self._divider then
         local line = self:CreateTexture(nil, "BACKGROUND")
-        pixel.SetPixelHeight(line, self.gui.theme.borderSize)
-        pixel.SetPixelPoint(line, "BOTTOMLEFT", self, "BOTTOMLEFT", 0, 0)
-        pixel.SetPixelPoint(line, "BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0)
-        pixel.SetPixelSnap(line)
+        line:NCSetHeight(self.gui.theme.borderSize)
+        line:NCSetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", 0, 0)
+        line:NCSetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0)
+        line:NCDisablePixelSnap()
         self._divider = line
     end
     if not self._divider then return end
@@ -724,8 +724,8 @@ function RowMixin:SetStripe(shown)
     if shown and not self._stripe then
         local band = self:CreateTexture(nil, "BACKGROUND", nil, -1)
         local inset = self.gui.theme.paddingSmall
-        pixel.SetPixelPoint(band, "TOPLEFT", self, "TOPLEFT", -inset, 0)
-        pixel.SetPixelPoint(band, "BOTTOMRIGHT", self, "BOTTOMRIGHT", inset, 0)
+        band:NCSetPoint("TOPLEFT", self, "TOPLEFT", -inset, 0)
+        band:NCSetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", inset, 0)
         self._stripe = band
     end
     if not self._stripe then return end

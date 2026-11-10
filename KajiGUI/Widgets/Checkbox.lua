@@ -23,7 +23,6 @@ local Kaji = Private.Kaji
 local InstanceMixin = Kaji.InstanceMixin
 local Animations = Private.Animations
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 local L = Private.L
 
 local CreateFrame = CreateFrame
@@ -146,7 +145,7 @@ function CheckboxMixin:AnimateToState(toState, instant)
 
     if instant or abs(deltaX) < 1 then
         self.knob:ClearAllPoints()
-        pixel.SetPixelPoint(self.knob, "LEFT", self.toggle, "LEFT", targetX, 0)
+        self.knob:NCSetPoint("LEFT", self.toggle, "LEFT", targetX, 0)
         self:ApplyStateColors(toState, true)
         self._animating = false
     else
@@ -154,7 +153,7 @@ function CheckboxMixin:AnimateToState(toState, instant)
 
         self.animGroup:Stop()
         self.knob:ClearAllPoints()
-        pixel.SetPixelPoint(self.knob, "LEFT", self.toggle, "LEFT", currentX, 0)
+        self.knob:NCSetPoint("LEFT", self.toggle, "LEFT", currentX, 0)
         self.slideAnim:SetOffset(deltaX, 0)
         self.animGroup:Play()
     end
@@ -206,7 +205,7 @@ end
 function CheckboxMixin:OnAcquire(parent, labelText, config)
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, 36)
+    self:NCSetHeight(36)
 
     self.label:SetText(labelText or "")
     self._callback = config.callback
@@ -232,7 +231,7 @@ function CheckboxMixin:OnAcquire(parent, labelText, config)
     self:AnimateToState(value, true)
     if config.mixed then
         self.knob:ClearAllPoints()
-        pixel.SetPixelPoint(self.knob, "LEFT", self.toggle, "LEFT", MIXED_POSITION, 0)
+        self.knob:NCSetPoint("LEFT", self.toggle, "LEFT", MIXED_POSITION, 0)
     end
 
     self.button:EnableMouse(true)
@@ -278,15 +277,15 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.gui = gui
 
     local label = row:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(label, "TOPLEFT", row, "TOPLEFT", 0, 1)
+    label:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, 1)
     label:SetJustifyH("LEFT")
     gui:ApplyFont(label, "small")
     label:SetShadowColor(0, 0, 0, 0)
     row.label = label
 
     local toggle = CreateFrame("Frame", nil, row, "BackdropTemplate")
-    pixel.SetPixelSize(toggle, TOGGLE_WIDTH, TOGGLE_HEIGHT)
-    pixel.SetPixelPoint(toggle, "TOPLEFT", row, "TOPLEFT", 0, -14)
+    toggle:NCSetSize(TOGGLE_WIDTH, TOGGLE_HEIGHT)
+    toggle:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, -14)
     Kaji.SetBackdrop(toggle, gui, { bg = "bgMedium", bgAlpha = 0.9, border = "widgetBorder", borderAlpha = 1 })
     row.toggle = toggle
 
@@ -301,8 +300,8 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.glow = glow
 
     local knob = CreateFrame("Frame", nil, toggle, "BackdropTemplate")
-    pixel.SetPixelSize(knob, KNOB_SIZE, KNOB_SIZE)
-    pixel.SetPixelPoint(knob, "LEFT", toggle, "LEFT", OFF_POSITION, 0)
+    knob:NCSetSize(KNOB_SIZE, KNOB_SIZE)
+    knob:NCSetPoint("LEFT", toggle, "LEFT", OFF_POSITION, 0)
     Kaji.SetBackdrop(knob, gui, {
         bg = { 0, 0, 0 },
         bgAlpha = 0.9,
@@ -313,30 +312,30 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
 
     local knobTexture = knob:CreateTexture(nil, "ARTWORK")
     knobTexture:SetAllPoints()
-    pixel.SetPixelSnap(knobTexture)
+    knobTexture:NCDisablePixelSnap()
     row.knobTexture = knobTexture
 
     local checkmark = knob:CreateTexture(nil, "OVERLAY")
-    pixel.SetPixelSize(checkmark, KNOB_SIZE, KNOB_SIZE)
-    pixel.SetPixelPoint(checkmark, "CENTER", knob, "CENTER", 0, 0)
+    checkmark:NCSetSize(KNOB_SIZE, KNOB_SIZE)
+    checkmark:NCSetPoint("CENTER", knob, "CENTER", 0, 0)
     checkmark:SetTexture(theme.checkTexture)
-    pixel.SetPixelSnap(checkmark)
+    checkmark:NCDisablePixelSnap()
     checkmark:Hide()
     row.checkmark = checkmark
 
     local crossmark = knob:CreateTexture(nil, "OVERLAY")
-    pixel.SetPixelSize(crossmark, KNOB_CROSS, KNOB_CROSS)
-    pixel.SetPixelPoint(crossmark, "CENTER", knob, "CENTER", 0, 0)
+    crossmark:NCSetSize(KNOB_CROSS, KNOB_CROSS)
+    crossmark:NCSetPoint("CENTER", knob, "CENTER", 0, 0)
     crossmark:SetTexture(theme.crossTexture)
-    pixel.SetPixelSnap(crossmark)
+    crossmark:NCDisablePixelSnap()
     crossmark:Hide()
     row.crossmark = crossmark
 
     local dash = knob:CreateTexture(nil, "OVERLAY")
-    pixel.SetPixelSize(dash, KNOB_SIZE / 2, 2)
-    pixel.SetPixelPoint(dash, "CENTER", knob, "CENTER", 0, 0)
+    dash:NCSetSize(KNOB_SIZE / 2, 2)
+    dash:NCSetPoint("CENTER", knob, "CENTER", 0, 0)
     dash:SetColorTexture(0, 0, 0, 1)
-    pixel.SetPixelSnap(dash)
+    dash:NCDisablePixelSnap()
     dash:Hide()
     row.dash = dash
 
@@ -367,7 +366,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
 
     animGroup:SetScript("OnFinished", function()
         knob:ClearAllPoints()
-        pixel.SetPixelPoint(knob, "LEFT", toggle, "LEFT", row._targetX, 0)
+        knob:NCSetPoint("LEFT", toggle, "LEFT", row._targetX, 0)
         row._animating = false
         row:UpdateIcons()
     end)

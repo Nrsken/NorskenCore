@@ -32,7 +32,6 @@ local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin
@@ -98,7 +97,7 @@ function RadioMixin:OnAcquire(parent, titleText, config)
 
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, hasDescription and TITLE_HEIGHT + DESCRIPTION_HEIGHT or TITLE_HEIGHT)
+    self:NCSetHeight(hasDescription and TITLE_HEIGHT + DESCRIPTION_HEIGHT or TITLE_HEIGHT)
     self.explicitHeight = true
 
     self._selected = config.selected == true
@@ -113,8 +112,8 @@ function RadioMixin:OnAcquire(parent, titleText, config)
     local linked = config.linkTo
     self.guide:ClearAllPoints()
     if linked then
-        pixel.SetPixelPoint(self.guide, "TOP", linked.dot, "BOTTOM", 0, 0)
-        pixel.SetPixelPoint(self.guide, "BOTTOM", self.dot, "TOP", 0, 0)
+        self.guide:NCSetPoint("TOP", linked.dot, "BOTTOM", 0, 0)
+        self.guide:NCSetPoint("BOTTOM", self.dot, "TOP", 0, 0)
     end
     self.guide:SetShown(linked ~= nil)
 
@@ -152,26 +151,26 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.gui = gui
 
     local dot = Kaji.CreateTickBox(gui, row, DOT_SIZE)
-    pixel.SetPixelPoint(dot, "TOPLEFT", row, "TOPLEFT", 0, -(TITLE_HEIGHT - DOT_SIZE) / 2)
+    dot:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, -(TITLE_HEIGHT - DOT_SIZE) / 2)
     row.dot = dot
 
     local guide = row:CreateTexture(nil, "BACKGROUND")
-    pixel.SetPixelWidth(guide, gui.theme.borderSize)
-    pixel.SetPixelSnap(guide)
+    guide:NCSetWidth(gui.theme.borderSize)
+    guide:NCDisablePixelSnap()
     guide:Hide()
     row.guide = guide
 
     local title = row:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(title, "LEFT", dot, "RIGHT", TEXT_GAP, 0)
-    pixel.SetPixelPoint(title, "RIGHT", row, "RIGHT", 0, 0)
+    title:NCSetPoint("LEFT", dot, "RIGHT", TEXT_GAP, 0)
+    title:NCSetPoint("RIGHT", row, "RIGHT", 0, 0)
     title:SetJustifyH("LEFT")
     title:SetWordWrap(false)
     gui:ApplyFont(title, "medium")
     row.title = title
 
     local description = row:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(description, "TOPLEFT", row, "TOPLEFT", DOT_SIZE + TEXT_GAP, -TITLE_HEIGHT - 1)
-    pixel.SetPixelPoint(description, "RIGHT", row, "RIGHT", 0, 0)
+    description:NCSetPoint("TOPLEFT", row, "TOPLEFT", DOT_SIZE + TEXT_GAP, -TITLE_HEIGHT - 1)
+    description:NCSetPoint("RIGHT", row, "RIGHT", 0, 0)
     description:SetJustifyH("LEFT")
     description:SetWordWrap(false)
     gui:ApplyFont(description, "small")

@@ -316,11 +316,11 @@ function Private:SetSpark(texture, moduleDB, barHeight, override)
     -- own, where every other texture derives its width from the art so it cannot be stretched.
     local height = barHeight * (scale or 1)
     if value == SOLID then
-        texture:NUISetPixelSize(width or 2, (barHeight - 2) * (scale or 1))
+        texture:NCSetSize(width or 2, (barHeight - 2) * (scale or 1))
     elseif atlas and atlas.width and atlas.height and atlas.height > 0 then
-        texture:NUISetPixelSize(height * (atlas.width / atlas.height), height)
+        texture:NCSetSize(height * (atlas.width / atlas.height), height)
     else
-        texture:NUISetPixelSize(height, height)
+        texture:NCSetSize(height, height)
     end
 end
 

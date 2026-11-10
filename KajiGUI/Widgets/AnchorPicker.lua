@@ -22,7 +22,6 @@ local Private = select(2, ...)
 local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local pixel = Private.Pixel
 local safecall = Kaji.safecall
 local L = Private.L
 
@@ -141,25 +140,25 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local theme = gui.theme
 
     local container = CreateFrame("Frame", nil, gui._poolHost) --[[@as KajiGUIAnchorPicker]]
-    pixel.SetPixelSize(container, FRAME_WIDTH + BUTTON_SIZE,
+    container:NCSetSize(FRAME_WIDTH + BUTTON_SIZE,
         FRAME_HEIGHT + BUTTON_SIZE + TITLE_HEIGHT + SPACING + 4)
-    pixel.SetPixelSnap(container)
+    container:NCDisablePixelSnap()
 
     container.gui = gui
     container.value = "CENTER"
 
     local label = container:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(label, "TOP", container, "TOP", 0, 2)
-    pixel.SetPixelHeight(label, TITLE_HEIGHT)
+    label:NCSetPoint("TOP", container, "TOP", 0, 2)
+    label:NCSetHeight(TITLE_HEIGHT)
     label:SetJustifyH("CENTER")
     gui:ApplyFont(label, "small")
     label:SetTextColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
     container.label = label
 
     local background = CreateFrame("Frame", nil, container, "BackdropTemplate")
-    pixel.SetPixelSize(background, FRAME_WIDTH, FRAME_HEIGHT)
+    background:NCSetSize(FRAME_WIDTH, FRAME_HEIGHT)
     Kaji.SetBackdrop(background, gui, { bg = "bgDark", bgAlpha = 0.9, border = "textMuted", borderAlpha = 1 })
-    pixel.SetPixelSnap(background)
+    background:NCDisablePixelSnap()
     container.background = background
 
     -- The row resizes the container, so the box re-centres itself rather than being
@@ -168,7 +167,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         local width = container:GetWidth()
         if not width or width <= 0 then return end
         background:ClearAllPoints()
-        pixel.SetPixelPoint(background, "TOPLEFT", container, "TOPLEFT",
+        background:NCSetPoint("TOPLEFT", container, "TOPLEFT",
             (width - FRAME_WIDTH) / 2, -(TITLE_HEIGHT + SPACING))
     end
     AlignBackground()
@@ -194,13 +193,13 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local buttons = {}
     for _, direction in ipairs(ANCHOR_DIRECTIONS) do
         local button = CreateFrame("Button", nil, container)
-        pixel.SetPixelSize(button, BUTTON_SIZE, BUTTON_SIZE)
-        pixel.SetPixelPoint(button, "CENTER", background, direction)
+        button:NCSetSize(BUTTON_SIZE, BUTTON_SIZE)
+        button:NCSetPoint("CENTER", background, direction)
 
         local tex = button:CreateTexture(nil, "ARTWORK")
         tex:SetAllPoints()
         tex:SetTexture("Interface\\Buttons\\WHITE8X8")
-        pixel.SetPixelSnap(tex)
+        tex:NCDisablePixelSnap()
         button.tex = tex
         button.value = direction
 

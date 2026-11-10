@@ -165,8 +165,8 @@ function Private:SkinAuraButton(container, options, button)
 
     -- Icon, trimmed and inset inside the 1px backdrop border.
     local icon = button:CreateTexture(nil, 'ARTWORK')
-    icon:NUISetPixelInside(button, 1, 1)
-    icon:NUISetZoom()
+    icon:NCSetInside(button, 1, 1)
+    icon:NCSetZoom()
     button.Icon = icon
     button:SetIcon(icon)
 
@@ -243,8 +243,8 @@ function Private:SkinAuraButton(container, options, button)
     if borderColor then
         local enchantBorder = overlay:CreateTexture(nil, 'OVERLAY')
         enchantBorder:SetTexture(Private.Media.GUITextures .. 'AuraOverlay.png') -- Use our own border texture.
-        enchantBorder:NUISetPixelSnap()
-        enchantBorder:NUISetPixelInside(button)
+        enchantBorder:NCDisablePixelSnap()
+        enchantBorder:NCSetInside(button)
         enchantBorder:SetVertexColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
     end
 
@@ -254,8 +254,8 @@ function Private:SkinAuraButton(container, options, button)
     if showBuffBorder or showDebuffBorder then
         local border = overlay:CreateTexture(nil, 'OVERLAY')
         border:SetTexture(Private.Media.GUITextures .. 'AuraOverlay.png') -- Use our own border texture.
-        border:NUISetPixelSnap()
-        border:NUISetPixelInside(button)
+        border:NCDisablePixelSnap()
+        border:NCSetInside(button)
         button.Border = border
         button:AddDispelTypeTexture(border, {
             style = Opt(options, container, 'borderStyle', Enum.CustomAuraButtonDispelTypeTextureStyle.PreserveAsset),
@@ -796,7 +796,7 @@ end
 ---@param frame Frame
 ---@param callback fun()
 local function ScheduleSettle(frame, callback)
-    frame:NUIScheduleUpdate()
+    frame:NCScheduleUpdate()
 
     if frame.settling then return end
     frame.settling = true
@@ -848,13 +848,13 @@ local function GetWatcher(unit)
     watcher.assistCount = 0
     watcher.visibleCount = 0
     watcher:SetScript('OnEvent', OnGateEvent)
-    watcher:NUISetScheduledUpdate(RefreshWatcher)
+    watcher:NCSetScheduledUpdate(RefreshWatcher)
     watchers[unit] = watcher
 
     if not globalWatcher then
         globalWatcher = CreateFrame('Frame')
         globalWatcher:SetScript('OnEvent', OnGlobalGateEvent)
-        globalWatcher:NUISetScheduledUpdate(RefreshAll)
+        globalWatcher:NCSetScheduledUpdate(RefreshAll)
         for _, event in ipairs(GATE_EVENTS) do globalWatcher:RegisterEvent(event) end
     end
 

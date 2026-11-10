@@ -21,7 +21,6 @@ local Kaji = Private.Kaji
 local InstanceMixin = Kaji.InstanceMixin
 local Animations = Private.Animations
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 local L = Private.L
 
 local CreateFrame = CreateFrame
@@ -289,14 +288,14 @@ function InstanceMixin:CreateSearchBox(parent, opts)
 
     -- no ground of its own: the field sits on the panel it tops
     local box = CreateFrame("Frame", nil, parent, "BackdropTemplate") --[[@as KajiGUISearchBox]]
-    pixel.SetPixelHeight(box, opts.height or Kaji.SearchBoxHeight(theme))
+    box:NCSetHeight(opts.height or Kaji.SearchBoxHeight(theme))
 
     -- the EditBox widget's field, so a search reads as the same input as any card's
     local fieldTop = opts.fieldTop or theme.barInset
     local inner = CreateFrame("Frame", nil, box, "BackdropTemplate")
-    pixel.SetPixelPoint(inner, "TOPLEFT", box, "TOPLEFT", theme.barInset, -fieldTop)
-    pixel.SetPixelPoint(inner, "TOPRIGHT", box, "TOPRIGHT", -theme.barInset, -fieldTop)
-    pixel.SetPixelHeight(inner, FIELD_HEIGHT)
+    inner:NCSetPoint("TOPLEFT", box, "TOPLEFT", theme.barInset, -fieldTop)
+    inner:NCSetPoint("TOPRIGHT", box, "TOPRIGHT", -theme.barInset, -fieldTop)
+    inner:NCSetHeight(FIELD_HEIGHT)
     Kaji.SetBackdrop(inner, gui, { bg = "bgDark", bgAlpha = 0.9, border = "widgetBorder", borderAlpha = 1 })
 
     local AnimateBorder, SyncBorder = Animations:CreateHoverColorAnimator(inner,
@@ -312,8 +311,8 @@ function InstanceMixin:CreateSearchBox(parent, opts)
     end
 
     local clear = CreateFrame("Button", nil, inner)
-    pixel.SetPixelSize(clear, 14, 14)
-    pixel.SetPixelPoint(clear, "RIGHT", inner, "RIGHT", -2, 0)
+    clear:NCSetSize(14, 14)
+    clear:NCSetPoint("RIGHT", inner, "RIGHT", -2, 0)
     clear:Hide()
     local clearIcon = clear:CreateTexture(nil, "ARTWORK")
     clearIcon:SetAllPoints()
@@ -321,8 +320,8 @@ function InstanceMixin:CreateSearchBox(parent, opts)
 
     edit = CreateFrame("EditBox", nil, inner)
     -- the widget's text inset, stopping short of the clear button
-    pixel.SetPixelPoint(edit, "TOPLEFT", inner, "TOPLEFT", 6, -4)
-    pixel.SetPixelPoint(edit, "BOTTOMRIGHT", inner, "BOTTOMRIGHT", -(2 + 14 + 4), 4)
+    edit:NCSetPoint("TOPLEFT", inner, "TOPLEFT", 6, -4)
+    edit:NCSetPoint("BOTTOMRIGHT", inner, "BOTTOMRIGHT", -(2 + 14 + 4), 4)
     edit:SetAutoFocus(false)
     gui:ApplyFont(edit, "normal")
     edit:SetText(placeholder)

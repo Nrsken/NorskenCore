@@ -68,7 +68,6 @@ local Private = select(2, ...)
 local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local pixel = Private.Pixel
 local L = Private.L
 
 local CreateFrame = CreateFrame
@@ -101,13 +100,13 @@ function InstanceMixin:FlashMessage(text, opts)
         container:SetToplevel(true)
         container:SetFrameStrata('TOOLTIP')
         container.text = container:CreateFontString(nil, 'OVERLAY')
-        pixel.SetPixelPoint(container.text, 'CENTER')
+        container.text:NCSetPoint('CENTER')
         self._flashContainer = container
     end
 
     container:SetParent(opts.parent or UIParent)
     container:ClearAllPoints()
-    pixel.SetPixelPoint(container, opts.anchorFrom or 'CENTER', opts.parent or UIParent, opts.anchorTo or 'CENTER', opts.x or 0, opts.y or 250)
+    container:NCSetPoint(opts.anchorFrom or 'CENTER', opts.parent or UIParent, opts.anchorTo or 'CENTER', opts.x or 0, opts.y or 250)
 
     local fontString = container.text
     self:ApplyFont(fontString, opts.size or 'large')

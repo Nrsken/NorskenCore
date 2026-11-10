@@ -100,7 +100,7 @@ end
 ---Works on textures directly and on status bars via their fill texture. Runs once per object.
 ---@param object Frame|Texture|FontString|MaskTexture|Line
 local function SetPixelSnap(object)
-    if not object or object.NUIPixelSnapDisabled then return end
+    if not object or object.NCPixelSnapDisabled then return end
     if (issecrettable and issecrettable(object)) or (object.IsForbidden and object:IsForbidden()) then return end
 
     local target = object
@@ -118,7 +118,7 @@ local function SetPixelSnap(object)
         object:SetRoundLayoutToNearestPixel(true)
     end
 
-    object.NUIPixelSnapDisabled = true
+    object.NCPixelSnapDisabled = true
 end
 
 ---Sets the size of a frame to the nearest pixel grid.
@@ -177,27 +177,6 @@ local function SetPixelPoint(object, point, arg2, arg3, arg4, arg5, ...)
     object:SetPoint(point, arg2, arg3, arg4, arg5, ...)
 end
 
----Anchor a region a fixed pixel inset to another frame via its corners.
----When `outside` is set the inset flips outward so the region frames the anchor instead of sitting in it.
----@param object Frame|Texture|FontString|MaskTexture
----@param anchor Frame|Texture|FontString|MaskTexture
----@param xOffset number
----@param yOffset number
----@param anchor2 Frame|Texture|FontString|MaskTexture? Optional second anchor frame for the bottom-right corner. Defaults to `anchor`.
----@param outside boolean? If true, the inset flips outward instead of inward.
-local function AnchorPixelBox(object, anchor, xOffset, yOffset, anchor2, outside)
-    anchor = anchor or object:GetParent()
-    local x = ToPixelGrid(xOffset or 1)
-    local y = ToPixelGrid(yOffset or 1)
-    if outside then x, y = -x, -y end
-
-    -- Need to pcall ClearAllPoints because some Blizzard frames throw an error if you try to clear points on a frame that has no points set yet.
-    if pcall(object.GetPoint, object) then object:ClearAllPoints() end
-    SetPixelSnap(object)
-    object:SetPoint('TOPLEFT', anchor, 'TOPLEFT', x, -y)
-    object:SetPoint('BOTTOMRIGHT', anchor2 or anchor, 'BOTTOMRIGHT', -x, y)
-end
-
 ---Sets the point of a frame to the nearest pixel grid, inset from another frame's corners.
 ---@param object Frame|Texture|FontString|MaskTexture
 ---@param anchor Frame|Texture|FontString|MaskTexture
@@ -205,17 +184,17 @@ end
 ---@param yOffset number
 ---@param anchor2 Frame|Texture|FontString|MaskTexture? Optional second anchor frame for the bottom-right corner. Defaults to `anchor`.
 local function SetPixelInside(object, anchor, xOffset, yOffset, anchor2)
-    AnchorPixelBox(object, anchor, xOffset, yOffset, anchor2, false)
-end
+    anchor = anchor or object:GetParent()
+    local x = ToPixelGrid(xOffset or 1)
+    local y = ToPixelGrid(yOffset or 1)
 
----Sets the point of a frame to the nearest pixel grid, outset from another frame's corners.
----@param object Frame|Texture|FontString|MaskTexture
----@param anchor Frame|Texture|FontString|MaskTexture
----@param xOffset number
----@param yOffset number
----@param anchor2 Frame|Texture|FontString|MaskTexture? Optional second anchor frame for the bottom-right corner. Defaults to `anchor`.
-local function SetPixelOutside(object, anchor, xOffset, yOffset, anchor2)
-    AnchorPixelBox(object, anchor, xOffset, yOffset, anchor2, true)
+    -- some Blizzard frames error on ClearAllPoints while they have no points yet
+    if pcall(object.GetPoint, object) then
+        object:ClearAllPoints()
+    end
+    SetPixelSnap(object)
+    object:SetPoint('TOPLEFT', anchor, 'TOPLEFT', x, -y)
+    object:SetPoint('BOTTOMRIGHT', anchor2 or anchor, 'BOTTOMRIGHT', -x, y)
 end
 
 -- Fractional position of each anchor point within a frame.
@@ -355,29 +334,20 @@ local function SnapFrameEdges(frame)
     frame:SetPoint('TOPLEFT', UIParent, 'BOTTOMLEFT', ToPixelGrid(left), ToPixelGrid(top))
 end
 
--- Smaller function table for the mixin, so we don't pollute the instance with all the helpers.
+-- what InjectAPI puts on every region as the NC methods
 PixelMixin.SetPixelSnap = SetPixelSnap
 PixelMixin.SetPixelSize = SetPixelSize
 PixelMixin.SetPixelWidth = SetPixelWidth
 PixelMixin.SetPixelHeight = SetPixelHeight
 PixelMixin.SetPixelPoint = SetPixelPoint
 PixelMixin.SetPixelInside = SetPixelInside
-PixelMixin.SetPixelOutside = SetPixelOutside
 PixelMixin.SetGridPoint = SetGridPoint
 
--- Full function table for the library, so consumers can call the functions without mixing them onto a frame.
+-- The values and whole-frame helpers; placing a region goes through the injected NC methods.
 Pixel.ToPixelGrid = ToPixelGrid
 Pixel.GetMult = GetMult
 Pixel.GetPerfectPixel = GetPerfectPixel
 Pixel.GetBestPixelSize = GetBestPixelSize
-Pixel.SetPixelSnap = SetPixelSnap
-Pixel.SetPixelSize = SetPixelSize
-Pixel.SetPixelWidth = SetPixelWidth
-Pixel.SetPixelHeight = SetPixelHeight
-Pixel.SetPixelPoint = SetPixelPoint
-Pixel.SetPixelInside = SetPixelInside
-Pixel.SetPixelOutside = SetPixelOutside
-Pixel.SetGridPoint = SetGridPoint
 Pixel.CalculateFramePosition = CalculateFramePosition
 Pixel.SnapFrameToPixels = SnapFrameToPixels
 Pixel.SnapFrameSize = SnapFrameSize

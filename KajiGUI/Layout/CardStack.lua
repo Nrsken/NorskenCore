@@ -13,7 +13,6 @@ local Private = select(2, ...)
 local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local pixel = Private.Pixel
 
 local ipairs = ipairs
 local Mixin = Mixin
@@ -56,13 +55,13 @@ function CardStackMixin:DoLayout()
     local y = self.topOffset
     for _, card in ipairs(self.cards) do
         card:ClearAllPoints()
-        pixel.SetPixelPoint(card, "TOPLEFT", self.parent, "TOPLEFT", pad, -y)
-        pixel.SetPixelPoint(card, "RIGHT", self.parent, "RIGHT", -pad, 0)
+        card:NCSetPoint("TOPLEFT", self.parent, "TOPLEFT", pad, -y)
+        card:NCSetPoint("RIGHT", self.parent, "RIGHT", -pad, 0)
         card._yOffset = y
         y = card:GetNextOffset()
     end
 
-    pixel.SetPixelHeight(self.parent, y)
+    self.parent:NCSetHeight(y)
     self.laying = false
 
     if self.pending then

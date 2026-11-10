@@ -18,7 +18,6 @@ local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 local L = Private.L
 
 ---@class KajiGUISidebarItem : Button
@@ -67,19 +66,19 @@ function InstanceMixin:CreateSidebar(parent, opts)
 
     -- inset as a page's list is: flush right, where the next column's own inset is the gap
     local panel = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-    pixel.SetPixelPoint(panel, "TOPLEFT", frame, "TOPLEFT", pad, -pad)
-    pixel.SetPixelPoint(panel, "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, pad)
+    panel:NCSetPoint("TOPLEFT", frame, "TOPLEFT", pad, -pad)
+    panel:NCSetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, pad)
     local RestylePanel = Kaji.CreatePanelChrome(panel, gui)
 
     local scrollFrame = CreateFrame("ScrollFrame", nil, panel)
     scrollFrame:SetFrameLevel(panel:GetFrameLevel() + 5)
     -- inside the panel's border, which the list would otherwise scroll over, under what the host tops it with
-    pixel.SetPixelPoint(scrollFrame, "TOPLEFT", panel, "TOPLEFT", theme.borderSize, -(theme.borderSize + (opts.top or 0)))
-    pixel.SetPixelPoint(scrollFrame, "BOTTOMRIGHT", panel, "BOTTOMRIGHT", -theme.borderSize, theme.borderSize)
+    scrollFrame:NCSetPoint("TOPLEFT", panel, "TOPLEFT", theme.borderSize, -(theme.borderSize + (opts.top or 0)))
+    scrollFrame:NCSetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -theme.borderSize, theme.borderSize)
     scrollFrame:SetClipsChildren(true)
 
     local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-    pixel.SetPixelHeight(scrollChild, 1)
+    scrollChild:NCSetHeight(1)
     scrollChild:SetFrameLevel(scrollFrame:GetFrameLevel() + 1)
     scrollFrame:SetScrollChild(scrollChild)
 
@@ -94,7 +93,7 @@ function InstanceMixin:CreateSidebar(parent, opts)
     local function UpdateScrollChildWidth()
         local w = scrollFrame:GetWidth()
         if not w or w <= 0 then return end
-        pixel.SetPixelWidth(scrollChild, scrollbarVisible and (w - (theme.scrollbarWidth or 16)) or w)
+        scrollChild:NCSetWidth(scrollbarVisible and (w - (theme.scrollbarWidth or 16)) or w)
     end
     local function UpdateScrollbar()
         local visible = scrollbar:UpdateVisibility(scrollChild:GetHeight(), scrollFrame:GetHeight())
@@ -140,7 +139,7 @@ function InstanceMixin:CreateSidebar(parent, opts)
     -- Header --
     local function CreateHeader()
         local header = CreateFrame("Button", nil, scrollChild)
-        pixel.SetPixelHeight(header, HEADER_HEIGHT)
+        header:NCSetHeight(HEADER_HEIGHT)
         header:EnableMouse(true)
         header:RegisterForClicks("LeftButtonUp")
 
@@ -148,16 +147,16 @@ function InstanceMixin:CreateSidebar(parent, opts)
         Kaji.CreateRowSelection(header, theme)
 
         local label = header:CreateFontString(nil, "OVERLAY")
-        pixel.SetPixelPoint(label, "LEFT", header, "LEFT", TEXT_INSET, 0)
+        label:NCSetPoint("LEFT", header, "LEFT", TEXT_INSET, 0)
         label:SetJustifyH("LEFT")
         label:SetWordWrap(false)
         header.label = label
 
         local arrow = header:CreateTexture(nil, "OVERLAY")
-        pixel.SetPixelSize(arrow, CHEVRON_SIZE, CHEVRON_SIZE)
-        pixel.SetPixelPoint(arrow, "RIGHT", header, "RIGHT", -TEXT_INSET, 0)
+        arrow:NCSetSize(CHEVRON_SIZE, CHEVRON_SIZE)
+        arrow:NCSetPoint("RIGHT", header, "RIGHT", -TEXT_INSET, 0)
         arrow:SetTexture(theme.stepperTexture)
-        pixel.SetPixelSnap(arrow)
+        arrow:NCDisablePixelSnap()
         header.arrow = arrow
 
         -- Collapsed points right, expanded points down.
@@ -231,7 +230,7 @@ function InstanceMixin:CreateSidebar(parent, opts)
     -- Item --
     local function CreateItem()
         local item = CreateFrame("Button", nil, scrollChild) --[[@as KajiGUISidebarItem]]
-        pixel.SetPixelHeight(item, ITEM_HEIGHT)
+        item:NCSetHeight(ITEM_HEIGHT)
         item:EnableMouse(true)
         item:RegisterForClicks("LeftButtonUp")
 
@@ -239,8 +238,8 @@ function InstanceMixin:CreateSidebar(parent, opts)
         Kaji.CreateRowSelection(item, theme)
 
         local label = item:CreateFontString(nil, "OVERLAY")
-        pixel.SetPixelPoint(label, "LEFT", item, "LEFT", ROW_TEXT, 0)
-        pixel.SetPixelPoint(label, "RIGHT", item, "RIGHT", -pad, 0)
+        label:NCSetPoint("LEFT", item, "LEFT", ROW_TEXT, 0)
+        label:NCSetPoint("RIGHT", item, "RIGHT", -pad, 0)
         label:SetJustifyH("LEFT")
         label:SetWordWrap(false)
         item.label = label
@@ -365,11 +364,11 @@ function InstanceMixin:CreateSidebar(parent, opts)
         local host = parent or scrollChild
         item:SetParent(host)
         item:SetFrameLevel(host:GetFrameLevel() + 2)
-        pixel.SetPixelHeight(item, ITEM_HEIGHT)
+        item:NCSetHeight(ITEM_HEIGHT)
         item:ClearAllPoints()
         -- search results step in too, so every row's text shares one edge
-        pixel.SetPixelPoint(item, "TOPLEFT", host, "TOPLEFT", ROW_STEP, -yOffset)
-        pixel.SetPixelPoint(item, "TOPRIGHT", host, "TOPRIGHT", 0, -yOffset)
+        item:NCSetPoint("TOPLEFT", host, "TOPLEFT", ROW_STEP, -yOffset)
+        item:NCSetPoint("TOPRIGHT", host, "TOPRIGHT", 0, -yOffset)
         item.id = id
         item.searchResult = searchResult
         item.label:Show()
@@ -381,7 +380,7 @@ function InstanceMixin:CreateSidebar(parent, opts)
     local function ConfigureHeader(header, entry, isLeaf)
         header:SetParent(scrollChild)
         header:SetFrameLevel(scrollChild:GetFrameLevel() + 2)
-        pixel.SetPixelHeight(header, HEADER_HEIGHT)
+        header:NCSetHeight(HEADER_HEIGHT)
         header.label:Show()
         gui:ApplyFont(header.label, "medium")
         header.label:SetText(entry.text or "")
@@ -424,8 +423,8 @@ function InstanceMixin:CreateSidebar(parent, opts)
     ---@param y number
     local function Place(block, y)
         block:ClearAllPoints()
-        pixel.SetPixelPoint(block, "TOPLEFT", scrollChild, "TOPLEFT", 0, -y)
-        pixel.SetPixelPoint(block, "TOPRIGHT", scrollChild, "TOPRIGHT", 0, -y)
+        block:NCSetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -y)
+        block:NCSetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -y)
     end
 
     -- Positions the rendered blocks top to bottom. Cheap, so an animating section can call it every frame.
@@ -437,7 +436,7 @@ function InstanceMixin:CreateSidebar(parent, opts)
             elseif block.section then
                 local height = mfloor(block.full * SectionProgress(block.section) + 0.5)
                 Place(block.frame, y)
-                pixel.SetPixelHeight(block.frame, mmax(height, 1))
+                block.frame:NCSetHeight(mmax(height, 1))
                 block.frame:SetShown(height > 0)
                 y = y + height
             else
@@ -445,7 +444,7 @@ function InstanceMixin:CreateSidebar(parent, opts)
                 y = y + block.height
             end
         end
-        pixel.SetPixelHeight(scrollChild, y + pad)
+        scrollChild:NCSetHeight(y + pad)
 
         -- A shorter list must not leave the view scrolled past its new end, which hides the top rows.
         scrollFrame:UpdateScrollChildRect()
@@ -458,7 +457,7 @@ function InstanceMixin:CreateSidebar(parent, opts)
 
     local function RenderTree()
         if not sidebar.config then
-            pixel.SetPixelHeight(scrollChild, 1); return
+            scrollChild:NCSetHeight(1); return
         end
         for _, entry in ipairs(sidebar.config) do
             local header = AcquireHeader()
@@ -520,9 +519,9 @@ function InstanceMixin:CreateSidebar(parent, opts)
             sidebar.emptyText:SetTextColor(theme.textSecondary[1], theme.textSecondary[2], theme.textSecondary[3], 0.6)
             sidebar.emptyText:SetText(L["No results found"])
             sidebar.emptyText:ClearAllPoints()
-            pixel.SetPixelPoint(sidebar.emptyText, "TOP", scrollChild, "TOP", 0, -y - 10)
+            sidebar.emptyText:NCSetPoint("TOP", scrollChild, "TOP", 0, -y - 10)
             sidebar.emptyText:Show()
-            pixel.SetPixelHeight(scrollChild, y + 40)
+            scrollChild:NCSetHeight(y + 40)
             return
         end
         if sidebar.emptyText then sidebar.emptyText:Hide() end
@@ -543,7 +542,7 @@ function InstanceMixin:CreateSidebar(parent, opts)
             ApplyItemState(item, true)
             y = y + ITEM_HEIGHT + ITEM_SPACING
         end
-        pixel.SetPixelHeight(scrollChild, y + pad)
+        scrollChild:NCSetHeight(y + pad)
     end
 
     function sidebar:Refresh()

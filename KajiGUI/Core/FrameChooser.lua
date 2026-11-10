@@ -130,25 +130,25 @@ function Chooser:_Build()
     -- Parented to the host, not the box, so the box's translucent fill doesn't dim the label.
     local plate = CreateFrame('Frame', nil, host, 'BackdropTemplate')
     plate:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
-    pixel.SetPixelHeight(plate, PLATE_HEIGHT)
+    plate:NCSetHeight(PLATE_HEIGHT)
     plate.text = plate:CreateFontString(nil, 'OVERLAY')
-    pixel.SetPixelPoint(plate.text, 'CENTER')
+    plate.text:NCSetPoint('CENTER')
     plate:Hide()
     self.plate = plate
 
     local banner = CreateFrame('Frame', nil, host, 'BackdropTemplate')
     banner:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
-    pixel.SetPixelSize(banner, BANNER_WIDTH, BANNER_HEIGHT)
-    pixel.SetPixelPoint(banner, 'TOP', host, 'TOP', 0, BANNER_Y)
+    banner:NCSetSize(BANNER_WIDTH, BANNER_HEIGHT)
+    banner:NCSetPoint('TOP', host, 'TOP', 0, BANNER_Y)
 
     banner.title = banner:CreateFontString(nil, 'OVERLAY')
-    pixel.SetPixelPoint(banner.title, 'TOP', banner, 'TOP', 0, -8)
+    banner.title:NCSetPoint('TOP', banner, 'TOP', 0, -8)
 
     banner.confirm = banner:CreateFontString(nil, 'OVERLAY')
-    pixel.SetPixelPoint(banner.confirm, 'TOP', banner.title, 'BOTTOM', 0, -8)
+    banner.confirm:NCSetPoint('TOP', banner.title, 'BOTTOM', 0, -8)
 
     banner.cancel = banner:CreateFontString(nil, 'OVERLAY')
-    pixel.SetPixelPoint(banner.cancel, 'TOP', banner.confirm, 'BOTTOM', 0, -4)
+    banner.cancel:NCSetPoint('TOP', banner.confirm, 'BOTTOM', 0, -4)
     self.banner = banner
 
     host:SetScript('OnKeyDown', function(_, key)
@@ -219,8 +219,8 @@ function Chooser:_UpdateBox()
     local inset = BOX_INSET * pixel.GetBestPixelSize()
 
     box:ClearAllPoints()
-    pixel.SetPixelPoint(box, 'BOTTOMLEFT', self.host, 'BOTTOMLEFT', left * scale - inset, bottom * scale - inset)
-    pixel.SetPixelSize(box, width * scale + inset * 2, height * scale + inset * 2)
+    box:NCSetPoint('BOTTOMLEFT', self.host, 'BOTTOMLEFT', left * scale - inset, bottom * scale - inset)
+    box:NCSetSize(width * scale + inset * 2, height * scale + inset * 2)
     box:Show()
 
     return (bottom + height) * scale + inset
@@ -252,13 +252,13 @@ function Chooser:_SetTarget(focus)
     label:SetText(name)
     -- Muted when the hover resolved to an ancestor rather than the frame under the cursor.
     label:SetTextColor(self.gui:Color(exact and 'accent' or 'textSecondary'))
-    pixel.SetPixelWidth(self.plate, label:GetStringWidth() + PLATE_PADDING * 2)
+    self.plate:NCSetWidth(label:GetStringWidth() + PLATE_PADDING * 2)
 
     self.plate:ClearAllPoints()
     if top + PLATE_HEIGHT + PLATE_GAP > self.host:GetHeight() then
-        pixel.SetPixelPoint(self.plate, 'TOP', self.box, 'BOTTOM', 0, -PLATE_GAP)
+        self.plate:NCSetPoint('TOP', self.box, 'BOTTOM', 0, -PLATE_GAP)
     else
-        pixel.SetPixelPoint(self.plate, 'BOTTOM', self.box, 'TOP', 0, PLATE_GAP)
+        self.plate:NCSetPoint('BOTTOM', self.box, 'TOP', 0, PLATE_GAP)
     end
     self.plate:Show()
 end

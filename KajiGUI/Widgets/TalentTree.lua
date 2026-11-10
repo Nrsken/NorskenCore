@@ -298,10 +298,10 @@ local function AcquireButton(self, index)
         button.owner = self
         button:SetBackdrop({ edgeFile = WHITE, edgeSize = 1 })
         local icon = button:CreateTexture(nil, "ARTWORK")
-        pixel.SetPixelPoint(icon, "TOPLEFT", button, "TOPLEFT", 1, -1)
-        pixel.SetPixelPoint(icon, "BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+        icon:NCSetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+        icon:NCSetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
         Kaji.SetTextureZoom(icon)
-        pixel.SetPixelSnap(icon)
+        icon:NCDisablePixelSnap()
         button.icon = icon
         button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         button:SetScript("OnClick", function(clicked, mouse)
@@ -344,7 +344,7 @@ local function AcquireLine(self, index)
     local line = self.lines[index]
     if not line then
         line = self:CreateLine(nil, "BACKGROUND")
-        pixel.SetPixelSnap(line)
+        line:NCDisablePixelSnap()
         self.lines[index] = line
     end
     line:SetThickness(pixel.GetMult())
@@ -359,8 +359,8 @@ local function PlaceButton(self, button, entry, size, x, y)
     button.entryID, button.spellID = entry.entryID, entry.spellID
     button.icon:SetTexture(entry.icon or C_Spell.GetSpellTexture(entry.spellID))
     button:ClearAllPoints()
-    pixel.SetPixelSize(button, size, size)
-    pixel.SetPixelPoint(button, "CENTER", self, "TOPLEFT", x, y)
+    button:NCSetSize(size, size)
+    button:NCSetPoint("CENTER", self, "TOPLEFT", x, y)
     PaintButton(button)
 end
 

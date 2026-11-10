@@ -47,7 +47,6 @@ local Private = select(2, ...)
 local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local pixel = Private.Pixel
 local L = Private.L
 
 local CreateFrame = CreateFrame
@@ -168,7 +167,7 @@ function IconMixin:OnLayout(width)
 
     local frame = self.iconFrame
     frame:ClearAllPoints()
-    pixel.SetPixelPoint(frame, "TOPLEFT", self, "TOPLEFT", (width - (self._previewWidth or self._size)) / 2, -TILE_PAD)
+    frame:NCSetPoint("TOPLEFT", self, "TOPLEFT", (width - (self._previewWidth or self._size)) / 2, -TILE_PAD)
 end
 
 ---Places the icon square inside the widget, and the label beside or above it.
@@ -180,11 +179,11 @@ function IconMixin:LayoutIcon()
     self.description:ClearAllPoints()
 
     if self._align == "FILL" then
-        pixel.SetPixelInside(frame, self, 0, 0)
+        frame:NCSetInside(self, 0, 0)
         return
     end
 
-    pixel.SetPixelSize(frame, self._size, self._size)
+    frame:NCSetSize(self._size, self._size)
 
     local align = self._align
     local position = self._textPosition
@@ -196,55 +195,55 @@ function IconMixin:LayoutIcon()
         local corner = align == "CENTER" and edge or edge .. align
         local labelEdge = position == "TOP" and "TOP" or "BOTTOM"
 
-        pixel.SetPixelPoint(frame, corner, self, corner, 0, 0)
-        pixel.SetPixelPoint(label, labelEdge .. "LEFT", self, labelEdge .. "LEFT", 0, 0)
-        pixel.SetPixelPoint(label, labelEdge .. "RIGHT", self, labelEdge .. "RIGHT", 0, 0)
+        frame:NCSetPoint(corner, self, corner, 0, 0)
+        label:NCSetPoint(labelEdge .. "LEFT", self, labelEdge .. "LEFT", 0, 0)
+        label:NCSetPoint(labelEdge .. "RIGHT", self, labelEdge .. "RIGHT", 0, 0)
 
         return
     end
 
     if self._tile then
-        pixel.SetPixelSize(frame, self._previewWidth or self._size, self._size)
+        frame:NCSetSize(self._previewWidth or self._size, self._size)
         self:OnLayout(self:GetWidth())
-        pixel.SetPixelPoint(label, "TOP", frame, "BOTTOM", 0, -self._textSpacing)
-        pixel.SetPixelPoint(label, "LEFT", self, "LEFT", 2, 0)
-        pixel.SetPixelPoint(label, "RIGHT", self, "RIGHT", -2, 0)
-        pixel.SetPixelPoint(self.description, "TOP", label, "BOTTOM", 0, -2)
-        pixel.SetPixelPoint(self.description, "LEFT", self, "LEFT", 2, 0)
-        pixel.SetPixelPoint(self.description, "RIGHT", self, "RIGHT", -2, 0)
+        label:NCSetPoint("TOP", frame, "BOTTOM", 0, -self._textSpacing)
+        label:NCSetPoint("LEFT", self, "LEFT", 2, 0)
+        label:NCSetPoint("RIGHT", self, "RIGHT", -2, 0)
+        self.description:NCSetPoint("TOP", label, "BOTTOM", 0, -2)
+        self.description:NCSetPoint("LEFT", self, "LEFT", 2, 0)
+        self.description:NCSetPoint("RIGHT", self, "RIGHT", -2, 0)
         return
     elseif self._row then
         -- The icon keeps the same margin on its left as above and below it; label and description centre on it together.
-        pixel.SetPixelPoint(frame, "LEFT", self, "LEFT", floor((self:GetHeight() - self._size) / 2), 0)
+        frame:NCSetPoint("LEFT", self, "LEFT", floor((self:GetHeight() - self._size) / 2), 0)
         if self.description:IsShown() then
-            pixel.SetPixelPoint(label, "BOTTOMLEFT", frame, "RIGHT", self._textSpacing, 1)
-            pixel.SetPixelPoint(self.description, "TOPLEFT", frame, "RIGHT", self._textSpacing, -2)
-            pixel.SetPixelPoint(self.description, "RIGHT", self, "RIGHT", 0, 0)
+            label:NCSetPoint("BOTTOMLEFT", frame, "RIGHT", self._textSpacing, 1)
+            self.description:NCSetPoint("TOPLEFT", frame, "RIGHT", self._textSpacing, -2)
+            self.description:NCSetPoint("RIGHT", self, "RIGHT", 0, 0)
         else
-            pixel.SetPixelPoint(label, "LEFT", frame, "RIGHT", self._textSpacing, 0)
+            label:NCSetPoint("LEFT", frame, "RIGHT", self._textSpacing, 0)
         end
-        pixel.SetPixelPoint(label, "RIGHT", self, "RIGHT", 0, 0)
+        label:NCSetPoint("RIGHT", self, "RIGHT", 0, 0)
         return
     elseif align == "RIGHT" then
-        pixel.SetPixelPoint(frame, "RIGHT", self, "RIGHT", 0, 0)
+        frame:NCSetPoint("RIGHT", self, "RIGHT", 0, 0)
     elseif align == "CENTER" then
-        pixel.SetPixelPoint(frame, "CENTER", self, "CENTER", 0, 0)
+        frame:NCSetPoint("CENTER", self, "CENTER", 0, 0)
     else
-        pixel.SetPixelPoint(frame, "LEFT", self, "LEFT", 0, 0)
+        frame:NCSetPoint("LEFT", self, "LEFT", 0, 0)
     end
 
     if position == "RIGHT" and self.description:IsShown() then
         -- Split around the icon's middle, so the two lines sit centred on it together.
-        pixel.SetPixelPoint(label, "BOTTOMLEFT", frame, "RIGHT", self._textSpacing, 1)
-        pixel.SetPixelPoint(label, "RIGHT", self, "RIGHT", 0, 0)
-        pixel.SetPixelPoint(self.description, "TOPLEFT", frame, "RIGHT", self._textSpacing, -1)
-        pixel.SetPixelPoint(self.description, "RIGHT", self, "RIGHT", 0, 0)
+        label:NCSetPoint("BOTTOMLEFT", frame, "RIGHT", self._textSpacing, 1)
+        label:NCSetPoint("RIGHT", self, "RIGHT", 0, 0)
+        self.description:NCSetPoint("TOPLEFT", frame, "RIGHT", self._textSpacing, -1)
+        self.description:NCSetPoint("RIGHT", self, "RIGHT", 0, 0)
     elseif position == "RIGHT" then
-        pixel.SetPixelPoint(label, "LEFT", frame, "RIGHT", self._textSpacing, 0)
-        pixel.SetPixelPoint(label, "RIGHT", self, "RIGHT", 0, 0)
+        label:NCSetPoint("LEFT", frame, "RIGHT", self._textSpacing, 0)
+        label:NCSetPoint("RIGHT", self, "RIGHT", 0, 0)
     elseif position == "LEFT" then
-        pixel.SetPixelPoint(label, "RIGHT", frame, "LEFT", -self._textSpacing, 0)
-        pixel.SetPixelPoint(label, "LEFT", self, "LEFT", 0, 0)
+        label:NCSetPoint("RIGHT", frame, "LEFT", -self._textSpacing, 0)
+        label:NCSetPoint("LEFT", self, "LEFT", 0, 0)
     end
 end
 
@@ -353,14 +352,14 @@ function IconMixin:OnAcquire(parent, _, config)
     self._row = config.row == true
     if self._row then height = config.rowHeight or height end
     if self._tile then height = config.tileHeight or height end
-    pixel.SetPixelSize(self, size, height)
+    self:NCSetSize(size, height)
     self.explicitHeight = self._align ~= "FILL" or nil
     self:LayoutIcon()
     -- A row's or tile's chrome is the widget's own edge; an icon button's frame sits outside its share.
     local pad = (self._row or self._tile) and 0 or BUTTON_PAD
     self.chromeFill:ClearAllPoints()
-    pixel.SetPixelPoint(self.chromeFill, "TOPLEFT", self, "TOPLEFT", -pad, pad)
-    pixel.SetPixelPoint(self.chromeFill, "BOTTOMRIGHT", self, "BOTTOMRIGHT", pad, -pad)
+    self.chromeFill:NCSetPoint("TOPLEFT", self, "TOPLEFT", -pad, pad)
+    self.chromeFill:NCSetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", pad, -pad)
 
     Kaji.SetTooltip(self, self.gui, config.tooltipTitle, config.tooltip)
     Kaji.SetMixed(self, config.mixed, DescribeValue)
@@ -380,8 +379,8 @@ function IconMixin:OnAcquire(parent, _, config)
     local linked = config.linkTo
     self.guide:ClearAllPoints()
     if linked then
-        pixel.SetPixelPoint(self.guide, "TOPLEFT", linked.iconFrame, "BOTTOMLEFT", floor(linked._size / 2), 0)
-        pixel.SetPixelPoint(self.guide, "BOTTOMLEFT", self.iconFrame, "TOPLEFT", floor(size / 2), 0)
+        self.guide:NCSetPoint("TOPLEFT", linked.iconFrame, "BOTTOMLEFT", floor(linked._size / 2), 0)
+        self.guide:NCSetPoint("BOTTOMLEFT", self.iconFrame, "TOPLEFT", floor(size / 2), 0)
     end
     self.guide:SetShown(linked ~= nil)
     self._locked = config.disabled == true or nil
@@ -425,8 +424,8 @@ function IconMixin:DrawCanvas(draw, size)
         if not canvas then
             -- Inside the border like the icon texture, and under it, so a picture lines up with plain icons.
             canvas = CreateFrame("Frame", nil, self.iconFrame)
-            pixel.SetPixelPoint(canvas, "TOPLEFT", self.iconFrame, "TOPLEFT", 1, -1)
-            pixel.SetPixelPoint(canvas, "BOTTOMRIGHT", self.iconFrame, "BOTTOMRIGHT", -1, 1)
+            canvas:NCSetPoint("TOPLEFT", self.iconFrame, "TOPLEFT", 1, -1)
+            canvas:NCSetPoint("BOTTOMRIGHT", self.iconFrame, "BOTTOMRIGHT", -1, 1)
             self.canvas = canvas
         end
         -- Every draw: reparenting the pooled widget resets child levels.
@@ -515,27 +514,27 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     container.iconFrame = iconFrame
 
     local iconTexture = iconFrame:CreateTexture(nil, "ARTWORK")
-    pixel.SetPixelPoint(iconTexture, "TOPLEFT", 1, -1)
-    pixel.SetPixelPoint(iconTexture, "BOTTOMRIGHT", -1, 1)
-    pixel.SetPixelSnap(iconTexture)
+    iconTexture:NCSetPoint("TOPLEFT", 1, -1)
+    iconTexture:NCSetPoint("BOTTOMRIGHT", -1, 1)
+    iconTexture:NCDisablePixelSnap()
     Kaji.SetTextureZoom(iconTexture)
     container.icon = iconTexture
 
     -- The border and quality pip are always built and simply hidden when unwanted, so a
     -- recycled icon can never come back missing one.
     local border = CreateFrame("Frame", nil, iconFrame, "BackdropTemplate")
-    pixel.SetPixelInside(border, iconFrame, 0, 0)
+    border:NCSetInside(iconFrame, 0, 0)
     Kaji.SetBackdrop(border, gui, { border = { 0, 0, 0 }, borderAlpha = 1 })
     container.border = border
 
     local qualityFrame = CreateFrame("Frame", nil, iconFrame)
     qualityFrame:SetFrameLevel(iconFrame:GetFrameLevel() + 10)
-    pixel.SetPixelSize(qualityFrame, 14, 14)
-    pixel.SetPixelPoint(qualityFrame, "TOPLEFT", iconFrame, "TOPLEFT", -4, 4)
+    qualityFrame:NCSetSize(14, 14)
+    qualityFrame:NCSetPoint("TOPLEFT", iconFrame, "TOPLEFT", -4, 4)
     container.qualityFrame = qualityFrame
 
     local qualityTexture = qualityFrame:CreateTexture(nil, "OVERLAY")
-    pixel.SetPixelInside(qualityTexture, qualityFrame, 0, 0)
+    qualityTexture:NCSetInside(qualityFrame, 0, 0)
     container.qualityTexture = qualityTexture
 
     -- Given the theme font up front: an icon built without a label still has SetText called on it.
@@ -553,25 +552,25 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
 
     -- Behind the icons, so it runs from one icon's bottom edge to the next one's top.
     local guide = container:CreateTexture(nil, "BACKGROUND")
-    pixel.SetPixelWidth(guide, gui.theme.borderSize)
-    pixel.SetPixelSnap(guide)
+    guide:NCSetWidth(gui.theme.borderSize)
+    guide:NCDisablePixelSnap()
     guide:Hide()
     container.guide = guide
 
     -- Textures on the container itself, so the label (OVERLAY) always draws over the fill; the glow goes under it.
     local fill = container:CreateTexture(nil, "BACKGROUND")
-    pixel.SetPixelPoint(fill, "TOPLEFT", container, "TOPLEFT", -BUTTON_PAD, BUTTON_PAD)
-    pixel.SetPixelPoint(fill, "BOTTOMRIGHT", container, "BOTTOMRIGHT", BUTTON_PAD, -BUTTON_PAD)
-    pixel.SetPixelSnap(fill)
+    fill:NCSetPoint("TOPLEFT", container, "TOPLEFT", -BUTTON_PAD, BUTTON_PAD)
+    fill:NCSetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", BUTTON_PAD, -BUTTON_PAD)
+    fill:NCDisablePixelSnap()
     fill:Hide()
     container.chromeFill = fill
     local edges = {}
     for i, sides in ipairs({ { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" }, { "TOPLEFT", "BOTTOMLEFT" }, { "TOPRIGHT", "BOTTOMRIGHT" } }) do
         local edge = container:CreateTexture(nil, "BORDER")
-        pixel.SetPixelPoint(edge, sides[1], fill, sides[1], 0, 0)
-        pixel.SetPixelPoint(edge, sides[2], fill, sides[2], 0, 0)
-        if i <= 2 then pixel.SetPixelHeight(edge, 1) else pixel.SetPixelWidth(edge, 1) end
-        pixel.SetPixelSnap(edge)
+        edge:NCSetPoint(sides[1], fill, sides[1], 0, 0)
+        edge:NCSetPoint(sides[2], fill, sides[2], 0, 0)
+        if i <= 2 then edge:NCSetHeight(1) else edge:NCSetWidth(1) end
+        edge:NCDisablePixelSnap()
         edge:Hide()
         edges[i] = edge
     end

@@ -235,7 +235,7 @@ function SliderMixin:OnAcquire(parent, labelText, config)
     -- Reparenting resets levels; keep the thumb above the fill bar.
     self.thumbFrameBG:SetFrameLevel(self.fillBar:GetFrameLevel() + 1)
     self.thumbFrame:SetFrameLevel(self.fillBar:GetFrameLevel() + 1)
-    pixel.SetPixelHeight(self, 36)
+    self:NCSetHeight(36)
 
     self.label:SetText(labelText or "")
     self._step = step
@@ -314,23 +314,23 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.gui = gui
 
     local label = row:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(label, "TOPLEFT", row, "TOPLEFT", 0, 1)
+    label:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, 1)
     label:SetJustifyH("LEFT")
     gui:ApplyFont(label, "small")
     row.label = label
 
     local sliderBG = CreateFrame("Frame", nil, row, "BackdropTemplate")
-    pixel.SetPixelHeight(sliderBG, 8)
-    pixel.SetPixelPoint(sliderBG, "TOPLEFT", row, "TOPLEFT", 68, -22)
-    pixel.SetPixelPoint(sliderBG, "TOPRIGHT", row, "TOPRIGHT", -18, -22)
+    sliderBG:NCSetHeight(8)
+    sliderBG:NCSetPoint("TOPLEFT", row, "TOPLEFT", 68, -22)
+    sliderBG:NCSetPoint("TOPRIGHT", row, "TOPRIGHT", -18, -22)
     Kaji.SetBackdrop(sliderBG, gui, { bg = "bgDark", bgAlpha = 0.9, border = "widgetBorder", borderAlpha = 1 })
     sliderBG:EnableMouse(false)
     row.sliderBG = sliderBG
 
     local slider = CreateFrame("Slider", nil, row, "BackdropTemplate")
-    pixel.SetPixelHeight(slider, 8)
-    pixel.SetPixelPoint(slider, "TOPLEFT", row, "TOPLEFT", 77, -22)
-    pixel.SetPixelPoint(slider, "TOPRIGHT", row, "TOPRIGHT", -27, -22)
+    slider:NCSetHeight(8)
+    slider:NCSetPoint("TOPLEFT", row, "TOPLEFT", 77, -22)
+    slider:NCSetPoint("TOPRIGHT", row, "TOPRIGHT", -27, -22)
     slider:SetOrientation("HORIZONTAL")
     slider:SetObeyStepOnDrag(true)
     slider:SetHitRectInsets(-9, -9, -5, -5)
@@ -340,31 +340,31 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
 
     -- StatusBar so the engine sizes the fill at layout, never from unresolved geometry.
     local fillBar = CreateFrame("StatusBar", nil, slider)
-    pixel.SetPixelHeight(fillBar, 6)
-    pixel.SetPixelPoint(fillBar, "LEFT", sliderBG, "LEFT", 1, 0)
-    pixel.SetPixelPoint(fillBar, "RIGHT", slider, "RIGHT", -10, 0)
+    fillBar:NCSetHeight(6)
+    fillBar:NCSetPoint("LEFT", sliderBG, "LEFT", 1, 0)
+    fillBar:NCSetPoint("RIGHT", slider, "RIGHT", -10, 0)
     fillBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
     local fill = fillBar:GetStatusBarTexture()
-    pixel.SetPixelSnap(fill)
+    fill:NCDisablePixelSnap()
     row.fillBar = fillBar
 
     local function Halo(point, relPoint)
         local t = fillBar:CreateTexture(nil, "ARTWORK", nil, -1)
         t:SetTexture("Interface\\Buttons\\WHITE8X8")
-        pixel.SetPixelHeight(t, FILL_GLOW_HEIGHT)
-        pixel.SetPixelPoint(t, point .. "LEFT", fill, relPoint .. "LEFT", 0, 0)
-        pixel.SetPixelPoint(t, point .. "RIGHT", fill, relPoint .. "RIGHT", 0, 0)
+        t:NCSetHeight(FILL_GLOW_HEIGHT)
+        t:NCSetPoint(point .. "LEFT", fill, relPoint .. "LEFT", 0, 0)
+        t:NCSetPoint(point .. "RIGHT", fill, relPoint .. "RIGHT", 0, 0)
         return t
     end
     row.fillGlow = { Halo("BOTTOM", "TOP"), Halo("TOP", "BOTTOM") }
 
     local thumbFrameBG = CreateFrame("Frame", nil, slider, "BackdropTemplate")
-    pixel.SetPixelSize(thumbFrameBG, THUMB_WIDTH, THUMB_HEIGHT)
+    thumbFrameBG:NCSetSize(THUMB_WIDTH, THUMB_HEIGHT)
     Kaji.SetBackdrop(thumbFrameBG, gui, { bg = "bgLight", bgAlpha = 0.9, border = { 0, 0, 0 }, borderAlpha = 1 })
     row.thumbFrameBG = thumbFrameBG
 
     local thumbFrame = CreateFrame("Frame", nil, slider, "BackdropTemplate")
-    pixel.SetPixelSize(thumbFrame, THUMB_WIDTH, THUMB_HEIGHT)
+    thumbFrame:NCSetSize(THUMB_WIDTH, THUMB_HEIGHT)
     Kaji.SetBackdrop(thumbFrame, gui, { bg = "textSecondary", bgAlpha = 0.9, border = { 0, 0, 0 }, borderAlpha = 1 })
     row.thumbFrame = thumbFrame
 
@@ -382,14 +382,14 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
 
     local function MakeStepper(point, relPoint, rotation)
         local stepper = CreateFrame("Button", nil, row)
-        pixel.SetPixelSize(stepper, STEPPER_SIZE, STEPPER_SIZE)
-        pixel.SetPixelPoint(stepper, point, sliderBG, relPoint, 0, 0)
+        stepper:NCSetSize(STEPPER_SIZE, STEPPER_SIZE)
+        stepper:NCSetPoint(point, sliderBG, relPoint, 0, 0)
 
         local icon = stepper:CreateTexture(nil, "ARTWORK")
         icon:SetAllPoints()
         icon:SetTexture(theme.stepperTexture)
         icon:SetRotation(rad(rotation))
-        pixel.SetPixelSnap(icon)
+        icon:NCDisablePixelSnap()
         stepper.icon = icon
 
         return stepper
@@ -401,14 +401,14 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.rightStepper = rightStepper
 
     local valueContainer = CreateFrame("Frame", nil, slider, "BackdropTemplate")
-    pixel.SetPixelSize(valueContainer, 48, 24)
-    pixel.SetPixelPoint(valueContainer, "RIGHT", leftStepper, "LEFT", 0, 0)
+    valueContainer:NCSetSize(48, 24)
+    valueContainer:NCSetPoint("RIGHT", leftStepper, "LEFT", 0, 0)
     Kaji.SetBackdrop(valueContainer, gui, { bg = "bgDark", bgAlpha = 1, border = "widgetBorder", borderAlpha = 1 })
     row.valueContainer = valueContainer
 
     local valueEdit = CreateFrame("EditBox", nil, valueContainer)
-    pixel.SetPixelPoint(valueEdit, "TOPLEFT", 0, 0)
-    pixel.SetPixelPoint(valueEdit, "BOTTOMRIGHT", 0, 0)
+    valueEdit:NCSetPoint("TOPLEFT", 0, 0)
+    valueEdit:NCSetPoint("BOTTOMRIGHT", 0, 0)
     valueEdit:SetFontObject("GameFontNormal")
     valueEdit:SetJustifyH("CENTER")
     valueEdit:SetAutoFocus(false)

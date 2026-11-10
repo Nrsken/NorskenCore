@@ -21,7 +21,6 @@ local Private = select(2, ...)
 local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local pixel = Private.Pixel
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin
@@ -77,15 +76,15 @@ function TextMixin:Measure(width)
     -- No width yet means the row has not been laid out; OnSizeChanged brings us back.
     if not self._autoHeight or not width or width <= 0 then return end
 
-    pixel.SetPixelWidth(self.label, width)
+    self.label:NCSetWidth(width)
     local desired = max(self._titleSpacer + (self.label:GetStringHeight() or 0) + self.gui.theme.paddingSmall,
         self._minHeight)
     -- Bailing on an unchanged height is what stops resize -> OnSizeChanged -> resize looping.
     if self._measured and abs(desired - self._measured) < 0.5 then return end
 
     self._measured = desired
-    pixel.SetPixelHeight(self.container, desired)
-    pixel.SetPixelHeight(self, desired)
+    self.container:NCSetHeight(desired)
+    self:NCSetHeight(desired)
 
     local owner = self:GetParent()
     if owner and owner.SetContentHeight then owner:SetContentHeight(desired) end
@@ -134,8 +133,8 @@ function TextMixin:OnAcquire(parent, titleText, config)
 
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, rowHeight)
-    pixel.SetPixelHeight(self.container, rowHeight)
+    self:NCSetHeight(rowHeight)
+    self.container:NCSetHeight(rowHeight)
     -- Keeps the row it is added to from stamping its own height back over the measured one.
     self.explicitHeight = self._autoHeight or nil
 
@@ -150,13 +149,13 @@ function TextMixin:OnAcquire(parent, titleText, config)
     -- wrapped height right away. Pinning both sides only resolves the width on the next layout
     -- pass, which would leave us measuring against the previous one.
     self.label:ClearAllPoints()
-    pixel.SetPixelPoint(self.label, "TOPLEFT", self.container, "TOPLEFT", 0, -self._titleSpacer)
+    self.label:NCSetPoint("TOPLEFT", self.container, "TOPLEFT", 0, -self._titleSpacer)
     -- Set both ways: a pooled block that was auto-sized last time would keep TOP.
     if self._autoHeight then
         self.label:SetJustifyV("TOP")
     else
         self.label:SetJustifyV("MIDDLE")
-        pixel.SetPixelPoint(self.label, "BOTTOMRIGHT", self.container, "BOTTOMRIGHT", 0, 0)
+        self.label:NCSetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT", 0, 0)
     end
     self.label:SetJustifyH(config.justify or "LEFT")
     self.label:SetText(self:ResolveBody(config.text))
@@ -189,15 +188,15 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.gui = gui
 
     local container = CreateFrame("Frame", nil, row, "BackdropTemplate")
-    pixel.SetPixelPoint(container, "TOPLEFT", row, "TOPLEFT", 0, 0)
-    pixel.SetPixelPoint(container, "TOPRIGHT", row, "TOPRIGHT", 0, 0)
+    container:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
+    container:NCSetPoint("TOPRIGHT", row, "TOPRIGHT", 0, 0)
     Kaji.SetBackdrop(container, gui, BG_MODES.hide)
     row.container = container
 
     local title = container:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(title, "TOPLEFT", container, "TOPLEFT", 1, -1)
-    pixel.SetPixelPoint(title, "TOPRIGHT", container, "TOPRIGHT", -1, -1)
-    pixel.SetPixelHeight(title, 18)
+    title:NCSetPoint("TOPLEFT", container, "TOPLEFT", 1, -1)
+    title:NCSetPoint("TOPRIGHT", container, "TOPRIGHT", -1, -1)
+    title:NCSetHeight(18)
     title:SetJustifyH("LEFT")
     gui:ApplyFont(title, "large")
     row.title = title

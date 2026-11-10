@@ -142,25 +142,25 @@ end
 local function CreateSwatch(parent, rightInset, height)
     local backing = parent:CreateTexture(nil, "BACKGROUND", nil, 1)
     backing:SetColorTexture(0, 0, 0, 0.6)
-    pixel.SetPixelWidth(backing, SWATCH_WIDTH)
-    pixel.SetPixelPoint(backing, "TOPRIGHT", parent, "TOPRIGHT", -rightInset, -SWATCH_INSET)
-    pixel.SetPixelPoint(backing, "BOTTOMRIGHT", parent, "BOTTOMRIGHT", -rightInset, SWATCH_INSET)
+    backing:NCSetWidth(SWATCH_WIDTH)
+    backing:NCSetPoint("TOPRIGHT", parent, "TOPRIGHT", -rightInset, -SWATCH_INSET)
+    backing:NCSetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -rightInset, SWATCH_INSET)
     backing:Hide()
 
     local swatch = parent:CreateTexture(nil, "BORDER")
     swatch:SetAllPoints(backing)
-    pixel.SetPixelSnap(swatch)
+    swatch:NCDisablePixelSnap()
     swatch:Hide()
 
     local fill = parent:CreateTexture(nil, "BORDER")
     fill:SetTexture("Interface\\Buttons\\WHITE8X8")
-    pixel.SetPixelWidth(fill, SPARK_FILL_WIDTH)
-    pixel.SetPixelPoint(fill, "TOPLEFT", backing, "TOPLEFT", 0, 0)
-    pixel.SetPixelPoint(fill, "BOTTOMLEFT", backing, "BOTTOMLEFT", 0, 0)
+    fill:NCSetWidth(SPARK_FILL_WIDTH)
+    fill:NCSetPoint("TOPLEFT", backing, "TOPLEFT", 0, 0)
+    fill:NCSetPoint("BOTTOMLEFT", backing, "BOTTOMLEFT", 0, 0)
     fill:Hide()
 
     local spark = parent:CreateTexture(nil, "BORDER", nil, 1)
-    pixel.SetPixelPoint(spark, "CENTER", fill, "RIGHT", 0, 0)
+    spark:NCSetPoint("CENTER", fill, "RIGHT", 0, 0)
     spark:Hide()
 
     swatch._backing, swatch._fill, swatch._spark = backing, fill, spark
@@ -183,11 +183,11 @@ local function ShowSpark(swatch, value)
     spark:SetDesaturated(true)
     local info = GetAtlasInfo and type(value) == "string" and GetAtlasInfo(value)
     if value == SOLID_SPARK then
-        pixel.SetPixelSize(spark, SOLID_SPARK_WIDTH, height - 2)
+        spark:NCSetSize(SOLID_SPARK_WIDTH, height - 2)
     elseif info and info.height and info.height > 0 then
-        pixel.SetPixelSize(spark, min(height * info.width / info.height, SWATCH_WIDTH), height)
+        spark:NCSetSize(min(height * info.width / info.height, SWATCH_WIDTH), height)
     else
-        pixel.SetPixelSize(spark, height, height)
+        spark:NCSetSize(height, height)
     end
 end
 
@@ -261,7 +261,7 @@ local function AcquireItemButton(gui, parent)
     end
 
     btn = CreateFrame("Button", nil, parent)
-    pixel.SetPixelHeight(btn, ITEM_HEIGHT)
+    btn:NCSetHeight(ITEM_HEIGHT)
 
     btn._previewBar = CreateSwatch(btn, TEXT_RIGHT_INSET, ITEM_HEIGHT)
 
@@ -271,9 +271,9 @@ local function AcquireItemButton(gui, parent)
     btn._hoverBg = hoverBg
 
     local hoverBar = btn:CreateTexture(nil, "ARTWORK")
-    pixel.SetPixelWidth(hoverBar, HOVER_BAR_WIDTH)
-    pixel.SetPixelPoint(hoverBar, "TOPLEFT", btn, "TOPLEFT", 0, 0)
-    pixel.SetPixelPoint(hoverBar, "BOTTOMLEFT", btn, "BOTTOMLEFT", 0, 0)
+    hoverBar:NCSetWidth(HOVER_BAR_WIDTH)
+    hoverBar:NCSetPoint("TOPLEFT", btn, "TOPLEFT", 0, 0)
+    hoverBar:NCSetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 0, 0)
     btn._hoverBar = hoverBar
     btn._hoverP, btn._hoverTarget = 0, 0
     PaintItemHover(btn, gui.theme, 0)
@@ -293,15 +293,15 @@ local function AcquireItemButton(gui, parent)
     end)
 
     local btnText = btn:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(btnText, "LEFT", btn, "LEFT", 8, 0)
-    pixel.SetPixelPoint(btnText, "RIGHT", btn, "RIGHT", -24, 0)
+    btnText:NCSetPoint("LEFT", btn, "LEFT", 8, 0)
+    btnText:NCSetPoint("RIGHT", btn, "RIGHT", -24, 0)
     btnText:SetJustifyH("LEFT")
     btnText:SetWordWrap(false)
     gui:ApplyFont(btnText, "normal")
     btn._text = btnText
 
     local indicator = btn:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(indicator, "RIGHT", btn, "RIGHT", -8, 0)
+    indicator:NCSetPoint("RIGHT", btn, "RIGHT", -8, 0)
     gui:ApplyFont(indicator, "large")
     indicator:SetText("•")
     indicator:Hide()
@@ -323,7 +323,7 @@ local function AcquireItemAction(gui, btn, index)
     if action then return action end
 
     action = CreateFrame("Button", nil, btn) --[[@as KajiGUIDropdownActionButton]]
-    pixel.SetPixelSize(action, ACTION_SIZE, ACTION_SIZE)
+    action:NCSetSize(ACTION_SIZE, ACTION_SIZE)
     local icon = action:CreateTexture(nil, "ARTWORK")
     icon:SetAllPoints()
     icon:SetTexelSnappingBias(0)
@@ -579,7 +579,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     gui._dropdownPool = gui._dropdownPool or {}
 
     local row = CreateFrame("Frame", nil, gui._poolHost) --[[@as KajiGUIDropdown]]
-    pixel.SetPixelHeight(row, 34)
+    row:NCSetHeight(34)
     row.gui = gui
     -- Defaults only; OnAcquire decides these per use.
     row._isFontPreview = false
@@ -590,20 +590,20 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row._bgColor = { theme.bgMedium[1], theme.bgMedium[2], theme.bgMedium[3] }
 
     local label = row:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(label, "TOPLEFT", row, "TOPLEFT", 0, 1)
+    label:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, 1)
     label:SetJustifyH("LEFT")
     gui:ApplyFont(label, "small")
     label:SetTextColor(theme.textSecondary[1], theme.textSecondary[2], theme.textSecondary[3], 1)
     row.label = label
 
     local dropdownButton = CreateFrame("Button", nil, row, "BackdropTemplate")
-    pixel.SetPixelHeight(dropdownButton, DROPDOWN_HEIGHT)
-    pixel.SetPixelPoint(dropdownButton, "TOPLEFT", row, "TOPLEFT", 0, -14)
-    pixel.SetPixelPoint(dropdownButton, "TOPRIGHT", row, "TOPRIGHT", 0, -14)
+    dropdownButton:NCSetHeight(DROPDOWN_HEIGHT)
+    dropdownButton:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, -14)
+    dropdownButton:NCSetPoint("TOPRIGHT", row, "TOPRIGHT", 0, -14)
     dropdownButton:SetBackdrop(STANDARD_BACKDROP)
     dropdownButton:SetBackdropColor(theme.bgMedium[1], theme.bgMedium[2], theme.bgMedium[3], 0.9)
     dropdownButton:SetBackdropBorderColor(theme.widgetBorder[1], theme.widgetBorder[2], theme.widgetBorder[3], 1)
-    pixel.SetPixelSnap(dropdownButton)
+    dropdownButton:NCDisablePixelSnap()
 
     local selectedBar = CreateSwatch(dropdownButton, ARROW_SIZE + theme.paddingSmall * 2, DROPDOWN_HEIGHT)
 
@@ -611,8 +611,8 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local bg = row._bgColor
 
     local selectedText = dropdownButton:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(selectedText, "LEFT", dropdownButton, "LEFT", theme.paddingSmall, 0)
-    pixel.SetPixelPoint(selectedText, "RIGHT", dropdownButton, "RIGHT", -24, 0)
+    selectedText:NCSetPoint("LEFT", dropdownButton, "LEFT", theme.paddingSmall, 0)
+    selectedText:NCSetPoint("RIGHT", dropdownButton, "RIGHT", -24, 0)
     selectedText:SetJustifyH("LEFT")
     selectedText:SetWordWrap(false)
     gui:ApplyFont(selectedText, "normal")
@@ -627,11 +627,11 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row._selectedText = selectedText
 
     local arrow = dropdownButton:CreateTexture(nil, "ARTWORK")
-    pixel.SetPixelSize(arrow, ARROW_SIZE, ARROW_SIZE)
-    pixel.SetPixelPoint(arrow, "RIGHT", dropdownButton, "RIGHT", -theme.paddingSmall, 0)
+    arrow:NCSetSize(ARROW_SIZE, ARROW_SIZE)
+    arrow:NCSetPoint("RIGHT", dropdownButton, "RIGHT", -theme.paddingSmall, 0)
     arrow:SetTexture(theme.stepperTexture)
     arrow:SetVertexColor(accent[1], accent[2], accent[3], accent[4] or 1)
-    pixel.SetPixelSnap(arrow)
+    arrow:NCDisablePixelSnap()
     arrow:SetRotation(-pi / 2)
     dropdownButton.arrow = arrow
 
@@ -656,11 +656,11 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
             HideSwatch(selectedBar)
         end
         selectedText:ClearAllPoints()
-        pixel.SetPixelPoint(selectedText, "LEFT", dropdownButton, "LEFT", theme.paddingSmall, 0)
+        selectedText:NCSetPoint("LEFT", dropdownButton, "LEFT", theme.paddingSmall, 0)
         if swatched then
-            pixel.SetPixelPoint(selectedText, "RIGHT", selectedBar._backing, "LEFT", -SWATCH_GAP, 0)
+            selectedText:NCSetPoint("RIGHT", selectedBar._backing, "LEFT", -SWATCH_GAP, 0)
         else
-            pixel.SetPixelPoint(selectedText, "RIGHT", dropdownButton, "RIGHT", -24, 0)
+            selectedText:NCSetPoint("RIGHT", dropdownButton, "RIGHT", -24, 0)
         end
     end
 
@@ -727,7 +727,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     end
 
     local dropdownList = CreateFrame("Frame", nil, row, "BackdropTemplate")
-    pixel.SetPixelHeight(dropdownList, 1)
+    dropdownList:NCSetHeight(1)
     dropdownList:SetBackdrop(STANDARD_BACKDROP)
     -- Opaque: glows and scenery behind a translucent list bled through as a tint.
     dropdownList:SetBackdropColor(theme.bgMedium[1], theme.bgMedium[2], theme.bgMedium[3], 1)
@@ -737,8 +737,8 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     dropdownList:Hide()
 
     local scrollFrame = CreateFrame("ScrollFrame", nil, dropdownList)
-    pixel.SetPixelPoint(scrollFrame, "TOPLEFT", dropdownList, "TOPLEFT", 0, 0)
-    pixel.SetPixelPoint(scrollFrame, "BOTTOMRIGHT", dropdownList, "BOTTOMRIGHT", 0, 0)
+    scrollFrame:NCSetPoint("TOPLEFT", dropdownList, "TOPLEFT", 0, 0)
+    scrollFrame:NCSetPoint("BOTTOMRIGHT", dropdownList, "BOTTOMRIGHT", 0, 0)
 
     local scrollChild = CreateFrame("Frame", nil, scrollFrame)
     scrollFrame:SetScrollChild(scrollChild)
@@ -749,9 +749,9 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local function EnsureScrollbar()
         if scrollbar then return end
         scrollbar = CreateFrame("Slider", nil, dropdownList, "BackdropTemplate")
-        pixel.SetPixelPoint(scrollbar, "TOPRIGHT", dropdownList, "TOPRIGHT", 0, 0)
-        pixel.SetPixelPoint(scrollbar, "BOTTOMRIGHT", dropdownList, "BOTTOMRIGHT", 0, 0)
-        pixel.SetPixelWidth(scrollbar, 12)
+        scrollbar:NCSetPoint("TOPRIGHT", dropdownList, "TOPRIGHT", 0, 0)
+        scrollbar:NCSetPoint("BOTTOMRIGHT", dropdownList, "BOTTOMRIGHT", 0, 0)
+        scrollbar:NCSetWidth(12)
         scrollbar:SetBackdrop(STANDARD_BACKDROP)
         scrollbar:SetBackdropBorderColor(theme.widgetBorder[1], theme.widgetBorder[2], theme.widgetBorder[3], 1)
         scrollbar:SetBackdropColor(theme.bgDark[1], theme.bgDark[2], theme.bgDark[3], 0.9)
@@ -779,12 +779,12 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         end)
 
         thumb = scrollbar:GetThumbTexture()
-        pixel.SetPixelSize(thumb, 12, 30)
+        thumb:NCSetSize(12, 30)
         thumb:SetColorTexture(accent[1], accent[2], accent[3], accent[4] or 0.8)
 
         thumbBorder = CreateFrame("Frame", nil, scrollbar, "BackdropTemplate")
-        pixel.SetPixelPoint(thumbBorder, "TOPLEFT", thumb, 0, 0)
-        pixel.SetPixelPoint(thumbBorder, "BOTTOMRIGHT", thumb, 0, 0)
+        thumbBorder:NCSetPoint("TOPLEFT", thumb, 0, 0)
+        thumbBorder:NCSetPoint("BOTTOMRIGHT", thumb, 0, 0)
         thumbBorder:SetBackdrop(BORDER_ONLY_BACKDROP)
         thumbBorder:SetBackdropBorderColor(theme.widgetBorder[1], theme.widgetBorder[2], theme.widgetBorder[3], 1)
         thumb:HookScript("OnShow", function() thumbBorder:Show() end)
@@ -821,7 +821,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         PaintFieldGlow()
 
         if instant then
-            pixel.SetPixelHeight(dropdownList, 1)
+            dropdownList:NCSetHeight(1)
             dropdownList:Hide()
             if dropdownList._logicalParent then
                 dropdownList:SetParent(dropdownList._logicalParent)
@@ -858,21 +858,21 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
             scrollbar:Show()
             scrollbar:SetMinMaxValues(0, pixel.ToPixelGrid(contentHeight - scrollFrameHeight))
             scrollbar:SetValue(0)
-            pixel.SetPixelPoint(scrollFrame, "BOTTOMRIGHT", dropdownList, "BOTTOMRIGHT", -11, 0)
+            scrollFrame:NCSetPoint("BOTTOMRIGHT", dropdownList, "BOTTOMRIGHT", -11, 0)
         else
             if scrollbar then
                 scrollbar:Hide()
                 scrollbar:SetMinMaxValues(0, 0)
             end
             scrollFrame:SetVerticalScroll(0)
-            pixel.SetPixelPoint(scrollFrame, "BOTTOMRIGHT", dropdownList, "BOTTOMRIGHT", 0, 0)
+            scrollFrame:NCSetPoint("BOTTOMRIGHT", dropdownList, "BOTTOMRIGHT", 0, 0)
         end
 
-        pixel.SetPixelWidth(scrollChild, scrollFrame:GetWidth())
+        scrollChild:NCSetWidth(scrollFrame:GetWidth())
         for _, btn in ipairs(row._itemButtons) do
             btn:ClearAllPoints()
-            pixel.SetPixelPoint(btn, "TOPLEFT", scrollChild, "TOPLEFT", 0, -(btn._index - 1) * ITEM_HEIGHT)
-            pixel.SetPixelPoint(btn, "RIGHT", scrollChild, "RIGHT", 0, 0)
+            btn:NCSetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -(btn._index - 1) * ITEM_HEIGHT)
+            btn:NCSetPoint("RIGHT", scrollChild, "RIGHT", 0, 0)
         end
     end
     row._updateScroll = UpdateScroll
@@ -881,13 +881,13 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         local progress = anim:GetProgress() or 0
         local smooth = progress * progress * (3 - 2 * progress)
         local newHeight = startHeight + (targetHeight - startHeight) * smooth
-        pixel.SetPixelHeight(dropdownList, newHeight)
+        dropdownList:NCSetHeight(newHeight)
         if row._isOpen and newHeight < targetHeight then dropdownList:SetClipsChildren(false) end
     end)
 
     -- Callback is deferred to here: firing it instantly lets it rebuild the dropdown mid-close.
     animGroup:SetScript("OnFinished", function()
-        pixel.SetPixelHeight(dropdownList, targetHeight)
+        dropdownList:NCSetHeight(targetHeight)
         if not row._isOpen then
             dropdownList:Hide()
             if dropdownList._logicalParent then
@@ -1076,24 +1076,24 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
                     safecall(def.onClick, key)
                 end
                 action:ClearAllPoints()
-                pixel.SetPixelPoint(action, "RIGHT", btn, "RIGHT", -TEXT_RIGHT_INSET - (actionCount - j) * (ACTION_SIZE + ACTION_GAP), 0)
+                action:NCSetPoint("RIGHT", btn, "RIGHT", -TEXT_RIGHT_INSET - (actionCount - j) * (ACTION_SIZE + ACTION_GAP), 0)
                 action:Show()
             end
             btn._text:ClearAllPoints()
-            pixel.SetPixelPoint(btn._text, "LEFT", btn, "LEFT", 8 + (grouped and not isHeader and HEADER_INDENT or 0), 0)
+            btn._text:NCSetPoint("LEFT", btn, "LEFT", 8 + (grouped and not isHeader and HEADER_INDENT or 0), 0)
             if swatched then
-                pixel.SetPixelPoint(btn._text, "RIGHT", btn._previewBar._backing, "LEFT", -SWATCH_GAP, 0)
+                btn._text:NCSetPoint("RIGHT", btn._previewBar._backing, "LEFT", -SWATCH_GAP, 0)
             else
-                pixel.SetPixelPoint(btn._text, "RIGHT", btn, "RIGHT", -TEXT_RIGHT_INSET - actionCount * (ACTION_SIZE + ACTION_GAP), 0)
+                btn._text:NCSetPoint("RIGHT", btn, "RIGHT", -TEXT_RIGHT_INSET - actionCount * (ACTION_SIZE + ACTION_GAP), 0)
             end
 
-            pixel.SetPixelPoint(btn, "TOPLEFT", scrollChild, "TOPLEFT", 0, -(i - 1) * ITEM_HEIGHT)
-            pixel.SetPixelPoint(btn, "RIGHT", scrollChild, "RIGHT", 0, 0)
+            btn:NCSetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -(i - 1) * ITEM_HEIGHT)
+            btn:NCSetPoint("RIGHT", scrollChild, "RIGHT", 0, 0)
             tinsert(row._itemButtons, btn)
         end
 
         if emptyLabel then emptyLabel:SetShown(#filteredKeys == 0) end
-        pixel.SetPixelHeight(scrollChild, #filteredKeys > 0 and (#filteredKeys * ITEM_HEIGHT) or ITEM_HEIGHT)
+        scrollChild:NCSetHeight(#filteredKeys > 0 and (#filteredKeys * ITEM_HEIGHT) or ITEM_HEIGHT)
         row._itemsCreated = true
     end
     row._createItemButtons = CreateItemButtons
@@ -1102,17 +1102,17 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     -- per config would leave a recycled dropdown without a search box.
     do
         searchContainer = CreateFrame("Frame", nil, dropdownList, "BackdropTemplate")
-        pixel.SetPixelHeight(searchContainer, SEARCH_BOX_HEIGHT)
-        pixel.SetPixelPoint(searchContainer, "TOPLEFT", dropdownList, "TOPLEFT", SEARCH_PADDING, -SEARCH_PADDING)
-        pixel.SetPixelPoint(searchContainer, "TOPRIGHT", dropdownList, "TOPRIGHT", -SEARCH_INPUT_RIGHT_PADDING, -SEARCH_PADDING)
+        searchContainer:NCSetHeight(SEARCH_BOX_HEIGHT)
+        searchContainer:NCSetPoint("TOPLEFT", dropdownList, "TOPLEFT", SEARCH_PADDING, -SEARCH_PADDING)
+        searchContainer:NCSetPoint("TOPRIGHT", dropdownList, "TOPRIGHT", -SEARCH_INPUT_RIGHT_PADDING, -SEARCH_PADDING)
         searchContainer:SetBackdrop(STANDARD_BACKDROP)
         searchContainer:SetBackdropColor(theme.bgDark[1], theme.bgDark[2], theme.bgDark[3], 0.9)
         searchContainer:SetBackdropBorderColor(theme.widgetBorder[1], theme.widgetBorder[2], theme.widgetBorder[3], 1)
         searchContainer:Hide()
 
         searchEditBox = CreateFrame("EditBox", nil, searchContainer)
-        pixel.SetPixelPoint(searchEditBox, "TOPLEFT", searchContainer, "TOPLEFT", 6, -4)
-        pixel.SetPixelPoint(searchEditBox, "BOTTOMRIGHT", searchContainer, "BOTTOMRIGHT", -6, 4)
+        searchEditBox:NCSetPoint("TOPLEFT", searchContainer, "TOPLEFT", 6, -4)
+        searchEditBox:NCSetPoint("BOTTOMRIGHT", searchContainer, "BOTTOMRIGHT", -6, 4)
         searchEditBox:SetFontObject("GameFontNormal")
         searchEditBox:SetTextColor(theme.textPrimary[1], theme.textPrimary[2], theme.textPrimary[3], 1)
         searchEditBox:SetAutoFocus(false)
@@ -1137,9 +1137,9 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         end)
 
         emptyLabel = scrollChild:CreateFontString(nil, "OVERLAY")
-        pixel.SetPixelPoint(emptyLabel, "TOPLEFT", scrollChild, "TOPLEFT", 8, 0)
-        pixel.SetPixelPoint(emptyLabel, "TOPRIGHT", scrollChild, "TOPRIGHT", -8, 0)
-        pixel.SetPixelHeight(emptyLabel, ITEM_HEIGHT)
+        emptyLabel:NCSetPoint("TOPLEFT", scrollChild, "TOPLEFT", 8, 0)
+        emptyLabel:NCSetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", -8, 0)
+        emptyLabel:NCSetHeight(ITEM_HEIGHT)
         emptyLabel:SetJustifyH("LEFT")
         gui:ApplyFont(emptyLabel, "normal")
         emptyLabel:SetText(L["No matches found"])
@@ -1165,7 +1165,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         dropdownList:SetParent(gui.overlay or UIParent)
         dropdownList:SetFrameStrata("FULLSCREEN_DIALOG")
         dropdownList:ClearAllPoints()
-        pixel.SetPixelPoint(dropdownList, "TOPLEFT", dropdownButton, "BOTTOMLEFT", 0, -2)
+        dropdownList:NCSetPoint("TOPLEFT", dropdownButton, "BOTTOMLEFT", 0, -2)
 
         if row._searchable then
             searchText = ""
@@ -1184,8 +1184,8 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
 
         local buttonWidth = dropdownButton:GetWidth()
         if buttonWidth and buttonWidth > 0 then
-            pixel.SetPixelWidth(dropdownList, buttonWidth)
-            pixel.SetPixelWidth(scrollChild, buttonWidth - (needsScrollbar and 12 or 0))
+            dropdownList:NCSetWidth(buttonWidth)
+            scrollChild:NCSetWidth(buttonWidth - (needsScrollbar and 12 or 0))
         end
 
         if needsScrollbar then
@@ -1203,9 +1203,9 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         -- would open a short one scrolled clean past every item, showing an empty list.
         scrollFrame:SetVerticalScroll(0)
 
-        pixel.SetPixelHeight(dropdownList, targetHeight)
+        dropdownList:NCSetHeight(targetHeight)
         dropdownList:Show()
-        pixel.SetPixelHeight(dropdownList, startHeight)
+        dropdownList:NCSetHeight(startHeight)
         row._isOpen = true
         PaintFieldGlow()
 
@@ -1251,9 +1251,9 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     -- because the search strip changes where the scroll area starts.
     row._applySearchLayout = function()
         scrollFrame:ClearAllPoints()
-        pixel.SetPixelPoint(scrollFrame, "TOPLEFT", dropdownList, "TOPLEFT", 0,
+        scrollFrame:NCSetPoint("TOPLEFT", dropdownList, "TOPLEFT", 0,
             row._searchable and -(SEARCH_BOX_HEIGHT + SEARCH_PADDING * 2) or 0)
-        pixel.SetPixelPoint(scrollFrame, "BOTTOMRIGHT", dropdownList, "BOTTOMRIGHT", 0, 0)
+        scrollFrame:NCSetPoint("BOTTOMRIGHT", dropdownList, "BOTTOMRIGHT", 0, 0)
         searchContainer:Hide()
         if emptyLabel then emptyLabel:Hide() end
     end
@@ -1350,7 +1350,7 @@ function DropdownMixin:OnAcquire(parent, labelText, config)
 
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, 34)
+    self:NCSetHeight(34)
 
     self._mediaType = mediaType
     self._isFontPreview = mediaType == "font"

@@ -25,7 +25,6 @@ local Kaji = Private.Kaji
 local InstanceMixin = Kaji.InstanceMixin
 local Animations = Private.Animations
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 
 local tostring = tostring
 local Mixin = Mixin
@@ -103,8 +102,8 @@ function MultiLineEditBoxMixin:OnAcquire(parent, labelText, config)
 
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, self.rowHeight)
-    pixel.SetPixelHeight(self.container, containerHeight)
+    self:NCSetHeight(self.rowHeight)
+    self.container:NCSetHeight(containerHeight)
 
     self.label:SetText(labelText or "")
     self._callback = config.callback
@@ -154,20 +153,20 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.gui = gui
 
     local label = row:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(label, "TOPLEFT", row, "TOPLEFT", 0, 1)
+    label:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, 1)
     label:SetJustifyH("LEFT")
     gui:ApplyFont(label, "small")
     row.label = label
 
     local container = CreateFrame("Frame", nil, row, "BackdropTemplate")
-    pixel.SetPixelPoint(container, "TOPLEFT", row, "TOPLEFT", 0, -LABEL_HEIGHT)
-    pixel.SetPixelPoint(container, "TOPRIGHT", row, "TOPRIGHT", 0, -LABEL_HEIGHT)
+    container:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, -LABEL_HEIGHT)
+    container:NCSetPoint("TOPRIGHT", row, "TOPRIGHT", 0, -LABEL_HEIGHT)
     Kaji.SetBackdrop(container, gui, { bg = "bgDark", bgAlpha = 0.9, border = "widgetBorder", borderAlpha = 1 })
     row.container = container
 
     local scrollFrame = CreateFrame("ScrollFrame", nil, container)
-    pixel.SetPixelPoint(scrollFrame, "TOPLEFT", container, "TOPLEFT", 6, -6)
-    pixel.SetPixelPoint(scrollFrame, "BOTTOMRIGHT", container, "BOTTOMRIGHT", -18, 6)
+    scrollFrame:NCSetPoint("TOPLEFT", container, "TOPLEFT", 6, -6)
+    scrollFrame:NCSetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -18, 6)
     row.scrollFrame = scrollFrame
 
     local scrollbar = gui:CreateScrollbar(scrollFrame, {
@@ -200,7 +199,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     end
 
     local scrollWidth = scrollFrame:GetWidth()
-    pixel.SetPixelWidth(editBox, scrollWidth > 0 and scrollWidth - 14 or 186)
+    editBox:NCSetWidth(scrollWidth > 0 and scrollWidth - 14 or 186)
 
     editBox:SetScript("OnCursorChanged", function(_, _, y, _, cursorHeight)
         local _, maxVal = scrollbar:GetMinMaxValues()
@@ -230,7 +229,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     end)
 
     scrollFrame:SetScript("OnSizeChanged", function(_, width)
-        pixel.SetPixelWidth(editBox, width - 14)
+        editBox:NCSetWidth(width - 14)
         row:UpdateScrollbar()
     end)
 

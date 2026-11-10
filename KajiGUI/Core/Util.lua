@@ -233,18 +233,18 @@ local NOTICE_PULSE_STEP = 0.25 -- seconds per fade out or in; two flashes in all
 local function PlaceNotice(marker, label, before)
     marker:ClearAllPoints()
     if before then
-        Private.Pixel.SetPixelPoint(marker, "RIGHT", before, "LEFT", -NOTICE_GAP, 0)
+        marker:NCSetPoint("RIGHT", before, "LEFT", -NOTICE_GAP, 0)
         return
     end
     ---@cast label -nil
     if label:GetNumPoints() == 1 then
         -- a label held by one point sizes to its text, so its right edge is where the text ends
-        Private.Pixel.SetPixelPoint(marker, "LEFT", label, "RIGHT", NOTICE_GAP, 0)
+        marker:NCSetPoint("LEFT", label, "RIGHT", NOTICE_GAP, 0)
         return
     end
 
     local width = label:GetStringWidth()
-    Private.Pixel.SetPixelPoint(marker, "LEFT", label, "LEFT", math.min(width, label:GetWidth()) + NOTICE_GAP, 0)
+    marker:NCSetPoint("LEFT", label, "LEFT", math.min(width, label:GetWidth()) + NOTICE_GAP, 0)
 
     -- a cold font measures 0 on a fresh login's first pass, so place it again once it has loaded
     if width == 0 and (label:GetText() or "") ~= "" then
@@ -338,10 +338,10 @@ function Kaji.SetNotice(owner, gui, label, notice, before)
     if not marker then
         marker = CreateFrame("Frame", nil, owner)
         marker:EnableMouse(true)
-        Private.Pixel.SetPixelSize(marker, NOTICE_SIZE, NOTICE_SIZE)
+        marker:NCSetSize(NOTICE_SIZE, NOTICE_SIZE)
         local icon = marker:CreateTexture(nil, "OVERLAY")
         icon:SetAllPoints()
-        Private.Pixel.SetPixelSnap(icon)
+        icon:NCDisablePixelSnap()
         marker.icon = icon
         marker:SetScript("OnEnter", Kaji.ShowTooltip)
         marker:SetScript("OnLeave", Kaji.HideTooltip)
@@ -434,7 +434,7 @@ function Kaji.AddSurfaceTexture(frame, gui, kind)
     tex:SetAllPoints()
     tex:SetTexture(theme[kind .. "Texture"], "REPEAT", "REPEAT")
     tex:SetAlpha(theme[kind .. "Alpha"])
-    Private.Pixel.SetPixelSnap(tex)
+    tex:NCDisablePixelSnap()
 
     local function Retile()
         local w, h = frame:GetSize()
@@ -471,10 +471,10 @@ end
 function Kaji.AddTopHighlight(frame, gui, layer)
     local theme = gui.theme
     local line = frame:CreateTexture(nil, layer or "ARTWORK")
-    Private.Pixel.SetPixelHeight(line, theme.borderSize)
-    Private.Pixel.SetPixelPoint(line, "TOPLEFT", frame, "TOPLEFT", theme.borderSize, -theme.borderSize)
-    Private.Pixel.SetPixelPoint(line, "TOPRIGHT", frame, "TOPRIGHT", -theme.borderSize, -theme.borderSize)
-    Private.Pixel.SetPixelSnap(line)
+    line:NCSetHeight(theme.borderSize)
+    line:NCSetPoint("TOPLEFT", frame, "TOPLEFT", theme.borderSize, -theme.borderSize)
+    line:NCSetPoint("TOPRIGHT", frame, "TOPRIGHT", -theme.borderSize, -theme.borderSize)
+    line:NCDisablePixelSnap()
     line:SetColorTexture(1, 1, 1, theme.highlightAlpha)
     return line
 end
@@ -492,9 +492,9 @@ function Kaji.CreateCornerTicks(owner, target, theme)
     for _, corner in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
         for _, across in ipairs({ true, false }) do
             local tick = owner:CreateTexture(nil, "OVERLAY")
-            Private.Pixel.SetPixelSize(tick, across and length or edge, across and edge or length)
-            Private.Pixel.SetPixelPoint(tick, corner, target, corner, 0, 0)
-            Private.Pixel.SetPixelSnap(tick)
+            tick:NCSetSize(across and length or edge, across and edge or length)
+            tick:NCSetPoint(corner, target, corner, 0, 0)
+            tick:NCDisablePixelSnap()
             ticks[#ticks + 1] = tick
         end
     end
@@ -535,15 +535,15 @@ function Kaji.CreatePanelChrome(panel, gui)
     Kaji.SetBackdrop(panel, gui, { bg = "bgMedium", border = "border", edgeSize = "borderSize" })
     -- held above the panel's children, so a scrollbar running up its right edge doesn't cover the right corners
     local corners = CreateFrame("Frame", nil, panel)
-    Private.Pixel.SetPixelInside(corners, panel, 0, 0)
+    corners:NCSetInside(panel, 0, 0)
     corners:SetFrameLevel(panel:GetFrameLevel() + 50)
     local cornerTicks = Kaji.CreateCornerTicks(corners, panel, theme)
 
     local halftone = panel:CreateTexture(nil, "BACKGROUND", nil, 3)
     halftone:SetTexture(theme.halftoneTexture, "REPEAT", "CLAMP")
-    Private.Pixel.SetPixelSnap(halftone)
-    Private.Pixel.SetPixelPoint(halftone, "BOTTOMLEFT", panel, "BOTTOMLEFT", edge, edge)
-    Private.Pixel.SetPixelPoint(halftone, "BOTTOMRIGHT", panel, "BOTTOMRIGHT", -edge, edge)
+    halftone:NCDisablePixelSnap()
+    halftone:NCSetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", edge, edge)
+    halftone:NCSetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -edge, edge)
 
     -- one texel per physical pixel so the dots stay crisp, never taller than the texture
     local function LayoutHalftone()
@@ -552,7 +552,7 @@ function Kaji.CreatePanelChrome(panel, gui)
         local h = math.min((panel:GetHeight() - edge * 2) * perUnit, HALFTONE_ROWS)
         if w <= 0 or h <= 0 then return end
 
-        Private.Pixel.SetPixelHeight(halftone, h / perUnit)
+        halftone:NCSetHeight(h / perUnit)
         halftone:SetTexCoord(0, w / HALFTONE_COLUMNS, 1 - h / HALFTONE_ROWS, 1)
     end
 
@@ -598,15 +598,15 @@ function Kaji.CreateRowSelection(row, theme, edge, look)
     s.bar = row:CreateTexture(nil, "OVERLAY")
     s.bar:SetTexture(WHITE)
     if bottom then
-        Private.Pixel.SetPixelHeight(s.bar, SELECT_BAR)
-        Private.Pixel.SetPixelPoint(s.bar, "BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
-        Private.Pixel.SetPixelPoint(s.bar, "BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
+        s.bar:NCSetHeight(SELECT_BAR)
+        s.bar:NCSetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
+        s.bar:NCSetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
     else
-        Private.Pixel.SetPixelWidth(s.bar, SELECT_BAR)
-        Private.Pixel.SetPixelPoint(s.bar, "TOPLEFT", row, "TOPLEFT", 0, 0)
-        Private.Pixel.SetPixelPoint(s.bar, "BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
+        s.bar:NCSetWidth(SELECT_BAR)
+        s.bar:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
+        s.bar:NCSetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
     end
-    Private.Pixel.SetPixelSnap(s.bar)
+    s.bar:NCDisablePixelSnap()
 
     s.tint = row:CreateTexture(nil, "BACKGROUND", nil, 1)
     s.tint:SetTexture(WHITE)
@@ -622,10 +622,10 @@ function Kaji.CreateRowSelection(row, theme, edge, look)
         for _, side in ipairs({ "TOP", "BOTTOM" }) do
             local line = row:CreateTexture(nil, "BACKGROUND", nil, 2)
             line:SetTexture(WHITE)
-            Private.Pixel.SetPixelHeight(line, theme.borderSize)
-            Private.Pixel.SetPixelPoint(line, side .. "LEFT", s.bar, side .. "RIGHT", 0, 0)
-            Private.Pixel.SetPixelPoint(line, side .. "RIGHT", row, side .. "RIGHT", 0, 0)
-            Private.Pixel.SetPixelSnap(line)
+            line:NCSetHeight(theme.borderSize)
+            line:NCSetPoint(side .. "LEFT", s.bar, side .. "RIGHT", 0, 0)
+            line:NCSetPoint(side .. "RIGHT", row, side .. "RIGHT", 0, 0)
+            line:NCDisablePixelSnap()
             s.edges[#s.edges + 1] = line
         end
     end
@@ -750,7 +750,7 @@ end
 ---@return KajiTickBox
 function Kaji.CreateTickBox(gui, parent, size)
     local box = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    Private.Pixel.SetPixelSize(box, size, size)
+    box:NCSetSize(size, size)
     Kaji.SetBackdrop(box, gui, { bg = { 0, 0, 0 }, bgAlpha = 0.9, border = "widgetBorder", borderAlpha = 1 })
     ---@cast box KajiTickBox
 
@@ -758,16 +758,16 @@ function Kaji.CreateTickBox(gui, parent, size)
 
     local fill = box:CreateTexture(nil, "ARTWORK")
     fill:SetAllPoints()
-    Private.Pixel.SetPixelSnap(fill)
+    fill:NCDisablePixelSnap()
 
     local check = box:CreateTexture(nil, "OVERLAY")
     check:SetAllPoints()
-    Private.Pixel.SetPixelSnap(check)
+    check:NCDisablePixelSnap()
 
     local cross = box:CreateTexture(nil, "OVERLAY")
-    Private.Pixel.SetPixelSize(cross, size - 6, size - 6)
-    Private.Pixel.SetPixelPoint(cross, "CENTER", box, "CENTER", 0, 0)
-    Private.Pixel.SetPixelSnap(cross)
+    cross:NCSetSize(size - 6, size - 6)
+    cross:NCSetPoint("CENTER", box, "CENTER", 0, 0)
+    cross:NCDisablePixelSnap()
     cross:SetVertexColor(0, 0, 0, 1)
 
     local progress, hovered, enabled, negated = 0, false, true, false

@@ -23,7 +23,6 @@ local Kaji = Private.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 local L = Private.L
 
 local CreateFrame = CreateFrame
@@ -132,12 +131,12 @@ function SectionHeaderMixin:OnAcquire(parent, labelText, config)
 
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, HEIGHT)
+    self:NCSetHeight(HEIGHT)
     -- Read by FluentCard:Section, so the card lays the row out to a known height rather than
     -- whatever GetHeight happens to report before the frame has been drawn.
     self.layoutHeight = HEIGHT
-    pixel.SetPixelPoint(self, "TOPLEFT", parent, "TOPLEFT", 0, 0)
-    pixel.SetPixelPoint(self, "TOPRIGHT", parent, "TOPRIGHT", 0, 0)
+    self:NCSetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+    self:NCSetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
 
     self._onToggle = config.onToggle
     -- Collapsed points right, expanded points down, matching the main sidebar's headers.
@@ -158,15 +157,15 @@ function SectionHeaderMixin:OnAcquire(parent, labelText, config)
 
         if callback then
             button:ClearAllPoints()
-            pixel.SetPixelPoint(button, "RIGHT", self, "RIGHT", x, 0)
+            button:NCSetPoint("RIGHT", self, "RIGHT", x, 0)
             x = x - ACTION_SIZE - ACTION_SPACING
         end
     end
 
     -- The title stops where the action cluster starts, so a long name truncates instead of running under it.
     self.label:ClearAllPoints()
-    pixel.SetPixelPoint(self.label, "LEFT", self, "LEFT", theme.paddingSmall + ARROW_SIZE + 6, 0)
-    pixel.SetPixelPoint(self.label, "RIGHT", self, "RIGHT", x - theme.paddingSmall, 0)
+    self.label:NCSetPoint("LEFT", self, "LEFT", theme.paddingSmall + ARROW_SIZE + 6, 0)
+    self.label:NCSetPoint("RIGHT", self, "RIGHT", x - theme.paddingSmall, 0)
 
     self:SetAlpha(1)
     self:EnableMouse(true)
@@ -244,9 +243,9 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     end)
 
     local arrow = header:CreateTexture(nil, "OVERLAY")
-    pixel.SetPixelSize(arrow, ARROW_SIZE, ARROW_SIZE)
+    arrow:NCSetSize(ARROW_SIZE, ARROW_SIZE)
     arrow:SetTexture(gui.theme.stepperTexture)
-    pixel.SetPixelSnap(arrow)
+    arrow:NCDisablePixelSnap()
     header.arrow = arrow
 
     local label = header:CreateFontString(nil, "OVERLAY")
@@ -255,23 +254,23 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     header.label = label
 
     -- The arrow is placed after the label so both exist before anchoring.
-    pixel.SetPixelPoint(arrow, "LEFT", header, "LEFT", gui.theme.paddingSmall, 0)
+    arrow:NCSetPoint("LEFT", header, "LEFT", gui.theme.paddingSmall, 0)
 
     -- Every action button is created up front and hidden when unused, so a recycled header never
     -- finds itself missing one.
     header.actions = {}
     for _, action in ipairs(ACTIONS) do
         local button = CreateFrame("Button", nil, header)
-        pixel.SetPixelSize(button, ACTION_SIZE, ACTION_SIZE)
+        button:NCSetSize(ACTION_SIZE, ACTION_SIZE)
 
         local icon = button:CreateTexture(nil, "ARTWORK")
         if action.size then
-            pixel.SetPixelSize(icon, action.size, action.size)
+            icon:NCSetSize(action.size, action.size)
             icon:SetPoint("CENTER")
         else
             icon:SetAllPoints()
         end
-        pixel.SetPixelSnap(icon)
+        icon:NCDisablePixelSnap()
         SetIcon(icon, action, gui.theme)
         icon:SetAlpha(0.7)
         button.icon = icon

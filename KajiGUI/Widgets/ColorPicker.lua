@@ -23,7 +23,6 @@ local Kaji = Private.Kaji
 local InstanceMixin = Kaji.InstanceMixin
 local Animations = Private.Animations
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin
@@ -133,7 +132,7 @@ function ColorPickerMixin:OnAcquire(parent, labelText, config)
 
     self:SetParent(parent)
     self:ClearAllPoints()
-    pixel.SetPixelHeight(self, 34)
+    self:NCSetHeight(34)
 
     self.label:SetText(labelText or "")
     Kaji.SetTooltip(self, self.gui, labelText) -- only shown while mixed, for the list of colours
@@ -181,23 +180,23 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.gui = gui
 
     local label = row:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(label, "TOPLEFT", row, "TOPLEFT", 0, 1)
+    label:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, 1)
     label:SetJustifyH("LEFT")
     gui:ApplyFont(label, "small")
     row.label = label
 
     -- Checkerboard behind the swatch, so a translucent color reads as translucent.
     local swatchBg = row:CreateTexture(nil, "BACKGROUND")
-    pixel.SetPixelSize(swatchBg, 48, 24)
-    pixel.SetPixelPoint(swatchBg, "TOPLEFT", row, "TOPLEFT", 0, -14)
+    swatchBg:NCSetSize(48, 24)
+    swatchBg:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, -14)
     swatchBg:SetTexture(theme.colorSwatchTexture)
     swatchBg:SetAlpha(0.8)
-    pixel.SetPixelSnap(swatchBg)
+    swatchBg:NCDisablePixelSnap()
     row.swatchBg = swatchBg
 
     local swatch = CreateFrame("Button", nil, row, "BackdropTemplate") --[[@as KajiGUIColorSwatch]]
-    pixel.SetPixelSize(swatch, 48, 24)
-    pixel.SetPixelPoint(swatch, "TOPLEFT", row, "TOPLEFT", 0, -14)
+    swatch:NCSetSize(48, 24)
+    swatch:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, -14)
     Kaji.SetBackdrop(swatch, gui, { bg = { 1, 1, 1, 1 }, border = "widgetBorder", borderAlpha = 1 })
     swatch.r, swatch.g, swatch.b, swatch.a = 1, 1, 1, 1
     swatch.isKajiColorPicker = true
@@ -205,7 +204,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     row.swatch = swatch
 
     local hexText = row:CreateFontString(nil, "OVERLAY")
-    pixel.SetPixelPoint(hexText, "LEFT", swatch, "RIGHT", 8, 0)
+    hexText:NCSetPoint("LEFT", swatch, "RIGHT", 8, 0)
     gui:ApplyFont(hexText, "small")
     hexText:SetShadowColor(0, 0, 0, 0)
     row.hexText = hexText
