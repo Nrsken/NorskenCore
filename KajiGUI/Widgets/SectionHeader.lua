@@ -30,6 +30,7 @@ local format = string.format
 local Mixin = Mixin
 local ipairs = ipairs
 local mpi = math.pi
+local min = math.min
 local GetAtlasInfo = C_Texture and C_Texture.GetAtlasInfo
 
 local WIDGET_TYPE = "SectionHeader"
@@ -37,12 +38,17 @@ local HEIGHT = 26
 local ARROW_SIZE = 10
 local ACTION_SIZE = 18
 local ACTION_SPACING = 2
+local ACTION_ALPHA = 0.7
+local ACTION_ALPHA_INERT = 0.2 -- a move with nowhere to go keeps its slot so every row's cluster lines up
+local SUMMARY_GAP = 4
+local SUMMARY_MIN = 24 -- narrower than this the summary would only be an ellipsis
+local TOOLTIP_OPTIONS = { anchor = "ANCHOR_TOP", x = 0, y = 4 }
 local HOVER_CLAIM_WINDOW = 0.05 -- how long a rebuilt row waits for OnEnter before it stops assuming the pointer
 
 -- Right to left, so the rightmost action is the destructive one and the cluster keeps its order
 -- however many of them a caller opts into.
 local ACTIONS = {
-    { key = "onDelete",    texture = "crossCustomTexture",    color = "error",       size = 12,           rotation = 0,                  title = "Delete",    tooltipKey = "deleteTooltip" },
+    { key = "onDelete",    texture = "crossCustomTexture",    color = "error",       size = 14,           rotation = 0,                  title = "Delete",    tooltipKey = "deleteTooltip" },
     { key = "onDuplicate", texture = "duplicateTexture",      color = "textPrimary", size = 16,           rotation = 0,                  title = "Duplicate", tooltipKey = "duplicateTooltip" },
     { key = "onMoveDown",  atlas = "channels-icon-arrowdown", rotation = 0,          title = "Move Down", tooltipKey = "moveDownTooltip" },
     { key = "onMoveUp",    atlas = "channels-icon-arrowup",   rotation = mpi,        title = "Move Up",   tooltipKey = "moveUpTooltip" },
@@ -71,6 +77,11 @@ local function SetIcon(texture, action, theme)
     texture:SetRotation(action.rotation or 0)
 end
 
+---@class KajiGUISectionHeaderAction : Button
+---@field icon Texture
+---@field _callback fun()?
+---@field _restAlpha number
+
 ---@class KajiGUISectionHeaderMixin : Button, BackdropTemplate
 ---@field gui KajiGUIInstance
 ---@field arrow Texture
@@ -81,10 +92,13 @@ end
 ---@field _hoverCard table?
 ---@field _hoverKey any
 ---@field label FontString
----@field actions Button[]
+---@field summary FontString
+---@field actions table<string, KajiGUISectionHeaderAction>
 ---@field _title string
 ---@field _summary string?
 ---@field _summaryColor number[]?
+---@field _textLeft number
+---@field _textRight number negative, the action cluster's left edge from the row's right
 local SectionHeaderMixin = {}
 
 ---@param enabled boolean
@@ -96,10 +110,12 @@ end
 function SectionHeaderMixin:UpdateColors()
     local theme = self.gui.theme
     Kaji.RefreshBackdrop(self)
-    self.label:SetTextColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
+    self.label:SetTextColor(theme.textPrimary[1], theme.textPrimary[2], theme.textPrimary[3], 1)
     self.arrow:SetVertexColor(theme.textSecondary[1], theme.textSecondary[2], theme.textSecondary[3], 0.9)
     for _, action in ipairs(ACTIONS) do
-        if action.texture then SetIcon(self.actions[action.key].icon, action, theme) end
+        if action.texture then
+            SetIcon(self.actions[action.key].icon, action, theme)
+        end
     end
     self:SetSummary(self._summary, self._summaryColor)
 end
@@ -110,17 +126,37 @@ function SectionHeaderMixin:SetTitle(title)
     self:SetSummary(self._summary, self._summaryColor)
 end
 
----The text after the title, in the primary text colour unless given one; nil shows the title alone.
+---The text after the title, in the secondary text colour unless given one; nil shows the title alone.
 ---@param summary string?
 ---@param color? number[]
 function SectionHeaderMixin:SetSummary(summary, color)
     self._summary, self._summaryColor = summary, color
-    if summary then
-        local text = color or self.gui.theme.textPrimary
-        self.label:SetText(format("%s: |cff%02x%02x%02x%s|r", self._title, text[1] * 255, text[2] * 255, text[3] * 255, summary))
+    self.summary:SetText(summary or "")
+    local text = color or self.gui.theme.textSecondary
+    self.summary:SetTextColor(text[1], text[2], text[3], 1)
+    Kaji.SetTooltip(self, self.gui, self._title, summary, TOOLTIP_OPTIONS)
+    self:LayoutText()
+end
+
+---The title takes the width it needs and the summary what's left, so a long list of changes truncates before the name does.
+function SectionHeaderMixin:LayoutText()
+    local room = self:GetWidth() - self._textLeft + self._textRight
+    local fits = false
+    self.label:SetText(self._title)
+    if room > 0 then
+        local titleWidth = self.label:GetUnboundedStringWidth()
+        fits = self._summary ~= nil and room - titleWidth - SUMMARY_GAP >= SUMMARY_MIN
+        if fits then
+            self.label:SetText(format("%s:", self._title))
+            titleWidth = self.label:GetUnboundedStringWidth()
+        end
+        -- one pixel over the measured width since snapping it down truncates a title that fits
+        self.label:NCSetWidth(min(titleWidth + 1, room))
     else
-        self.label:SetText(self._title)
+        -- not laid out yet: the title sizes itself until OnSizeChanged brings the real width
+        self.label:SetWidth(0)
     end
+    self.summary:SetShown(fits)
 end
 
 ---@param parent Frame
@@ -143,29 +179,43 @@ function SectionHeaderMixin:OnAcquire(parent, labelText, config)
     self.arrow:SetRotation(config.collapsed and mpi / 2 or 0)
 
     self.gui:ApplyFont(self.label, "normal")
+    self.gui:ApplyFont(self.summary, "normal")
     self._title, self._summary, self._summaryColor = labelText or "", config.summary, config.summaryColor
 
-    -- Actions are laid out right to left, so an omitted one leaves no gap.
+    -- Actions are laid out right to left, so an omitted one leaves no gap; in a list both moves keep a slot.
+    local inList = config.onMoveUp ~= nil or config.onMoveDown ~= nil
     local x = -theme.paddingSmall
     for _, action in ipairs(ACTIONS) do
         local button = self.actions[action.key]
         local callback = config[action.key]
+        local shown = callback ~= nil or inList and (action.key == "onMoveUp" or action.key == "onMoveDown")
 
-        button:SetShown(callback ~= nil)
+        button:SetShown(shown)
         button._callback = callback
-        Kaji.SetTooltip(button, self.gui, L[action.title], config[action.tooltipKey], { anchor = "ANCHOR_TOP", x = 0, y = 4 })
-
+        button._restAlpha = callback and ACTION_ALPHA or ACTION_ALPHA_INERT
+        button.icon:SetAlpha(button._restAlpha)
+        -- an inert slot lets clicks and hover through to the row
+        button:EnableMouse(callback ~= nil)
         if callback then
+            Kaji.SetTooltip(button, self.gui, L[action.title], config[action.tooltipKey], TOOLTIP_OPTIONS)
+        else
+            Kaji.ClearTooltip(button)
+        end
+
+        if shown then
             button:ClearAllPoints()
             button:NCSetPoint("RIGHT", self, "RIGHT", x, 0)
             x = x - ACTION_SIZE - ACTION_SPACING
         end
     end
 
-    -- The title stops where the action cluster starts, so a long name truncates instead of running under it.
+    -- The text stops where the action cluster starts, so it truncates instead of running under it.
+    self._textLeft, self._textRight = theme.paddingSmall + ARROW_SIZE + 6, x - theme.paddingSmall
     self.label:ClearAllPoints()
-    self.label:NCSetPoint("LEFT", self, "LEFT", theme.paddingSmall + ARROW_SIZE + 6, 0)
-    self.label:NCSetPoint("RIGHT", self, "RIGHT", x - theme.paddingSmall, 0)
+    self.label:NCSetPoint("LEFT", self, "LEFT", self._textLeft, 0)
+    self.summary:ClearAllPoints()
+    self.summary:NCSetPoint("LEFT", self.label, "RIGHT", SUMMARY_GAP, 0)
+    self.summary:NCSetPoint("RIGHT", self, "RIGHT", self._textRight, 0)
 
     self:SetAlpha(1)
     self:EnableMouse(true)
@@ -197,6 +247,8 @@ end
 function SectionHeaderMixin:OnRelease()
     self._onToggle, self._summary = nil, nil
     self.label:SetText("")
+    self.summary:SetText("")
+    Kaji.ClearTooltip(self)
     if self._hovered then
         self.gui._releasedHoverCard, self.gui._releasedHoverKey = self._hoverCard, self._hoverKey
     end
@@ -216,6 +268,7 @@ end
 Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local header = CreateFrame("Button", nil, gui._poolHost, "BackdropTemplate") --[[@as KajiGUISectionHeader]]
     header.gui = gui
+    header._textLeft, header._textRight = 0, 0 -- OnSizeChanged can come before the first OnAcquire sets them
     header:RegisterForClicks("LeftButtonUp")
 
     local hoverBg = header:CreateTexture(nil, "BACKGROUND")
@@ -236,8 +289,20 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     end
     header._setHovered = SetHovered
 
-    header:SetScript("OnEnter", function() SetHovered(true) end)
-    header:SetScript("OnLeave", function() SetHovered(false) end)
+    -- the full text only when the row can't show it
+    header:SetScript("OnEnter", function(self)
+        SetHovered(true)
+        if self.label:IsTruncated() or self.summary:IsTruncated() or self._summary and not self.summary:IsShown() then
+            Kaji.ShowTooltip(self)
+        end
+    end)
+    header:SetScript("OnLeave", function()
+        SetHovered(false)
+        Kaji.HideTooltip()
+    end)
+    header:SetScript("OnSizeChanged", function(self)
+        self:LayoutText()
+    end)
     header:SetScript("OnClick", function(self)
         if self._onToggle then safecall(self._onToggle) end
     end)
@@ -253,6 +318,11 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     label:SetWordWrap(false)
     header.label = label
 
+    local summary = header:CreateFontString(nil, "OVERLAY")
+    summary:SetJustifyH("LEFT")
+    summary:SetWordWrap(false)
+    header.summary = summary
+
     -- The arrow is placed after the label so both exist before anchoring.
     arrow:NCSetPoint("LEFT", header, "LEFT", gui.theme.paddingSmall, 0)
 
@@ -260,7 +330,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     -- finds itself missing one.
     header.actions = {}
     for _, action in ipairs(ACTIONS) do
-        local button = CreateFrame("Button", nil, header)
+        local button = CreateFrame("Button", nil, header) --[[@as KajiGUISectionHeaderAction]]
         button:NCSetSize(ACTION_SIZE, ACTION_SIZE)
 
         local icon = button:CreateTexture(nil, "ARTWORK")
@@ -272,18 +342,19 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         end
         icon:NCDisablePixelSnap()
         SetIcon(icon, action, gui.theme)
-        icon:SetAlpha(0.7)
         button.icon = icon
 
         -- entering a child fires the row's OnLeave, the row stays lit because the pointer is still on it
         button:SetScript("OnEnter", function(self)
             SetHovered(true)
-            icon:SetAlpha(1)
+            if self._callback then
+                icon:SetAlpha(1)
+            end
             Kaji.ShowTooltip(self)
         end)
-        button:SetScript("OnLeave", function()
+        button:SetScript("OnLeave", function(self)
             SetHovered(false)
-            icon:SetAlpha(0.7)
+            icon:SetAlpha(self._restAlpha)
             Kaji.HideTooltip()
         end)
         button:SetScript("OnClick", function(self)

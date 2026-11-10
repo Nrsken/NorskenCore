@@ -162,7 +162,7 @@ Kaji.premadeCards.PositionCard = {
                 SELECTFRAME = L["Select Frame"],
             }
 
-            card:Row(40):Dropdown(L["Anchored To"], {
+            card:Row(theme.rowHeight):Dropdown(L["Anchored To"], {
                 width = 1,
                 options = anchorTypeList,
                 value = currentType,
@@ -174,7 +174,7 @@ Kaji.premadeCards.PositionCard = {
             })
 
             if currentType == "SELECTFRAME" then
-                local row2 = card:Row(40)
+                local row2 = card:Row(theme.rowHeight)
                 local frameInput = row2:EditBox(L["Frame"], {
                     width = 0.5,
                     value = getValue(keys.anchorFrameFrame, ""),
@@ -199,7 +199,7 @@ Kaji.premadeCards.PositionCard = {
             end
         end
 
-        local row3 = card:Row(80)
+        local row3 = card:Row(theme.rowHeightTall)
         selfPointWidget = row3:AnchorPicker(L["Anchor From"], {
             width = 0.5,
             value = getValue(keys.selfPoint, defaults.selfPoint or "CENTER"),
@@ -215,7 +215,7 @@ Kaji.premadeCards.PositionCard = {
             callback = function(val) setValue(keys.anchorPoint, val) end,
         })
 
-        local row4 = card:Row(40, showStrata and nil or 0)
+        local row4 = card:Row(showStrata and theme.rowHeight or theme.rowHeightLast, not showStrata and 0 or nil)
         xSlider = row4:Slider(L["X Offset"], {
             width = 0.5,
             min = sliderRange[1],

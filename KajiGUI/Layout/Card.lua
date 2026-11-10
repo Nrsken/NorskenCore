@@ -617,9 +617,9 @@ function RowMixin:SetWidgetHeight(widget, height)
     self:SetContentHeight(tallest)
 end
 
----Adds a widget at a relative width. Widths in a row should sum to 1.0.
+---Adds a widget at a relative width. Shares in a row should sum to 1.0 unless one widget is 'fill'.
 ---@param widget Frame
----@param widthPct? number
+---@param widthPct? number|'fill' 'fill' takes what the row's other widgets leave, so a fixed-width neighbour still ends on the row's edge; one per row, without columnAt
 ---@param spacing? number
 ---@param xOffset? number
 ---@param yOffset? number
@@ -669,9 +669,24 @@ function RowMixin:LayoutWidgets(width)
         end
     end
 
+    local widths, spacings, fill, used = {}, {}, nil, 0
     for i, widget in ipairs(self.widgets) do
         local spacing = (i == count) and 0 or (widget._spacing or pad)
-        local widgetWidth = widget._fixedWidth or (self._even and (width - gaps) * widget._widthPct or width * widget._widthPct - spacing)
+        spacings[i] = spacing
+        if widget._widthPct == 'fill' then
+            fill = i
+        else
+            widths[i] = widget._fixedWidth or (self._even and (width - gaps) * widget._widthPct or width * widget._widthPct - spacing)
+        end
+        used = used + (widths[i] or 0) + spacing
+    end
+    if fill then
+        widths[fill] = width - used
+    end
+
+    for i, widget in ipairs(self.widgets) do
+        local spacing = spacings[i]
+        local widgetWidth = widths[i]
         if widget._columnAt then
             x = indent + width * widget._columnAt
         end

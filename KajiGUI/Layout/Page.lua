@@ -45,7 +45,7 @@ local setmetatable = setmetatable
 
 ---Widget config for fluent card methods. All fields are optional, defaults are applied in the fluent layer.
 ---@class KajiGUIWidgetConfig
----@field width? number widthPct passed to AddWidget (defaults to 0.5)
+---@field width? number|'fill' widthPct passed to AddWidget (defaults to 0.5); 'fill' takes what the row's other widgets leave
 ---@field spacing? number
 ---@field xOffset? number
 ---@field yOffset? number
