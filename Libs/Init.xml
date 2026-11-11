@@ -12,8 +12,8 @@
     <Include file="Ace3/AceSerializer-3.0/AceSerializer-3.0.xml" />
     <Script file="LibDeflate/LibDeflate.lua"/>
     <Include file="LibSharedMedia-3.0/LibSharedMedia-3.0.lua" />
-    <Script file="LibSpecialization/LibSpecialization.lua"/>
-    <Script file="LibRangeCheck-3.0/LibRangeCheck-3.0.lua"/>
+    <Script file="LibSpecialization/LibSpecialization/LibSpecialization.lua"/>
+    <Script file="LibRangeCheck-3.0/LibRangeCheck-3.0/LibRangeCheck-3.0.lua"/>
     <Script file="LibCustomGlow-1.0/LibCustomGlow-1.0.lua"/>
     <Include file="TaintLess/TaintLess.xml" />
     <Script file="LibEditModeOverride/LibEditModeOverride.lua" />
