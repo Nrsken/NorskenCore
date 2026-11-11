@@ -25,12 +25,6 @@ externals:
     Libs/TaintLess:
         url: https://www.townlong-yak.com/addons.git/taintless
         commit: default
-    Libs/LibEditMode:
-        url: https://github.com/p3lim-wow/LibEditMode.git
-        tag: master
-    Libs/LibEditModeOverride:
-        url: https://github.com/plusmouse/LibEditModeOverride
-        tag: main
     Libs/LibRangeCheck-3.0:
         url: https://github.com/WeakAuras/LibRangeCheck-3.0.git
         branch: main

@@ -20,9 +20,9 @@
 local MAJOR, MINOR = "AceTimer-3.0", 17 -- Bump minor on changes
 local AceTimer, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
-if not AceTimer then return end                     -- No upgrade needed
+if not AceTimer then return end -- No upgrade needed
 AceTimer.activeTimers = AceTimer.activeTimers or {} -- Active timer list
-local activeTimers = AceTimer.activeTimers          -- Upvalue our private data
+local activeTimers = AceTimer.activeTimers -- Upvalue our private data
 
 -- Lua APIs
 local type, unpack, next, error, select = type, unpack, next, error, select
@@ -93,16 +93,13 @@ end
 -- end
 function AceTimer:ScheduleTimer(func, delay, ...)
 	if not func or not delay then
-		error(MAJOR .. ": ScheduleTimer(callback, delay, args...): 'callback' and 'delay' must have set values.", 2)
+		error(MAJOR..": ScheduleTimer(callback, delay, args...): 'callback' and 'delay' must have set values.", 2)
 	end
 	if type(func) == "string" then
 		if type(self) ~= "table" then
-			error(MAJOR .. ": ScheduleTimer(callback, delay, args...): 'self' - must be a table.", 2)
+			error(MAJOR..": ScheduleTimer(callback, delay, args...): 'self' - must be a table.", 2)
 		elseif not self[func] then
-			error(
-			MAJOR ..
-			": ScheduleTimer(callback, delay, args...): Tried to register '" ..
-			func .. "' as the callback, but it doesn't exist in the module.", 2)
+			error(MAJOR..": ScheduleTimer(callback, delay, args...): Tried to register '"..func.."' as the callback, but it doesn't exist in the module.", 2)
 		end
 	end
 	return new(self, nil, func, delay, ...)
@@ -131,17 +128,13 @@ end
 -- end
 function AceTimer:ScheduleRepeatingTimer(func, delay, ...)
 	if not func or not delay then
-		error(MAJOR .. ": ScheduleRepeatingTimer(callback, delay, args...): 'callback' and 'delay' must have set values.",
-			2)
+		error(MAJOR..": ScheduleRepeatingTimer(callback, delay, args...): 'callback' and 'delay' must have set values.", 2)
 	end
 	if type(func) == "string" then
 		if type(self) ~= "table" then
-			error(MAJOR .. ": ScheduleRepeatingTimer(callback, delay, args...): 'self' - must be a table.", 2)
+			error(MAJOR..": ScheduleRepeatingTimer(callback, delay, args...): 'self' - must be a table.", 2)
 		elseif not self[func] then
-			error(
-			MAJOR ..
-			": ScheduleRepeatingTimer(callback, delay, args...): Tried to register '" ..
-			func .. "' as the callback, but it doesn't exist in the module.", 2)
+			error(MAJOR..": ScheduleRepeatingTimer(callback, delay, args...): Tried to register '"..func.."' as the callback, but it doesn't exist in the module.", 2)
 		end
 	end
 	return new(self, true, func, delay, ...)
@@ -165,7 +158,7 @@ end
 
 --- Cancels all timers registered to the current addon object ('self')
 function AceTimer:CancelAllTimers()
-	for k, v in next, activeTimers do
+	for k,v in next, activeTimers do
 		if v.object == self then
 			AceTimer.CancelTimer(self, k)
 		end
@@ -185,6 +178,7 @@ function AceTimer:TimeLeft(id)
 	end
 end
 
+
 -- ---------------------------------------------------------------------
 -- Upgrading
 
@@ -195,8 +189,8 @@ if oldminor and oldminor < 10 then
 	AceTimer.frame:SetScript("OnEvent", nil)
 	AceTimer.frame:UnregisterAllEvents()
 	-- convert timers
-	for object, timers in next, AceTimer.selfs do
-		for handle, timer in next, timers do
+	for object,timers in next, AceTimer.selfs do
+		for handle,timer in next, timers do
 			if type(timer) == "table" and timer.callback then
 				local newTimer
 				if timer.delay then
@@ -228,11 +222,9 @@ elseif oldminor and oldminor < 17 then
 		local duration, elapsed = timer:GetDuration(), timer:GetElapsed()
 		timer:GetParent():Stop()
 		if timer.looping then
-			newTimer = AceTimer.ScheduleRepeatingTimer(timer.object, timer.func, duration,
-				unpack(timer.args, 1, timer.argsCount))
+			newTimer = AceTimer.ScheduleRepeatingTimer(timer.object, timer.func, duration, unpack(timer.args, 1, timer.argsCount))
 		else
-			newTimer = AceTimer.ScheduleTimer(timer.object, timer.func, duration - elapsed,
-				unpack(timer.args, 1, timer.argsCount))
+			newTimer = AceTimer.ScheduleTimer(timer.object, timer.func, duration - elapsed, unpack(timer.args, 1, timer.argsCount))
 		end
 		-- Use the old handle for old timers
 		activeTimers[newTimer] = nil
@@ -267,7 +259,7 @@ local mixins = {
 
 function AceTimer:Embed(target)
 	AceTimer.embeds[target] = true
-	for _, v in next, mixins do
+	for _,v in next, mixins do
 		target[v] = AceTimer[v]
 	end
 	return target
