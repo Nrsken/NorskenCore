@@ -2,6 +2,7 @@ package-as: NorskenCore
 enable-nolib-creation: no
 
 curse-id: 1787589
+wago-id: x61xB2N1
 
 # the shared options parts ship as their own LoadOnDemand folder
 move-folders:

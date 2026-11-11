@@ -8,6 +8,7 @@
 ## OptionalDeps: Ace3, LibSharedMedia-3.0
 ## IconTexture: Interface\AddOns\NorskenCore\Media\Logo\LogoCore.png
 ## X-Curse-Project-ID: 1787589
+## X-Wago-ID: x61xB2N1
 
 Libs/Init.xml
 Core/Core.xml
