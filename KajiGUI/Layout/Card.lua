@@ -106,11 +106,13 @@ end
 ---@param body KajiGUIBodyMixin
 local function RelayoutBody(body)
     local card = body._owner
-    local pad = card.gui.theme.paddingSmall
+    local theme = card.gui.theme
+    local pad = theme.paddingSmall
     local y = 0
     for _, row in ipairs(body.rows) do
         local offset = y + (row._layoutOffsetY or 0)
-        PlaceRow(row, body, BODY_BLEED + (row._layoutIndent or 0), BODY_BLEED + offset, -BODY_BLEED)
+        -- rows sit in from the header, so its arrow hangs out to the left of them
+        PlaceRow(row, body, BODY_BLEED + theme.sectionIndent + (row._layoutIndent or 0), BODY_BLEED + offset, -BODY_BLEED)
         y = y + (row._layoutHeight or 24) + (row._layoutSpacing or pad)
     end
 
@@ -520,8 +522,9 @@ Kaji:RegisterWidgetType(CARD_TYPE, function(gui)
     header:NCSetPoint("TOPRIGHT", card, "TOPRIGHT", 0, 0)
     card.header = header
 
+    -- inside the card's edge: the header frame sits above the card, so a full-size band would paint over it
     local band = header:CreateTexture(nil, "BACKGROUND")
-    band:NCSetInside(header, 0, 0)
+    band:NCSetInside(header, theme.borderSize, theme.borderSize)
     card.band = band
 
     -- a 45° slash across the band just past the title, as the portrait skins' tabs; LayoutHeaderCut places it

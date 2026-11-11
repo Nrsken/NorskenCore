@@ -79,7 +79,8 @@ local SUPPORT_ICON = 21 -- the prompt's icon, as big as the footer's
 local SUPPORT_LINKS = {
     { text = 'Twitch', title = L['Support My %s'], icon = 'twitchv2W', size = 20, width = 18, color = 'ff9146ff', link = 'www.twitch.tv/norskenwow' },
     { text = 'Discord', title = L['Join My %s'], icon = 'discordv2W', size = 21, width = 21, color = 'ff5865f2', link = 'https://discord.com/invite/23bS8pHfuX' },
-    { text = 'GitHub', title = L['View NorskenUI on %s'], icon = 'github2W', size = 19, width = 19, color = 'ffffffff', link = 'https://github.com/Nrsken/NorskenUI' },
+    -- each addon has its own repo, its name ends the link and leads the title
+    { text = 'GitHub', title = L['View %s on %s'], icon = 'github2W', size = 19, width = 19, color = 'ffffffff', link = 'https://github.com/Nrsken/', repo = true },
     { text = 'Ko-fi', title = L['Support Me on %s'], icon = 'kofiW', size = 22, width = 22, color = 'ffff6433', link = 'https://ko-fi.com/norskenwow' },
     -- PayPal's lighter blue, its navy doesn't show on the dark footer
     { text = 'PayPal', title = L['Support Me on %s'], icon = 'paypalW', size = 19, width = 15, color = 'ff009cde', link = 'https://streamelements.com/norskenwow/tip' },
@@ -95,6 +96,14 @@ function Shared:AddSupportFooter(window, addon)
         local color = CreateColorFromHexString(site.color)
         local rgb = { color:GetRGB() }
         local icon, glow = SUPPORT_LOGOS .. site.icon .. '.png', SUPPORT_LOGOS .. site.icon .. '_glow.png'
+        local repo = site.repo and addon.name
+        local link = repo and site.link .. repo or site.link
+        local function Title(siteName)
+            if repo then
+                return format(site.title, repo, siteName)
+            end
+            return format(site.title, siteName)
+        end
         window:AddFooterSocial({
             icon = icon,
             glow = glow,
@@ -102,11 +111,11 @@ function Shared:AddSupportFooter(window, addon)
             width = site.width,
             color = rgb,
             tooltip = site.text,
-            tooltipText = format(site.title, site.text), -- the prompt's title, uncoloured
+            tooltipText = Title(site.text), -- the prompt's title, uncoloured
             onClick = function()
                 addon:CreatePrompt({
-                    title = format(site.title, color:WrapTextInColorCode(site.text)),
-                    text = site.link,
+                    title = Title(color:WrapTextInColorCode(site.text)),
+                    text = link,
                     editBox = true,
                     editBoxLabel = L['CTRL-C to copy'],
                     texture = { path = icon, glow = glow, width = SUPPORT_ICON, height = SUPPORT_ICON, color = { r = rgb[1], g = rgb[2], b = rgb[3] } },

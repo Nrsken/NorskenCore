@@ -487,10 +487,10 @@ Kaji.premadeCards.LoadConditionsCard = {
             }
         end
 
-        ---@return number width the card's content, 400 before it has been laid out
+        ---@return number width a section's rows have, 400 before the card has been laid out
         local function ContentWidth()
             local width = card.real and card.real.content and card.real.content:GetWidth() or 0
-            return width > 0 and width or 400
+            return (width > 0 and width or 400) - theme.sectionIndent
         end
 
         local function SelectMyClass()
@@ -763,7 +763,7 @@ Kaji.premadeCards.LoadConditionsCard = {
 
         -- General --
 
-        card:Separator(L["General"], { useLabel = true, height = 20 })
+        card:Separator(L["General"], { useLabel = true, height = 20, centered = true })
 
         local cells = {}
         for _, state in ipairs(Kaji.loadStates) do
@@ -803,7 +803,7 @@ Kaji.premadeCards.LoadConditionsCard = {
         for index, category in ipairs(categories) do
             if category.group ~= group then
                 group = category.group
-                card:Separator(group, { useLabel = true })
+                card:Separator(group, { useLabel = true, centered = true })
             end
 
             local key = category.key
@@ -822,11 +822,11 @@ Kaji.premadeCards.LoadConditionsCard = {
             if expanded then
                 category.body()
 
-                -- closes the open section off; the next heading draws its own rule
+--[[                 -- closes the open section off; the next heading draws its own rule
                 local nextCategory = categories[index + 1]
                 if nextCategory and nextCategory.group == group then
                     card:Separator(nil, { inSection = true })
-                end
+                end ]]
             end
         end
     end,

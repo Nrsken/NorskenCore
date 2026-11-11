@@ -30,6 +30,8 @@ local type = type
 local strfind, strlower = string.find, string.lower
 
 local FIELD_HEIGHT = 24 -- the EditBox widget's field
+local CLEAR_SIZE = 10
+local CLEAR_INSET = 6
 
 -- Collector: mirrors the fluent surface, records labels, builds nothing --
 
@@ -311,8 +313,8 @@ function InstanceMixin:CreateSearchBox(parent, opts)
     end
 
     local clear = CreateFrame("Button", nil, inner)
-    clear:NCSetSize(14, 14)
-    clear:NCSetPoint("RIGHT", inner, "RIGHT", -2, 0)
+    clear:NCSetSize(CLEAR_SIZE, CLEAR_SIZE)
+    clear:NCSetPoint("RIGHT", inner, "RIGHT", -CLEAR_INSET, 0)
     clear:Hide()
     local clearIcon = clear:CreateTexture(nil, "ARTWORK")
     clearIcon:SetAllPoints()
@@ -321,7 +323,7 @@ function InstanceMixin:CreateSearchBox(parent, opts)
     edit = CreateFrame("EditBox", nil, inner)
     -- the widget's text inset, stopping short of the clear button
     edit:NCSetPoint("TOPLEFT", inner, "TOPLEFT", 6, -4)
-    edit:NCSetPoint("BOTTOMRIGHT", inner, "BOTTOMRIGHT", -(2 + 14 + 4), 4)
+    edit:NCSetPoint("BOTTOMRIGHT", inner, "BOTTOMRIGHT", -(CLEAR_INSET + CLEAR_SIZE + 4), 4)
     edit:SetAutoFocus(false)
     gui:ApplyFont(edit, "normal")
     edit:SetText(placeholder)
@@ -345,7 +347,9 @@ function InstanceMixin:CreateSearchBox(parent, opts)
     ---The border's colour at rest: the accent while focused, the widget's edge otherwise.
     local function PaintBorder()
         local c = edit:HasFocus() and theme.accent or theme.widgetBorder
+        -- the sync only reseats the animator, it doesn't paint
         SyncBorder(c[1], c[2], c[3], 1)
+        inner:SetBackdropBorderColor(c[1], c[2], c[3], 1)
     end
 
     -- hover as the widget tracks it, off the text area's enter and leave; the clear button sits on the field,

@@ -212,4 +212,4 @@ L['Toggle Anchors'] = true
 L['Join My %s'] = true
 L['Support My %s'] = true
 L['Support Me on %s'] = true
-L['View NorskenUI on %s'] = true
+L['View %s on %s'] = true

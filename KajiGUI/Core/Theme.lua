@@ -96,6 +96,8 @@ local DEFAULT_THEME = {
     barControlHeight        = 27,
     footerHeight            = 28,
     sidebarWidth            = 242,
+    sectionIndent           = 8, -- rows inside a section start this far in from its header
+
     contentWidth            = 679.1,
     borderSize              = 1,
     -- Spacing
@@ -283,14 +285,14 @@ local THEME_PRESETS = {
         dark = { 0.102, 0.071, 0.055, 0.9 },
         medium = { 0.125, 0.086, 0.067, 0.9 },
         light = { 0.149, 0.102, 0.078, 0.9 },
-        accent = { 0.659, 0.518, 0.384 },
+        accent = { 0.87, 0.62, 0.33 },
         border = { 0.227, 0.141, 0.094, 1 },
         widgetBorder = { 0.27, 0.25, 0.23, 1 },
         bgHover = { 0.290, 0.196, 0.125, 1 },
         textPrimary = { 0.95, 0.93, 0.90, 1 },
         textSecondary = { 0.78, 0.76, 0.73, 1 },
         textMuted = { 0.52, 0.50, 0.48, 1 },
-        selectedBg = { 0.659, 0.518, 0.384, 0.15 },
+        selectedBg = { 0.87, 0.62, 0.33, 0.15 },
     },
     ["Merlot"] = BuildPreset {
         dark = { 0.035, 0.016, 0.016, 0.9 },

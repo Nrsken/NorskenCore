@@ -260,6 +260,16 @@ function FluentCard:OnExternalRefresh(fn)
     return self
 end
 
+---Adds a section header to the flow with a gap above it when rows come before, so it leads the rows below.
+---@param card KajiGUICard
+---@param header KajiGUISectionHeader
+local function AddSectionHeader(card, header)
+    local host = card._body or card
+    local lead = #host.rows > 0 and card.gui.theme.paddingSmall / 2 or 0
+    header._layoutOffsetY = lead
+    card:AddRow(header, header.layoutHeight + lead)
+end
+
 ---Adds a collapsible section header and reports whether its body should be built.
 ---
 ---A section owns no rows: the header is a plain row in the card's flow, and collapsing is this
@@ -304,7 +314,7 @@ function FluentCard:Section(title, config)
     header = self.page.gui:CreateSectionHeader(real.content, title, headerConfig)
     header:ClaimHover(real, key)
     header._layoutIndent = nil -- a pooled header may last have been a sub-section's
-    real:AddRow(header, header.layoutHeight)
+    AddSectionHeader(real, header)
 
     local anim = real:GetSectionAnim(key)
     if anim then
@@ -351,7 +361,7 @@ function FluentCard:SubSection(title, config)
     header = self.page.gui:CreateSectionHeader(real.content, title, headerConfig)
     header:ClaimHover(real, key)
     header._layoutIndent = config.indent
-    real:AddRow(header, header.layoutHeight)
+    AddSectionHeader(real, header)
 
     local anim = real:GetSectionAnim(key)
     if anim then

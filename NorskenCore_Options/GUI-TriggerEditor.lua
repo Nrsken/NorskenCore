@@ -320,7 +320,7 @@ function TriggerEditor:LoadPresetConfig(gui, trigger, changed, refresh, index)
     end
 
     return {
-        width = 0.5,
+        width = 1,
         options = options,
         tooltip = index and L['Replace this trigger with a preset, as a starting point to edit.']
             or L['Replace the triggers with a preset, as a starting point to edit.'],
@@ -418,10 +418,9 @@ end
 ---@param branch table
 ---@param group table
 ---@param changed fun()
----@param indent number? inside a section, where the rows sit under a sub-section
-local function BuildGroupRows(card, branch, group, changed, indent)
+local function BuildGroupRows(card, branch, group, changed)
     if group.duration then
-        card:Row(rowH, nil, indent):EditBox(L['Max Duration (seconds)'], {
+        card:Row(rowH):EditBox(L['Max Duration (seconds)'], {
             width = 0.5,
             value = tostring(branch.candidates and branch.candidates.maxDuration or ''),
             callback = function(text)
@@ -437,7 +436,7 @@ local function BuildGroupRows(card, branch, group, changed, indent)
 
     local fields = group.fields
     for index = 1, #fields, 2 do
-        local row = card:Row(rowH, nil, indent)
+        local row = card:Row(rowH)
         for i = index, index + 1 do
             local field = fields[i]
             if field then
@@ -458,12 +457,11 @@ end
 ---@param card KajiGUIFluentCard
 ---@param branch table
 ---@param changed fun()
----@param nest { key: string, indent: number }? inside a section the groups are its sub-sections
+---@param nest { key: string }? inside a section the groups are its sub-sections
 local function BuildFilters(card, branch, changed, nest)
     local theme = card.page.gui.theme
     local open = openState[branch] or {}
     openState[branch] = open
-    local indent = nest and nest.indent
 
     for _, group in ipairs(GROUPS) do
         local count = CountSet(branch, group)
@@ -472,7 +470,6 @@ local function BuildFilters(card, branch, changed, nest)
         local title = count > 0 and (group.title .. '  ' .. Muted(theme, format(L['%d active'], count))) or group.title
         local config = {
             key = nest and (nest.key .. ':' .. group.key),
-            indent = indent,
             collapsed = not isOpen,
             onToggle = function()
                 open[group.key] = not isOpen
@@ -486,8 +483,8 @@ local function BuildFilters(card, branch, changed, nest)
             expanded = card:Section(title, config)
         end
         if expanded then
-            card:Row(20, nil, indent):Text(nil, { width = 1, text = Muted(theme, group.desc), bgMode = 'hide' })
-            BuildGroupRows(card, branch, group, changed, indent)
+            card:Row(20):Text(nil, { width = 1, text = Muted(theme, group.desc), bgMode = 'hide' })
+            BuildGroupRows(card, branch, group, changed)
         end
     end
     if nest then
@@ -502,10 +499,10 @@ end
 ---@param apply fun()
 ---@param changed fun() after an edit that changes the rows
 ---@param retype fun() after the aura type changed, which titles name
----@param nest { key: string, indent: number }? set when the rows sit inside a section of the caller's
+---@param nest { key: string }? set when the rows sit inside a section of the caller's
 local function BuildBranch(c, trigger, index, apply, changed, retype, nest)
     local branch = trigger.branches[index]
-    local separator = { useLabel = true, inSection = nest ~= nil } -- a plain separator would end the caller's section
+    local separator = { useLabel = true, inSection = nest ~= nil, centered = true } -- a plain separator would end the caller's section
 
     local row = c:Row(rowH)
     row:Dropdown(L['Aura Type'], {
@@ -576,7 +573,7 @@ end
 ---@param trigger table
 ---@param index number
 ---@param changed fun() after any edit, which rebuilds the rows
----@param nest { key: string, indent: number } the section's key and how far its sub-sections sit in
+---@param nest { key: string } the section's key
 function TriggerEditor:BuildBranch(c, trigger, index, changed, nest)
     c:Row(rowH):Dropdown(L['Load Preset'], self:LoadPresetConfig(c.page.gui, trigger, changed, function() c:Rebuild() end, index))
     BuildBranch(c, trigger, index, nop, changed, changed, nest) -- changed applies too, so a retype runs it once
