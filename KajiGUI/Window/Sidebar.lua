@@ -44,7 +44,6 @@ local COLLAPSE_DURATION = 0.15
 local HEADER_GAP = 2 -- between stacked headers
 local ROWS_GAP = 8 -- under a section's open rows, folding with them
 local ITEM_SPACING = 1
-local HOVER_LIGHTEN = 0.6 -- how far a hovered label goes toward textPrimary
 
 ---Creates the sidebar panel.
 ---@param parent Frame
@@ -129,10 +128,8 @@ function InstanceMixin:CreateSidebar(parent, opts)
     ---A selectable row's label: its rest colour lightening while hovered, the accent as it's selected.
     local function PaintLabel(row, rest)
         local l, h = Kaji.RowSelectionProgress(row)
-        local hi, ac = theme.textPrimary, theme.accent
-        local r = rest[1] + (hi[1] - rest[1]) * h * HOVER_LIGHTEN
-        local g = rest[2] + (hi[2] - rest[2]) * h * HOVER_LIGHTEN
-        local b = rest[3] + (hi[3] - rest[3]) * h * HOVER_LIGHTEN
+        local ac = theme.accent
+        local r, g, b = Kaji.HoverColor(theme, rest, h)
         row.label:SetTextColor(r + (ac[1] - r) * l, g + (ac[2] - g) * l, b + (ac[3] - b) * l, 1)
     end
 

@@ -44,6 +44,21 @@ function Private:ColorTextByClass(text, classToken)
     return color:WrapTextInColorCode(text)
 end
 
+---The player's name written the way an aura button writes a caster's (CustomAuraButtonPrivateMixin:ApplyCasterName,
+---live 12.1.5), for previews of %casterName.
+---@param useClassColors boolean?
+---@param showRealmName boolean?
+---@return string
+function Private:FormatCasterName(useClassColors, showRealmName)
+    local name = Private.MyName
+    if showRealmName and Private.MyRealm and Private.MyRealm ~= '' then
+        name = name .. '-' .. Private.MyRealm
+    end
+    -- the one place Blizzard's class colours are used: the game colours the real text itself, which stays secret
+    local color = useClassColors and RAID_CLASS_COLORS[Private.MyClass]
+    return color and color:WrapTextInColorCode(name) or name
+end
+
 ---Convert 0-1 RGB components to an "RRGGBB" hex string.
 ---@param r? number
 ---@param g? number

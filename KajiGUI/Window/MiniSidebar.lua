@@ -73,7 +73,6 @@ local ROW_STEP = 8 -- a head's rows step in to its text, so their bar sits under
 local STEPPED_TEXT = 12 -- those rows' text from their bar
 local CHEVRON_SIZE = 10
 local GLYPH_SIZE = 10 -- an action row's +
-local HOVER_LIGHTEN = 0.6 -- how far a hovered label goes toward textPrimary, as in the sidebar
 local HOVER_FADE = 0.15 -- a section head's hover crossfade, as long as the rows' selection fade
 local EXPAND_DURATION = 0.2
 local COLLAPSE_DURATION = 0.15
@@ -186,10 +185,8 @@ function InstanceMixin:CreateMiniSidebar(parent, opts)
     ---SetTextColor's alpha overrides FontString:SetAlpha, so the disabled dim rides on the colour.
     local function PaintLabel(item)
         local l, h = Kaji.RowSelectionProgress(item)
-        local rest, hi, ac = theme.textSecondary, theme.textPrimary, theme.accent
-        local r = rest[1] + (hi[1] - rest[1]) * h * HOVER_LIGHTEN
-        local g = rest[2] + (hi[2] - rest[2]) * h * HOVER_LIGHTEN
-        local b = rest[3] + (hi[3] - rest[3]) * h * HOVER_LIGHTEN
+        local rest, ac = theme.textSecondary, theme.accent
+        local r, g, b = Kaji.HoverColor(theme, rest, h)
         local alpha = item.item and item.item.disabled and DISABLED_ALPHA or 1
         item.label:SetTextColor(r + (ac[1] - r) * l, g + (ac[2] - g) * l, b + (ac[3] - b) * l, alpha)
     end

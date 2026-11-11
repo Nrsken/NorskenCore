@@ -37,7 +37,7 @@ local ARROW_SIZE = 10 -- even, so the ungroup arrow centres on the 32px row with
 local ICON_SIZE = ROW_HEIGHT - 2 -- a pixel clear of the row's top and bottom, where the selection draws its lines
 local ICON_CROP = 0.08
 local SMALL_BUTTON = 14
-local DOT_SIZE = 8
+local ACTION_ICON = 14
 local DISABLED_ALPHA = 0.45
 local DRAG_SOURCE_ALPHA = 0.35
 local ACCENT_BAR_WIDTH = 2
@@ -47,12 +47,13 @@ local COLLAPSE_DURATION = 0.15
 -- collapse.tga points down at rotation 0.
 local ARROW_UP, ARROW_LEFT = pi, -pi / 2
 
-local STATE_COLORS = { loaded = 'success', standby = 'warning', unloaded = 'textMuted' }
+local STATE_COLORS = { loaded = 'success', standby = 'warning', unloaded = 'textMuted', disabled = 'textMuted' }
 -- locale keys: this file loads before a language is chosen
 local STATE_TEXT = {
     loaded = { 'Loaded', 'This display is currently loaded' },
     standby = { 'Standby', 'This display is on standby, it will be loaded when needed.' },
     unloaded = { 'Not Loaded', 'This display is not currently loaded' },
+    disabled = { 'Disabled', 'This display is turned off.' },
 }
 
 -- Kaji's tooltip look: accent title, secondary body, beside the cursor.
@@ -93,6 +94,7 @@ end
 ---@field canvas Frame the drawn picture, shown instead of icon when the display has one
 ---@field title FontString
 ---@field expand KajiGUITreeSmallButton
+---@field badge KajiGUITreeSmallButton
 ---@field state KajiGUITreeSmallButton
 ---@field eye KajiGUITreeSmallButton
 
@@ -133,8 +135,10 @@ MiniSidebar instead.
 A row is { key, text, icon, depth, enabled }, plus what it has:
 * `loadState` ('loaded'|'standby'|'unloaded') draws the state dot, `stateTitle` / `stateText` word its tooltip
 * `preview` (0|1|2) draws the eye, `isGroup` with `children` folds, `canMoveUp` / `canMoveDown` reorder in a group
+* `badge = { texture, tipTitle, tipText }` marks what kind of row it is, where a group's fold button sits
 * children only get the ungroup arrow with `sd.onUngroup`; a `fixed` child has no reorder column at all
 * `sd.onPicksChanged()` runs after a Ctrl/Shift click changes the multi selection without moving the shown row
+* `sd.actions = { { text, icon, onClick } }` are icon-only Kaji buttons right of the search, text their tooltip
 A section's `preview` draws its eye; one without `text` has no band.
 ]]
 
@@ -170,21 +174,35 @@ local function CreateTree(gui, parent, opts)
 
     -- Search --
 
-    -- the window sidebar's search, placed the same way at the top of the panel
     local searchBox = gui:CreateSearchBox(panel, {
         onChanged = function(text)
             tree.search = strlower(strtrim(text))
             tree:Render(true)
         end,
     })
-    ---The scrollbar's track runs the panel's full height, so the search steps aside for it.
+
+    -- Actions --
+
+    -- icon-only Kaji buttons right of the search field, as tall as it; each def's button is made once and
+    -- kept, as the pages sharing this column each bring their own
+    local fieldHeight = Kaji.SearchBoxHeight(theme) - theme.barInset * 2
+    local buttons, shownButtons = {}, {} -- [def] = button; the current page's, in order
+
+    ---The search field and the actions after it, as wide as the section bands: the scrollbar's track runs
+    ---the panel's full height, so they step aside for it, and the search's own inset reaches past the band edges.
     ---@param scrollbarShown boolean
-    local function AnchorSearch(scrollbarShown)
+    local function AnchorTop(scrollbarShown)
+        local right = -(theme.borderSize + (scrollbarShown and theme.scrollbarWidth or 0))
+        local step = fieldHeight + pad
+        for i, button in ipairs(shownButtons) do
+            button:ClearAllPoints()
+            button:NCSetPoint('TOPRIGHT', panel, 'TOPRIGHT', right - (#shownButtons - i) * step, -theme.borderSize - theme.barInset)
+        end
         searchBox:ClearAllPoints()
-        searchBox:NCSetPoint('TOPLEFT', panel, 'TOPLEFT', theme.borderSize, -theme.borderSize)
-        searchBox:NCSetPoint('TOPRIGHT', panel, 'TOPRIGHT', -(scrollbarShown and theme.scrollbarWidth or theme.borderSize), -theme.borderSize)
+        searchBox:NCSetPoint('TOPLEFT', panel, 'TOPLEFT', theme.borderSize - theme.barInset, -theme.borderSize)
+        searchBox:NCSetPoint('TOPRIGHT', panel, 'TOPRIGHT', right + theme.barInset - #shownButtons * step, -theme.borderSize)
     end
-    AnchorSearch(false)
+    AnchorTop(false)
 
     -- List --
 
@@ -192,7 +210,7 @@ local function CreateTree(gui, parent, opts)
     -- a padding under its search, these sections start flush, so the gap is made here
     local scrollFrame = CreateFrame('ScrollFrame', nil, panel)
     scrollFrame:SetClipsChildren(true)
-    scrollFrame:NCSetPoint('TOPLEFT', searchBox, 'BOTTOMLEFT', 0, -pad)
+    scrollFrame:NCSetPoint('TOPLEFT', searchBox, 'BOTTOMLEFT', theme.barInset, -pad)
     scrollFrame:NCSetPoint('BOTTOMRIGHT', panel, 'BOTTOMRIGHT', -theme.borderSize, theme.borderSize)
 
     local scrollChild = CreateFrame('Frame', nil, scrollFrame)
@@ -211,7 +229,7 @@ local function CreateTree(gui, parent, opts)
         local visible = scrollbar:UpdateVisibility(scrollChild:GetHeight(), scrollFrame:GetHeight())
         if visible ~= scrollbarVisible then
             scrollbarVisible = visible
-            AnchorSearch(visible)
+            AnchorTop(visible)
         end
         local w = scrollFrame:GetWidth()
         if w and w > 0 then
@@ -302,7 +320,9 @@ local function CreateTree(gui, parent, opts)
             tree:ToggleExpanded(data.key, not data.expanded)
         end)
 
-        row.state = SmallButton(theme, row, MEDIA .. 'whiteCircle.png', DOT_SIZE)
+        row.badge = SmallButton(theme, row, MEDIA .. 'plus-sign.png', SMALL_BUTTON - 2)
+
+        row.state = SmallButton(theme, row, MEDIA .. 'power.png', SMALL_BUTTON - 2)
 
         row.eye = SmallButton(theme, row, MEDIA .. 'eye.png', SMALL_BUTTON + 2)
         row.eye.tipTitle, row.eye.tipText = L['View'], L['Toggle the visibility of this display']
@@ -412,7 +432,7 @@ local function CreateTree(gui, parent, opts)
         row.icon:SetShown(not drawn)
 
         -- the title sits over the state line or alone in the middle when the row has none
-        local stateLine = data.isGroup or data.loadState ~= nil
+        local stateLine = data.isGroup or data.badge ~= nil or data.loadState ~= nil
         gui:ApplyFont(row.title, 'normal')
         row.title:SetText(data.text or '')
         row.title:ClearAllPoints()
@@ -423,7 +443,9 @@ local function CreateTree(gui, parent, opts)
         end
 
         row.expand:ClearAllPoints()
+        row.badge:ClearAllPoints()
         row.state:ClearAllPoints()
+        row.badge:Hide()
         if data.isGroup then
             row.expand:Show()
             local hasChildren = (data.childCount or 0) > 0
@@ -436,17 +458,30 @@ local function CreateTree(gui, parent, opts)
                 or L['Expansion is disabled because this group has no children']
             row.expand:NCSetPoint('BOTTOMLEFT', row.iconBorder, 'BOTTOMRIGHT', 6, 3)
             row.state:NCSetPoint('LEFT', row.expand, 'RIGHT', 6, 0)
+        elseif data.badge then
+            row.expand:Hide()
+            local badge = row.badge
+            badge:Show()
+            badge.tex:SetTexture(data.badge.texture)
+            local c = theme.textSecondary
+            badge.tex:SetVertexColor(c[1], c[2], c[3], 1)
+            badge.tipTitle, badge.tipText = data.badge.tipTitle, data.badge.tipText
+            badge:NCSetPoint('BOTTOMLEFT', row.iconBorder, 'BOTTOMRIGHT', 6, 3)
+            row.state:NCSetPoint('LEFT', badge, 'RIGHT', 6, 0)
         else
             row.expand:Hide()
-            row.state:NCSetPoint('BOTTOMLEFT', row.iconBorder, 'BOTTOMRIGHT', 8, 6)
+            row.state:NCSetPoint('BOTTOMLEFT', row.iconBorder, 'BOTTOMRIGHT', 6, 3) -- where a group's fold button sits
         end
 
         row.state:SetShown(data.loadState ~= nil)
         if data.loadState then
-            local stateColor = theme[STATE_COLORS[data.loadState]]
+            -- a display turned off says so, whatever its load conditions would give
+            local state = data.enabled == false and 'disabled' or data.loadState
+            row.state.tex:SetTexture(MEDIA .. (state == 'disabled' and 'power-off.png' or 'power.png'))
+            local stateColor = theme[STATE_COLORS[state]]
             row.state.tex:SetVertexColor(stateColor[1], stateColor[2], stateColor[3], 1)
-            row.state.tipTitle = data.stateTitle or L[STATE_TEXT[data.loadState][1]]
-            row.state.tipText = data.stateText or (not data.stateTitle and L[STATE_TEXT[data.loadState][2]]) or nil
+            row.state.tipTitle = data.stateTitle or L[STATE_TEXT[state][1]]
+            row.state.tipText = data.stateText or (not data.stateTitle and L[STATE_TEXT[state][2]]) or nil
         end
 
         row.eye:ClearAllPoints()
@@ -961,6 +996,31 @@ local function CreateTree(gui, parent, opts)
             end
         end
         self.sd = sd
+
+        for _, button in pairs(buttons) do
+            button:Hide()
+        end
+        wipe(shownButtons)
+        for _, def in ipairs(sd.actions or {}) do
+            local button = buttons[def]
+            if not button then
+                button = gui:CreateButton(panel, '', {
+                    width = fieldHeight,
+                    height = fieldHeight,
+                    image = def.icon,
+                    imageSize = ACTION_ICON,
+                    imageColor = theme.accent,
+                    bgColor = theme.bgDark,
+                    tooltip = def.text,
+                    callback = def.onClick,
+                })
+                buttons[def] = button
+            end
+            button:Show()
+            shownButtons[#shownButtons + 1] = button
+        end
+        AnchorTop(scrollbarVisible)
+
         -- the search restyles itself, the panel follows the theme on every page that shows the column
         RestylePanel()
         self:Render()

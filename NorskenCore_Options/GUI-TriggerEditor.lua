@@ -17,6 +17,7 @@ local setmetatable = setmetatable
 local tinsert, tremove = table.insert, table.remove
 local min, rad = math.min, math.rad
 local CopyTable = CopyTable
+local nop = nop
 
 local TEX = Core.Media.GUITextures
 local DELETE_COLOR = { 1, 0, 0 }
@@ -230,6 +231,23 @@ local function SetAuraType(trigger, index, value)
     end
 end
 
+---Give every trigger its own type before the list changes order, so none of them retypes with trigger 1.
+---@param trigger table
+local function PinTypes(trigger)
+    for _, branch in ipairs(trigger.branches) do
+        branch.type = branch.type or trigger.Base
+    end
+end
+
+---Trigger 1 lives on the base again after the list changed order: every type was pinned first, so nothing retypes.
+---@param trigger table
+local function Rebase(trigger)
+    local first = trigger.branches[1]
+    if first and first.type then
+        trigger.Base, first.type = first.type, nil
+    end
+end
+
 ---@param theme table
 ---@param text string
 ---@return string
@@ -239,10 +257,11 @@ end
 
 -- Container card --
 
+---@param theme table
 ---@param trigger table
 ---@param index number
 ---@return string
-local function TriggerLabel(theme, trigger, index)
+function TriggerEditor:Label(theme, trigger, index)
     local auraType = (trigger.branches[index].type or trigger.Base) == AF.Helpful and L['Buffs'] or L['Debuffs']
     return format('%s  %s', format(L['Trigger %d'], index), Muted(theme, auraType))
 end
@@ -259,8 +278,8 @@ local function TriggerActions(gui, trigger, changed)
                 icon = TEX .. 'plus-sign.png',
                 tooltip = L['Duplicate'],
                 onClick = function()
-                    tinsert(branches, index + 1, CopyTable(branches[index]))
-                    changed(index + 1)
+                    TriggerEditor:DuplicateBranch(trigger, index)
+                    changed(#branches)
                 end,
             },
             {
@@ -275,7 +294,7 @@ local function TriggerActions(gui, trigger, changed)
                         title = L['Delete Trigger'],
                         text = format(L['Delete Trigger %d and everything set on it?\nThis cannot be undone.'], index),
                         onAccept = function()
-                            tremove(branches, index)
+                            TriggerEditor:RemoveBranch(trigger, index)
                             changed(min(index, #branches))
                         end,
                         acceptText = L['Delete'],
@@ -287,11 +306,14 @@ local function TriggerActions(gui, trigger, changed)
     end
 end
 
+---The Load Preset dropdown: it replaces every trigger, or only the one at `index`.
+---@param gui table
 ---@param trigger table
 ---@param changed fun(picked: number)
----@param refresh fun()
----@return table config the Load Preset dropdown
-local function LoadPresetConfig(gui, trigger, changed, refresh)
+---@param refresh fun() puts the dropdown back when the prompt is cancelled
+---@param index number?
+---@return table config
+function TriggerEditor:LoadPresetConfig(gui, trigger, changed, refresh, index)
     local options = {}
     for i, preset in ipairs(Premade:GetList()) do
         options[i] = { value = preset.key, text = preset.text }
@@ -300,15 +322,22 @@ local function LoadPresetConfig(gui, trigger, changed, refresh)
     return {
         width = 0.5,
         options = options,
-        tooltip = L['Replace the triggers with a preset, as a starting point to edit.'],
+        tooltip = index and L['Replace this trigger with a preset, as a starting point to edit.']
+            or L['Replace the triggers with a preset, as a starting point to edit.'],
         callback = function(key)
             local preset = Premade:Get(key)
+            local name = preset and preset.name or key
             gui:Prompt({
                 title = L['Load Preset'],
-                text = format(L['Replace every trigger with %s?\nThis cannot be undone.'], preset and preset.name or key),
+                text = index and format(L['Replace Trigger %d with %s?\nThis cannot be undone.'], index, name)
+                    or format(L['Replace every trigger with %s?\nThis cannot be undone.'], name),
                 onAccept = function()
-                    AuraTriggers:LoadPreset(trigger, key)
-                    changed(1)
+                    if index then
+                        TriggerEditor:LoadPresetInto(trigger, index, key)
+                    else
+                        AuraTriggers:LoadPreset(trigger, key)
+                    end
+                    changed(index or 1)
                 end,
                 onCancel = refresh, -- the dropdown already shows the preset it was asked for
                 acceptText = L['Load'],
@@ -332,7 +361,7 @@ local function BuildContainerCard(page, trigger, ctx, apply, show, changed)
         local index = Picked(trigger)
         local options = {}
         for i = 1, #trigger.branches do
-            options[i] = { value = i, text = TriggerLabel(gui.theme, trigger, i) }
+            options[i] = { value = i, text = TriggerEditor:Label(gui.theme, trigger, i) }
         end
 
         local editing = {
@@ -348,12 +377,11 @@ local function BuildContainerCard(page, trigger, ctx, apply, show, changed)
         local addTrigger = {
             height = 24,
             callback = function()
-                local branch = trigger.branches[index]
-                tinsert(trigger.branches, { type = branch.type or trigger.Base })
+                TriggerEditor:AddBranch(trigger)
                 changed(#trigger.branches)
             end,
         }
-        local loadPreset = LoadPresetConfig(gui, trigger, changed, function() card:Rebuild() end)
+        local loadPreset = TriggerEditor:LoadPresetConfig(gui, trigger, changed, function() card:Rebuild() end)
 
         local first = c:Row(rowH)
         if ctx.showUnit then
@@ -390,9 +418,10 @@ end
 ---@param branch table
 ---@param group table
 ---@param changed fun()
-local function BuildGroupRows(card, branch, group, changed)
+---@param indent number? inside a section, where the rows sit under a sub-section
+local function BuildGroupRows(card, branch, group, changed, indent)
     if group.duration then
-        card:Row(rowH):EditBox(L['Max Duration (seconds)'], {
+        card:Row(rowH, nil, indent):EditBox(L['Max Duration (seconds)'], {
             width = 0.5,
             value = tostring(branch.candidates and branch.candidates.maxDuration or ''),
             callback = function(text)
@@ -408,7 +437,7 @@ local function BuildGroupRows(card, branch, group, changed)
 
     local fields = group.fields
     for index = 1, #fields, 2 do
-        local row = card:Row(rowH)
+        local row = card:Row(rowH, nil, indent)
         for i = index, index + 1 do
             local field = fields[i]
             if field then
@@ -429,28 +458,89 @@ end
 ---@param card KajiGUIFluentCard
 ---@param branch table
 ---@param changed fun()
-local function BuildFilters(card, branch, changed)
+---@param nest { key: string, indent: number }? inside a section the groups are its sub-sections
+local function BuildFilters(card, branch, changed, nest)
     local theme = card.page.gui.theme
     local open = openState[branch] or {}
     openState[branch] = open
+    local indent = nest and nest.indent
 
     for _, group in ipairs(GROUPS) do
         local count = CountSet(branch, group)
         local isOpen = open[group.key] == true -- closed until the user opens one
 
         local title = count > 0 and (group.title .. '  ' .. Muted(theme, format(L['%d active'], count))) or group.title
-        local expanded = card:Section(title, {
+        local config = {
+            key = nest and (nest.key .. ':' .. group.key),
+            indent = indent,
             collapsed = not isOpen,
             onToggle = function()
                 open[group.key] = not isOpen
                 card:Rebuild()
             end,
-        })
+        }
+        local expanded
+        if nest then
+            expanded = card:SubSection(title, config)
+        else
+            expanded = card:Section(title, config)
+        end
         if expanded then
-            card:Row(20):Text(nil, { width = 1, text = Muted(theme, group.desc), bgMode = 'hide' })
-            BuildGroupRows(card, branch, group, changed)
+            card:Row(20, nil, indent):Text(nil, { width = 1, text = Muted(theme, group.desc), bgMode = 'hide' })
+            BuildGroupRows(card, branch, group, changed, indent)
         end
     end
+    if nest then
+        card:EndSubSection()
+    end
+end
+
+---One trigger's rows: its aura type, its spells and its filters.
+---@param c KajiGUIFluentCard
+---@param trigger table
+---@param index number
+---@param apply fun()
+---@param changed fun() after an edit that changes the rows
+---@param retype fun() after the aura type changed, which titles name
+---@param nest { key: string, indent: number }? set when the rows sit inside a section of the caller's
+local function BuildBranch(c, trigger, index, apply, changed, retype, nest)
+    local branch = trigger.branches[index]
+    local separator = { useLabel = true, inSection = nest ~= nil } -- a plain separator would end the caller's section
+
+    local row = c:Row(rowH)
+    row:Dropdown(L['Aura Type'], {
+        width = 0.5,
+        options = AURA_TYPES,
+        value = branch.type or trigger.Base,
+        callback = function(value)
+            SetAuraType(trigger, index, value)
+            apply()
+            retype()
+        end,
+    })
+    row:Dropdown(L['Spells'], {
+        width = 0.5,
+        options = SPELL_MODES,
+        value = GetSpellMode(branch),
+        callback = function(value)
+            SetSpellMode(branch, value)
+            changed()
+        end,
+    })
+
+    local mode = GetSpellMode(branch)
+    if mode ~= 'all' then
+        local shipped = branch.shipped
+        local source = shipped and SpellList:ShippedSource(shipped, shipped.list, changed)
+            or SpellList:MapSource(branch.candidates[MODE_FIELD[mode]], changed)
+
+        c:Separator(mode == 'only' and L['Whitelist'] or L['Blacklist'], separator)
+        SpellList:BuildAdd(c, source)
+        SpellList:BuildList(c, source)
+    end
+
+    c:Separator(L['Filters'], separator)
+    BuildFilters(c, branch, changed, nest)
 end
 
 ---@param page table
@@ -462,58 +552,92 @@ end
 local function BuildTriggerCard(page, trigger, apply, retype, group)
     local card
     card = page:Card(format(L['Trigger %d'], Picked(trigger)), group):Rebuild(function(c)
-        local index = Picked(trigger)
-        local branch = trigger.branches[index]
-        local function Changed()
+        BuildBranch(c, trigger, Picked(trigger), apply, function()
             apply()
             card:Rebuild()
-        end
-
-        local row = c:Row(rowH)
-        row:Dropdown(L['Aura Type'], {
-            width = 0.5,
-            options = AURA_TYPES,
-            value = branch.type or trigger.Base,
-            callback = function(value)
-                SetAuraType(trigger, index, value)
-                apply()
-                retype()
-            end,
-        })
-        row:Dropdown(L['Spells'], {
-            width = 0.5,
-            options = SPELL_MODES,
-            value = GetSpellMode(branch),
-            callback = function(value)
-                SetSpellMode(branch, value)
-                Changed()
-            end,
-        })
-
-        local mode = GetSpellMode(branch)
-        if mode ~= 'all' then
-            local shipped = branch.shipped
-            local source = shipped and SpellList:ShippedSource(shipped, shipped.list, Changed)
-                or SpellList:MapSource(branch.candidates[MODE_FIELD[mode]], Changed)
-
-            c:Separator(mode == 'only' and L['Whitelist'] or L['Blacklist'], { useLabel = true })
-            SpellList:BuildAdd(c, source)
-            SpellList:BuildList(c, source)
-        end
-
-        c:Separator(L['Filters'], { useLabel = true })
-        BuildFilters(c, branch, Changed)
+        end, retype)
     end)
     return card
 end
+
+---Bring an old trigger up to the shape the editor writes, before anything reads its branches.
+---@param trigger table
+function TriggerEditor:Prepare(trigger)
+    AuraTriggers:ConvertSpellIDs(trigger)
+    AuraTriggers:ConvertPreset(trigger)
+    trigger.branches = trigger.branches or { {} }
+end
+
+-- Sections --
+
+-- For a page that lays every trigger out as a section of its own, as the Cooldown & Aura Manager does.
+
+---@param c KajiGUIFluentCard
+---@param trigger table
+---@param index number
+---@param changed fun() after any edit, which rebuilds the rows
+---@param nest { key: string, indent: number } the section's key and how far its sub-sections sit in
+function TriggerEditor:BuildBranch(c, trigger, index, changed, nest)
+    c:Row(rowH):Dropdown(L['Load Preset'], self:LoadPresetConfig(c.page.gui, trigger, changed, function() c:Rebuild() end, index))
+    BuildBranch(c, trigger, index, nop, changed, changed, nest) -- changed applies too, so a retype runs it once
+end
+
+---A preset in place of one trigger; one with several triggers of its own puts them all there.
+---@param trigger table
+---@param index number
+---@param key string
+function TriggerEditor:LoadPresetInto(trigger, index, key)
+    local loaded = AuraTriggers:ToAuraFilter({ Type = AuraTriggers.Types.Preset, Preset = key, Unit = trigger.Unit })
+    PinTypes(trigger)
+    tremove(trigger.branches, index)
+    for i, branch in ipairs(loaded.branches) do
+        branch.type = branch.type or loaded.Base
+        tinsert(trigger.branches, index + i - 1, branch)
+    end
+    Rebase(trigger)
+end
+
+---A new trigger at the end, of the last one's aura type.
+---@param trigger table
+function TriggerEditor:AddBranch(trigger)
+    local last = trigger.branches[#trigger.branches]
+    tinsert(trigger.branches, { type = last and last.type or trigger.Base })
+end
+
+---A copy at the end, so no other trigger's number changes.
+---@param trigger table
+---@param index number
+function TriggerEditor:DuplicateBranch(trigger, index)
+    local copy = CopyTable(trigger.branches[index])
+    copy.type = copy.type or trigger.Base
+    tinsert(trigger.branches, copy)
+end
+
+---@param trigger table
+---@param from number
+---@param to number
+function TriggerEditor:MoveBranch(trigger, from, to)
+    local branches = trigger.branches
+    PinTypes(trigger)
+    branches[from], branches[to] = branches[to], branches[from]
+    Rebase(trigger)
+end
+
+---@param trigger table
+---@param index number
+function TriggerEditor:RemoveBranch(trigger, index)
+    PinTypes(trigger)
+    tremove(trigger.branches, index)
+    Rebase(trigger)
+end
+
+-- Card --
 
 ---@param page table
 ---@param trigger table
 ---@param ctx { title: string, group?: string, showUnit?: boolean, onChange: fun() }
 function TriggerEditor:Build(page, trigger, ctx)
-    AuraTriggers:ConvertSpellIDs(trigger)
-    AuraTriggers:ConvertPreset(trigger)
-    trigger.branches = trigger.branches or { {} }
+    self:Prepare(trigger)
 
     local function Apply()
         ctx.onChange()

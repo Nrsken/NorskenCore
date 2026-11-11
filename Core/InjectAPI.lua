@@ -581,9 +581,9 @@ end
 -- collapse into a single run, and the engine auto-disarms (resets to Disabled) right before firing.
 
 
-local RunOnce = Enum and Enum.OnUpdateMode.RunOnce
-local RunWhenVisibleOnce = Enum and Enum.OnUpdateMode.RunWhenVisibleOnce
-local OnUpdateDisabled = Enum and Enum.OnUpdateMode.Disabled
+local RunOnce = Enum.OnUpdateMode.RunOnce
+local RunWhenVisibleOnce = Enum.OnUpdateMode.RunWhenVisibleOnce
+local OnUpdateDisabled = Enum.OnUpdateMode.Disabled
 
 local function RunScheduledUpdate(frame)
     local callback = frame._scheduledUpdate

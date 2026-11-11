@@ -261,7 +261,8 @@ local function CreateHeaderTexture(gui, header, opts)
     texture:SetTexelSnappingBias(0)
     texture:SetSnapToPixelGrid(false)
 
-    Kaji.AddIconGlow(frame, texture, tex.width or 20, tex.height or 20, tex.glow, gui)(1)
+    local color = tex.color and { tex.color.r or 1, tex.color.g or 1, tex.color.b or 1 }
+    Kaji.AddIconGlow(frame, texture, tex.width or 20, tex.height or 20, tex.glow, gui)(1, color)
 end
 
 local function MeasureTextHeight(gui, text, width, fontStyle)

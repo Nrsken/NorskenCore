@@ -51,7 +51,6 @@ local TICK_STEP = 6 -- between the ruler's ticks
 local TICK_MINOR, TICK_MAJOR = 2, 4 -- tick lengths, every fifth one major
 local HALFTONE_WIDTH = 1024 -- texels, drawn one per physical pixel
 local HALFTONE_ROWS = 128 -- the dots repeat down the panel every 128 texels
-local HOVER_LIGHTEN = 0.6 -- how far a hovered tab label goes toward textPrimary, as in the sidebar
 local DIM_ALPHA = 0.35
 local SEPARATOR = ' · '
 
@@ -198,10 +197,8 @@ function InstanceMixin:CreatePageHeader(parent, opts)
         local def = button.def
         if not def then return end
         local l, h = Kaji.RowSelectionProgress(button)
-        local rest, hi, ac = theme.textMuted, theme.textPrimary, theme.accent
-        local r = rest[1] + (hi[1] - rest[1]) * h * HOVER_LIGHTEN
-        local g = rest[2] + (hi[2] - rest[2]) * h * HOVER_LIGHTEN
-        local b = rest[3] + (hi[3] - rest[3]) * h * HOVER_LIGHTEN
+        local rest, ac = theme.textMuted, theme.accent
+        local r, g, b = Kaji.HoverColor(theme, rest, h)
         local off = dimmed and not def.keepLive or def.isDisabled and def.isDisabled()
         button.label:SetTextColor(r + (ac[1] - r) * l, g + (ac[2] - g) * l, b + (ac[3] - b) * l, off and DIM_ALPHA or 1)
         button:EnableMouse(not off)
@@ -313,10 +310,8 @@ function InstanceMixin:CreatePageHeader(parent, opts)
     ---A tab's label: textSecondary at rest, lightening while hovered, the accent as it's selected.
     local function PaintLabel(tab)
         local l, h = Kaji.RowSelectionProgress(tab)
-        local rest, hi, ac = theme.textSecondary, theme.textPrimary, theme.accent
-        local r = rest[1] + (hi[1] - rest[1]) * h * HOVER_LIGHTEN
-        local g = rest[2] + (hi[2] - rest[2]) * h * HOVER_LIGHTEN
-        local b = rest[3] + (hi[3] - rest[3]) * h * HOVER_LIGHTEN
+        local rest, ac = theme.textSecondary, theme.accent
+        local r, g, b = Kaji.HoverColor(theme, rest, h)
         tab.label:SetTextColor(r + (ac[1] - r) * l, g + (ac[2] - g) * l, b + (ac[3] - b) * l, 1)
     end
 

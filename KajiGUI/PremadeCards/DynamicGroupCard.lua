@@ -5,6 +5,8 @@
   grid options and an optional visible-count limit.
 * `showLimit = false` drops the limit row; `limitNotice = { level, text }` (or a function returning one,
   asked on every rebuild) keeps it but disabled, with a notice marker on Use Limit saying why it can't apply.
+* `extraRows = function(card)` builds the caller's own rows below the same separator, in place of the limit;
+  it must end on a `theme.rowHeightLast` row with spacing 0, as the card's other last rows do.
 * The alignment options and the GRID-only rows depend on the grow direction, so
   changing Grow rebuilds the card in place (no full page refresh).
 
@@ -66,6 +68,8 @@ Kaji.premadeCards.DynamicGroupCard = {
         local dbKeys = config.dbKeys or {}
         local onChange = config.onChangeCallback
         local showLimit = config.showLimit ~= false
+        local extraRows = config.extraRows
+        local lastRows = showLimit or extraRows -- something follows the spacing and grid rows
         -- the limit can't apply here: shown disabled, this says why; a function is asked again on every rebuild, as Grow may change it
         local limitNotice = config.limitNotice
         if type(limitNotice) == "function" then
@@ -162,7 +166,7 @@ Kaji.premadeCards.DynamicGroupCard = {
         end
 
         -- Row 2: spacing (+ row spacing for GRID).
-        local spacingLast = not isGrid and not showLimit
+        local spacingLast = not isGrid and not lastRows
         local spacingHeight = spacingLast and theme.rowHeightLast or theme.rowHeight
         local row2 = card:Row(spacingHeight, spacingLast and 0 or nil)
         row2:Slider(L["Spacing"], {
@@ -187,7 +191,7 @@ Kaji.premadeCards.DynamicGroupCard = {
 
         -- Row 3 (GRID only): grid width / children per run.
         if isGrid then
-            local gridLast = not showLimit
+            local gridLast = not lastRows
             local gridHeight = gridLast and theme.rowHeightLast or theme.rowHeight
             card:Row(gridHeight, gridLast and 0 or nil):Slider(L["Grid Width"], {
                 width = 1,
@@ -222,6 +226,11 @@ Kaji.premadeCards.DynamicGroupCard = {
                 value = getValue(keys.Limit, 5),
                 callback = function(val) setValue(keys.Limit, val) end,
             })
+        end
+
+        if extraRows then
+            card:Separator(nil, { inSection = true })
+            extraRows(card)
         end
 
         -- The limit row only follows the master enable when Use Limit is on and a limit can

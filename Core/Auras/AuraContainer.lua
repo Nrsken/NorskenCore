@@ -6,7 +6,7 @@ local UnitCanAssist = UnitCanAssist
 local UnitIsVisible = UnitIsVisible
 local UnitIsPlayerControlledOrGroupMember = UnitIsPlayerControlledOrGroupMember
 local C_Timer, GetTime = C_Timer, GetTime
-local min, huge, ceil = math.min, math.huge, math.ceil
+local min, max, huge, ceil, floor = math.min, math.max, math.huge, math.ceil, math.floor
 local GenerateClosure = GenerateClosure
 local CreateFrame = CreateFrame
 local CopyTable = CopyTable
@@ -103,16 +103,86 @@ function Private:ResolveAuraGrowth(horizontal, vertical, anchorTo)
     return cornerV .. cornerH, containerPoint ~= '' and containerPoint or 'CENTER', horizontalFlow, verticalFlow
 end
 
----Extent of the largest grid a config can lay out.
----@param config table .size, .perRow, .elementSpacing and .lineSpacing
+-- The first letter of a dynamic group's Grid Fill each other Grow stands for, so one parser reads them all.
+local GROW_FILL = { RIGHT = 'R', LEFT = 'L', HORIZONTAL = 'R', DOWN = 'D', UP = 'U', VERTICAL = 'D' }
+
+---The flow layout a dynamic group's Layout asks for, so an aura group grows the way a dynamic group does.
+---@param layout table a dynamic group's Layout: Grow, Align, Spacing, RowSpacing, GridType, GridWidth
+---@param width number one button's width
+---@param height number one button's height
+---@return table flow the container config's layout keys
+function Private:ResolveAuraFlow(layout, width, height)
+    local grow = layout.Grow
+    local grid = grow == 'GRID'
+    local fill = layout.GridType
+    if not grid then
+        local first = GROW_FILL[grow] or 'D' -- a dynamic group's default
+        if first == 'R' or first == 'L' then
+            fill = first .. (layout.Align == 'BOTTOM' and 'U' or 'D')
+        else
+            fill = first .. (layout.Align == 'RIGHT' and 'L' or 'R')
+        end
+    end
+    local rowFirst, xSign, ySign, corner = Private:ParseGridType(fill)
+
+    -- The container sizes itself to its auras, so anchoring it by a centre keeps them centred as they come and go.
+    local centred = grow == 'HORIZONTAL' or grow == 'VERTICAL'
+    local alignCentre = not grid and (layout.Align or 'CENTER') == 'CENTER'
+    local centreV = rowFirst and alignCentre or not rowFirst and centred
+    local centreH = rowFirst and centred or not rowFirst and alignCentre
+    local pointV = centreV and '' or (ySign > 0 and 'BOTTOM' or 'TOP')
+    local pointH = centreH and '' or (xSign > 0 and 'LEFT' or 'RIGHT')
+    local containerPoint = pointV .. pointH
+
+    local spacing = layout.Spacing or 1
+    local maximumLineSize
+    if grid then
+        maximumLineSize = (layout.GridWidth or 5) * ((rowFirst and width or height) + spacing)
+    end
+
+    return {
+        layoutAxis = rowFirst and AnchorUtil.FlowLayoutAxis.Horizontal or AnchorUtil.FlowLayoutAxis.Vertical,
+        anchorPoint = corner,
+        containerPoint = containerPoint ~= '' and containerPoint or 'CENTER',
+        horizontalGrowthDirection = xSign > 0 and 'RIGHT' or 'LEFT',
+        verticalGrowthDirection = ySign > 0 and 'UP' or 'DOWN',
+        elementSpacing = spacing,
+        lineSpacing = grid and layout.RowSpacing or spacing,
+        maximumLineSize = maximumLineSize,
+    }
+end
+
+---How a count of buttons falls into lines, the way the native flow layout wraps them.
+---@param config table a container config: size or width/height, elementSpacing, lineSpacing, maximumLineSize, layoutAxis
 ---@param count number most buttons that can be placed
 ---@return number width
 ---@return number height
+---@return number perLine
+---@return number lines
 function Private:GetAuraGridSize(config, count)
-    local columns = min(config.perRow, count)
-    local rows = ceil(count / config.perRow)
+    count = max(1, count)
+    local width = config.width or config.size or 24
+    local height = config.height or config.size or 24
+    local spacing, lineSpacing = config.elementSpacing or 0, config.lineSpacing or 0
+    local vertical = config.layoutAxis == AnchorUtil.FlowLayoutAxis.Vertical
+    local primary, cross = width, height
+    if vertical then
+        primary, cross = height, width
+    end
 
-    return columns * config.size + (columns - 1) * config.elementSpacing, rows * config.size + (rows - 1) * config.lineSpacing
+    local perLine = count
+    if config.maximumLineSize then
+        perLine = max(1, floor((config.maximumLineSize + spacing) / (primary + spacing)))
+    end
+    local lines = ceil(count / perLine)
+    local along = min(perLine, count)
+
+    local primarySize = along * primary + (along - 1) * spacing
+    local crossSize = lines * cross + (lines - 1) * lineSpacing
+    if vertical then
+        return crossSize, primarySize, perLine, lines
+    end
+    return primarySize, crossSize, perLine, lines
 end
 
 -- Check what type of duration text coloring is enabled in the global media settings.
@@ -535,6 +605,12 @@ local function SyncBinding(container, binding)
             -- AddGroup mutates the options it is given, so each group gets its own copy.
             local groupOptions = binding.options and CopyTable(binding.options) or {}
             groupOptions.candidateFilters = branch.candidateFilters
+            -- the game hands initializeFrame only the button, so a caller that styles per trigger is told which one here
+            local initializeBranch = groupOptions.initializeBranchFrame
+            groupOptions.initializeBranchFrame = nil
+            if initializeBranch then
+                groupOptions.initializeFrame = function(button) initializeBranch(button, index) end
+            end
             binding.keys[index], binding.slots[index] = container:AddGroup(branch.filterString, groupOptions)
         end
 
@@ -556,7 +632,8 @@ end
 
 ---Register an inline trigger, can be called multiple times.
 ---@param trigger table? an inline trigger (see Core/Auras/AuraTriggers.lua)
----@param options table? optional per-group options (candidateFilters is filled in from each branch)
+---@param options table? optional per-group options (candidateFilters is filled in from each branch;
+---`initializeBranchFrame(button, branchIndex)` in place of initializeFrame tells a button which branch made it)
 ---@return string[]
 function ContainerMixin:AddFilteredGroup(trigger, options)
     local binding = { trigger = trigger, keys = {}, slots = {}, options = options }

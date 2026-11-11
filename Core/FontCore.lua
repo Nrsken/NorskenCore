@@ -10,9 +10,9 @@ local CreateFrame = CreateFrame
 local CreateFont = CreateFont
 local CreateFontFamily = CreateFontFamily
 
-local animEnum = Enum and Enum.FontStringScaleAnimationMode
-local vertexEnum = Enum and Enum.FontStringScaleAnimationMode.Vertex
-local fontSizeEnum = Enum and Enum.FontStringScaleAnimationMode.FontSize
+local animEnum = Enum.FontStringScaleAnimationMode
+local vertexEnum = Enum.FontStringScaleAnimationMode.Vertex
+local fontSizeEnum = Enum.FontStringScaleAnimationMode.FontSize
 
 local DEFAULT_SIZE = Private.Media.FallbackSize
 local DEFAULT_FONT_NAME = Private.Media.DefaultFont

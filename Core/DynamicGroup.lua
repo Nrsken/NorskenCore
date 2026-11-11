@@ -131,7 +131,7 @@ end
 ---Parse a grid type string into its row/column orientation, axis signs and anchor point.
 ---@param gridType string|nil
 ---@return boolean rowFirst, number xSign, number ySign, string point
-local function ParseGridType(gridType)
+function Private:ParseGridType(gridType)
     gridType = type(gridType) == 'string' and gridType:upper() or 'RD'
     local c1, c2 = gridType:sub(1, 1), gridType:sub(2, 2)
     local horiz = (c1 == 'R' or c1 == 'L') and c1 or ((c2 == 'R' or c2 == 'L') and c2)
@@ -153,7 +153,7 @@ local function GridFactory(config)
     local spacing = Default(config.Spacing, 1)
     local rowSpacing = Default(config.RowSpacing, spacing)
     local gridWidth = max(1, floor(Default(config.GridWidth, 5)))
-    local rowFirst, xSign, ySign = ParseGridType(config.GridType)
+    local rowFirst, xSign, ySign = Private:ParseGridType(config.GridType)
 
     return function(positions, active, numVisible)
         local primary, secondary = 0, 0
@@ -211,7 +211,7 @@ growers.VERTICAL = {
 }
 growers.GRID = {
     point = function(config)
-        local point = select(4, ParseGridType(config.GridType))
+        local point = select(4, Private:ParseGridType(config.GridType))
         return point
     end,
     factory = GridFactory,
@@ -628,7 +628,7 @@ function GroupMixin:GetResolvedAnchor(grow)
     elseif grow == 'VERTICAL' then
         return 'CENTER'
     elseif grow == 'GRID' then
-        local point = select(4, ParseGridType(self._config.GridType))
+        local point = select(4, Private:ParseGridType(self._config.GridType))
         return point
     end
 end

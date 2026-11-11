@@ -9,9 +9,9 @@ local hooksecurefunc = hooksecurefunc
 local CreateFrame = CreateFrame
 local PlaySoundFile = PlaySoundFile
 
-local GetFileID = C_UIFileAsset and C_UIFileAsset.GetFileID
-local IsKnownFile = C_UIFileAsset and C_UIFileAsset.IsKnownFile
-local GetAtlasInfo = C_Texture and C_Texture.GetAtlasInfo
+local GetFileID = C_UIFileAsset.GetFileID
+local IsKnownFile = C_UIFileAsset.IsKnownFile
+local GetAtlasInfo = C_Texture.GetAtlasInfo
 
 -- Locale masks: LSM rejects font registrations on koKR/zhCN/zhTW/ruRU clients unless the mask includes their locale bit and Fetch then falls back to the locale default game font.
 local westAndRU = LSM.LOCALE_BIT_western + LSM.LOCALE_BIT_ruRU

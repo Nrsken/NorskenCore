@@ -53,6 +53,169 @@ local function SortedIds(map)
     return ids
 end
 
+-- In Defensive Buffs and a list of their own, which an aura group can show apart.
+local EXTERNAL_DEFENSIVES = {
+    group = 'EXTERNALS',
+    ids = {
+        116849, -- Life Cocoon
+        6940,   -- Blessing of Sacrifice
+        1022,   -- Blessing of Protection
+        204018, -- Blessing of Spellwarding
+        47788,  -- Guardian Spirit
+        102342, -- Ironbark
+        357170, -- Time Dilation
+        33206,  -- Pain Suppression
+    },
+}
+
+-- A player's own defensives, raid cooldowns, racials and trinkets: Defensive Buffs without the externals.
+local PERSONAL_DEFENSIVES = {
+    {
+        group = 'DEATHKNIGHT',
+        ids = {
+            55233, -- Vampiric Blood
+            48792, -- Icebound Fortitude
+            48707, -- Anti-Magic Shell
+        }
+    },
+    {
+        group = 'DEMONHUNTER',
+        ids = {
+            187827,  -- Metamorphosis
+            1266616, -- Demon Muzzle
+            212800,  -- Blur
+            207771,  -- Fiery Brand
+        }
+    },
+    {
+        group = 'DRUID',
+        ids = {
+            22812,   -- Barkskin
+            61336,   -- Survival Instincts
+            1261872, -- Heart of the wild bearform
+        }
+    },
+    {
+        group = 'EVOKER',
+        ids = {
+            363916, -- Obsidian Scales
+        }
+    },
+    {
+        group = 'HUNTER',
+        ids = {
+            186265, -- Aspect of the Turtle
+            264735, -- Survival of the Fittest
+        }
+    },
+    {
+        group = 'MAGE',
+        ids = {
+            114267,  -- Ice Barrier
+            235450,  -- Prismatic Barrier
+            235313,  -- Blazing Barrier
+            414658,  -- Ice Cold
+            45438,   -- Ice Block
+            342246,  -- Alter Time
+            1309793, -- Amplified Refraction
+            449336,  -- Merely a Setback
+        }
+    },
+    {
+        group = 'MONK',
+        ids = {
+            132578,  -- Invoke Niuzao, the Black Ox
+            1241059, -- Celestial Infusion
+            125174,  -- Touch of karma
+            120954,  -- Fortifying Brew
+        }
+    },
+    {
+        group = 'PALADIN',
+        ids = {
+            432607, -- Holy Bulwark
+            86659,  -- Guardian of Ancient Kings
+            31850,  -- Ardent Defender
+            642,    -- Divine Shield
+            403876, -- Divine Protection
+            184662, -- Shield of Vengeance
+            498,    -- Divine Protection
+        }
+    },
+    {
+        group = 'PRIEST',
+        ids = {
+            19236, -- Desperate Prayer
+            47585, -- Dispersion
+            586,   -- Fade
+        }
+    },
+    {
+        group = 'ROGUE',
+        ids = {
+            1966,   -- Feint
+            31224,  -- Cloak of Shadows
+            5277,   -- Evasion
+            45182,  -- Cheating Death
+            185311, -- Crimson Vial
+        }
+    },
+    {
+        group = 'SHAMAN',
+        ids = {
+            198103, -- Earth Elemental
+            108271, -- Astral Shift
+            260881, -- Spirit Wolf
+        }
+    },
+    {
+        group = 'WARLOCK',
+        ids = {
+            108416, -- Dark Pact
+            104773, -- Unending Resolve
+        }
+    },
+    {
+        group = 'WARRIOR',
+        ids = {
+            23920,  -- Spell Reflection
+            118038, -- Die by the Sword
+            871,    -- Shield Wall
+            184364, -- Enraged Regeneration
+            386398, -- Battle-Scarred Veteran
+        }
+    },
+    {
+        group = 'RAIDCDS',
+        ids = {
+            97463,  -- Rallying Cry
+            145629, -- Anti-Magic Zone
+            209426, -- Darkness
+            374227, -- Zephyr
+            325174, -- Spirit Link Totem
+            81772,  -- Power World: Barrier
+        }
+    },
+    {
+        group = 'RACIALS',
+        ids = {
+            65116,  -- Stoneform
+            273104, -- Fireblood
+        }
+    },
+    {
+        group = 'TRINKETS',
+        ids = {
+            1307578, -- Soulcoiler Ritual Vessel
+        }
+    },
+}
+
+-- Defensive Buffs lists both, so an aura group can show the externals apart while a list of everything stays one key.
+local DEFENSIVE_BUFFS = { EXTERNAL_DEFENSIVES }
+for _, group in ipairs(PERSONAL_DEFENSIVES) do
+    DEFENSIVE_BUFFS[#DEFENSIVE_BUFFS + 1] = group
+end
 -- Presets with `spells` are editable: triggers layer Added/Removed on top of the shipped list.
 local ByKey = {}
 Private:OnLanguageSet(function()
@@ -89,160 +252,25 @@ Private:OnLanguageSet(function()
             key = 'preset:defensives',
             name = L['Defensive Buffs'],
             spellField = 'includeSpellIDs',
-            spells = {
-                {
-                    group = 'DEATHKNIGHT',
-                    ids = {
-                        55233, -- Vampiric Blood
-                        48792, -- Icebound Fortitude
-                        48707, -- Anti-Magic Shell
-                    }
-                },
-                {
-                    group = 'DEMONHUNTER',
-                    ids = {
-                        187827,  -- Metamorphosis
-                        1266616, -- Demon Muzzle
-                        212800,  -- Blur
-                        207771,  -- Fiery Brand
-                    }
-                },
-                {
-                    group = 'DRUID',
-                    ids = {
-                        22812,   -- Barkskin
-                        61336,   -- Survival Instincts
-                        1261872, -- Heart of the wild bearform
-                    }
-                },
-                {
-                    group = 'EVOKER',
-                    ids = {
-                        363916, -- Obsidian Scales
-                    }
-                },
-                {
-                    group = 'HUNTER',
-                    ids = {
-                        186265, -- Aspect of the Turtle
-                        264735, -- Survival of the Fittest
-                    }
-                },
-                {
-                    group = 'MAGE',
-                    ids = {
-                        114267,  -- Ice Barrier
-                        235450,  -- Prismatic Barrier
-                        235313,  -- Blazing Barrier
-                        414658,  -- Ice Cold
-                        45438,   -- Ice Block
-                        342246,  -- Alter Time
-                        1309793, -- Amplified Refraction
-                        449336,  -- Merely a Setback
-                    }
-                },
-                {
-                    group = 'MONK',
-                    ids = {
-                        132578,  -- Invoke Niuzao, the Black Ox
-                        1241059, -- Celestial Infusion
-                        125174,  -- Touch of karma
-                        120954,  -- Fortifying Brew
-                    }
-                },
-                {
-                    group = 'PALADIN',
-                    ids = {
-                        432607, -- Holy Bulwark
-                        86659,  -- Guardian of Ancient Kings
-                        31850,  -- Ardent Defender
-                        642,    -- Divine Shield
-                        403876, -- Divine Protection
-                        184662, -- Shield of Vengeance
-                        498,    -- Divine Protection
-                    }
-                },
-                {
-                    group = 'PRIEST',
-                    ids = {
-                        19236, -- Desperate Prayer
-                        47585, -- Dispersion
-                        586,   -- Fade
-                    }
-                },
-                {
-                    group = 'ROGUE',
-                    ids = {
-                        1966,   -- Feint
-                        31224,  -- Cloak of Shadows
-                        5277,   -- Evasion
-                        45182,  -- Cheating Death
-                        185311, -- Crimson Vial
-                    }
-                },
-                {
-                    group = 'SHAMAN',
-                    ids = {
-                        198103, -- Earth Elemental
-                        108271, -- Astral Shift
-                        260881, -- Spirit Wolf
-                    }
-                },
-                {
-                    group = 'WARLOCK',
-                    ids = {
-                        108416, -- Dark Pact
-                        104773, -- Unending Resolve
-                    }
-                },
-                {
-                    group = 'WARRIOR',
-                    ids = {
-                        23920,  -- Spell Reflection
-                        118038, -- Die by the Sword
-                        871,    -- Shield Wall
-                        184364, -- Enraged Regeneration
-                        386398, -- Battle-Scarred Veteran
-                    }
-                },
-                {
-                    group = 'RAIDCDS',
-                    ids = {
-                        97463,  -- Rallying Cry
-                        145629, -- Anti-Magic Zone
-                        209426, -- Darkness
-                        374227, -- Zephyr
-                        325174, -- Spirit Link Totem
-                        81772,  -- Power World: Barrier
-                    }
-                },
-                {
-                    group = 'EXTERNALS',
-                    ids = {
-                        116849, -- Life Cocoon
-                        6940,   -- Blessing of Sacrifice
-                        1022,   -- Blessing of Protection
-                        204018, -- Blessing of Spellwarding
-                        47788,  -- Guardian Spirit
-                        102342, -- Ironbark
-                        357170, -- Time Dilation
-                        33206,  -- Pain Suppression
-                    }
-                },
-                {
-                    group = 'RACIALS',
-                    ids = {
-                        65116,  -- Stoneform
-                        273104, -- Fireblood
-                    }
-                },
-                {
-                    group = 'TRINKETS',
-                    ids = {
-                        1307578, -- Soulcoiler Ritual Vessel
-                    }
-                },
+            spells = DEFENSIVE_BUFFS,
+            branches = {
+                { type = Filters.Helpful },
             },
+        },
+        {
+            key = 'preset:personalDefensives',
+            name = L['Personal Defensives'],
+            spellField = 'includeSpellIDs',
+            spells = PERSONAL_DEFENSIVES,
+            branches = {
+                { type = Filters.Helpful },
+            },
+        },
+        {
+            key = 'preset:externals',
+            name = L['Externals'],
+            spellField = 'includeSpellIDs',
+            spells = { EXTERNAL_DEFENSIVES },
             branches = {
                 { type = Filters.Helpful },
             },

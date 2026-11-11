@@ -17,12 +17,34 @@ local ipairs, pairs = ipairs, pairs
 local CopyTable = CopyTable
 local _G = _G
 
----A Hide Minimap Icon row for the addon's launcher, see RegisterLauncher.
----@param card table
+-- Home page --
+
+local WELCOME_HEIGHT = 60
+local SUPPORT_HEIGHT = 34
+local QUICK_ACTION_HEIGHT = 32
+
+---A home page's greeting: the player in their class colour, the addon's version and the launcher's Hide Minimap Icon.
+---@param page table
 ---@param addon table
----@param height number? the row height, the last row in a card takes rowHeightLast
-function Shared:LauncherRow(card, addon, height)
-    card:Row(height or rowH):Checkbox(L['Hide Minimap Icon'], {
+---@param title string
+---@param lines string[]? shown under the version
+---@return table card for the addon's own rows, QuickActions closes it
+function Shared:WelcomeCard(page, addon, title, lines)
+    local text = { L['Version: '] .. addon:ColorTextByTheme(addon:GetVersionText()) }
+    for _, line in ipairs(lines or {}) do
+        text[#text + 1] = line
+    end
+
+    local card = page:Card(title)
+    card:Row(WELCOME_HEIGHT, 0):Text(L['Hello, '] .. addon:ColorTextByClass(addon.MyName, addon.MyClass) .. '!', {
+        width = 1,
+        text = text,
+        height = WELCOME_HEIGHT,
+        autoHeight = true, -- as tall as its lines, NorskenAuras has one fewer
+        bgMode = 'hide',
+    })
+    card:Separator()
+    card:Row(rowH):Checkbox(L['Hide Minimap Icon'], {
         width = 1,
         value = addon.launcherDB.hide,
         msgPopup = true,
@@ -30,6 +52,81 @@ function Shared:LauncherRow(card, addon, height)
         callback = function(checked)
             addon:SetLauncherHidden(checked)
         end,
+    })
+    return card
+end
+
+---Toggle Anchors and Reload UI, the welcome card's last row.
+---@param card table
+---@param addon table
+function Shared:QuickActions(card, addon)
+    card:Separator()
+    local row = card:Row(QUICK_ACTION_HEIGHT)
+    row:Button(L['Toggle Anchors'], {
+        width = 0.5,
+        height = QUICK_ACTION_HEIGHT,
+        callback = function() addon.Anchors:Toggle() end,
+    })
+    row:Button(L['Reload UI'], { width = 0.5, height = QUICK_ACTION_HEIGHT, callback = ReloadUI })
+end
+
+-- Support links --
+
+local SUPPORT_LOGOS = 'Interface\\AddOns\\NorskenCore\\Media\\SupportLogos\\'
+local SUPPORT_ICON = 21 -- the prompt's icon, as big as the footer's
+-- each site's brand colour tints its footer icon and glow, the prompt's icon and the name in the prompt's title;
+-- sized to look alike as the header's are: the full circle and solid shapes smaller, the thin cup larger, width the drawn shape's
+local SUPPORT_LINKS = {
+    { text = 'Twitch', title = L['Support My %s'], icon = 'twitchv2W', size = 20, width = 18, color = 'ff9146ff', link = 'www.twitch.tv/norskenwow' },
+    { text = 'Discord', title = L['Join My %s'], icon = 'discordv2W', size = 21, width = 21, color = 'ff5865f2', link = 'https://discord.com/invite/23bS8pHfuX' },
+    { text = 'GitHub', title = L['View NorskenUI on %s'], icon = 'github2W', size = 19, width = 19, color = 'ffffffff', link = 'https://github.com/Nrsken/NorskenUI' },
+    { text = 'Ko-fi', title = L['Support Me on %s'], icon = 'kofiW', size = 22, width = 22, color = 'ffff6433', link = 'https://ko-fi.com/norskenwow' },
+    -- PayPal's lighter blue, its navy doesn't show on the dark footer
+    { text = 'PayPal', title = L['Support Me on %s'], icon = 'paypalW', size = 19, width = 15, color = 'ff009cde', link = 'https://streamelements.com/norskenwow/tip' },
+}
+
+---The window's footer: the Twitch, Discord, GitHub, Ko-fi and PayPal buttons, each opening its link to copy, then the addon's
+---version and slash command.
+---@param window table
+---@param addon table the addon whose window it is, its prompt shows the link
+function Shared:AddSupportFooter(window, addon)
+
+    for _, site in ipairs(SUPPORT_LINKS) do
+        local color = CreateColorFromHexString(site.color)
+        local rgb = { color:GetRGB() }
+        local icon, glow = SUPPORT_LOGOS .. site.icon .. '.png', SUPPORT_LOGOS .. site.icon .. '_glow.png'
+        window:AddFooterSocial({
+            icon = icon,
+            glow = glow,
+            size = site.size,
+            width = site.width,
+            color = rgb,
+            tooltip = site.text,
+            tooltipText = format(site.title, site.text), -- the prompt's title, uncoloured
+            onClick = function()
+                addon:CreatePrompt({
+                    title = format(site.title, color:WrapTextInColorCode(site.text)),
+                    text = site.link,
+                    editBox = true,
+                    editBoxLabel = L['CTRL-C to copy'],
+                    texture = { path = icon, glow = glow, width = SUPPORT_ICON, height = SUPPORT_ICON, color = { r = rgb[1], g = rgb[2], b = rgb[3] } },
+                })
+            end,
+        })
+    end
+    window:SetFooterText(addon:GetVersionText() .. '  ·  ' .. addon.slashCommand)
+end
+
+---Where to report a bug, the last card on a home page.
+---@param page table
+---@param addon table
+function Shared:SupportCard(page, addon)
+    local discord, github = addon:ColorTextByTheme(L['Discord']), addon:ColorTextByTheme(L['GitHub'])
+    page:Card(L['Support']):Row(SUPPORT_HEIGHT):Text(addon:ColorTextByTheme(L['Found a bug or have a suggestion?']), {
+        width = 1,
+        text = addon:ColorTextByTheme('• ') .. L['Join the '] .. discord .. L[' or open an issue on '] .. github .. '.',
+        height = SUPPORT_HEIGHT,
+        bgMode = 'hide',
     })
 end
 
@@ -500,7 +597,7 @@ local function BuildDurationTextPage(page, db)
     rowsCard:Rebuild(function(c)
         local showColors = not db.durationSingleColor
         local colorTable = db.durationCurveColors and db.profileColorCurve or db.profileColorBreakPoint
-        local widths = showColors and { 0.2, 0.35, 0.25, 0.2 } or { 0.2, 0.5, nil, 0.3 }
+        local widths = showColors and { 0.15, 0.45, 0.15, 0.25 } or { 0.2, 0.5, nil, 0.3 }
         local startBoxes = {}
         wipe(examples)
 
@@ -564,6 +661,7 @@ local function BuildDurationTextPage(page, db)
                 row:ColorPicker(nil, {
                     width = widths[3],
                     yOffset = FIELD_TOP,
+                    hideHex = true, -- Looks Like shows the colour
                     value = colorTable[point.color],
                     callback = function(r, g, b, a)
                         colorTable[point.color] = { r, g, b, a }
@@ -604,4 +702,97 @@ end
 ---@param page table
 function Shared:BuildDurationText(page)
     BuildDurationTextPage(page, Core:GetSharedSettings().globalMedia)
+end
+
+-- Global Settings --
+
+local GLOBAL_PAGE = 'globalSettings'
+local THEME_ITEM = 'themePage'
+local GLOBAL_LIST_WIDTH = 140 -- its labels are short, and beside the Auras tree the colour grids need the room
+Shared.GLOBAL_PAGE = GLOBAL_PAGE
+Shared.THEME_ITEM = THEME_ITEM
+
+---Registers the Global Settings page on an addon's GUI: the shared settings and the GUI theme in a page list.
+---@param gui table the addon's KajiGUI instance
+---@param addon table the addon whose window it is, it asks for the reloads
+---@param open fun(itemKey: string?) shows the page, on that item when given
+---@param extra table[]? the addon's own items { key, text, build = fun(page) }, listed before Theme
+function Shared:RegisterGlobalPage(gui, addon, open, extra)
+    local items = {
+        { type = 'label', key = 'general', text = L['General'] },
+        { key = 'globalFonts', text = L['Fonts'] },
+        { key = 'globalTextures', text = L['Textures'] },
+        { key = 'globalDurationText', text = L['Duration Text'] },
+        { key = 'globalLanguage', text = L['Language'] },
+    }
+    local builds = {
+        globalFonts = function(page) Shared:BuildFonts(page) end,
+        globalTextures = function(page) Shared:BuildTextures(page) end,
+        globalDurationText = function(page) Shared:BuildDurationText(page) end,
+        globalLanguage = function(page) Shared:BuildLanguage(page, addon) end,
+        [THEME_ITEM] = function(page) Shared:BuildTheme(page, function() open(THEME_ITEM) end) end,
+    }
+    for _, item in ipairs(extra or {}) do
+        items[#items + 1] = item
+        builds[item.key] = item.build
+    end
+    items[#items + 1] = { key = THEME_ITEM, text = L['Theme'] }
+    for _, item in ipairs(ColorCategories) do
+        items[#items + 1] = item
+    end
+
+    -- the harvest skips card titles, so each item's name is a term of its own and opens it
+    local search = {
+        { text = L['Use Global Font'], itemKey = 'globalFonts' },
+        { text = L['Theme Mode'], itemKey = THEME_ITEM },
+        { text = L['Copy From'], itemKey = THEME_ITEM },
+        { text = L['Reset Custom'], itemKey = THEME_ITEM },
+    }
+    for _, item in ipairs(items) do
+        if item.type ~= 'label' then
+            search[#search + 1] = { text = item.text, itemKey = item.key }
+        end
+    end
+
+    gui:RegisterPage(GLOBAL_PAGE, {
+        mode = 'clean',
+        search = search,
+        sidebar = { items = items, width = GLOBAL_LIST_WIDTH, default = 'globalFonts' },
+        build = function(page, _, itemKey, item)
+            if item.specs then
+                Shared:BuildColors(page, item)
+            elseif builds[itemKey] then
+                builds[itemKey](page)
+            end
+        end,
+    })
+end
+
+-- Sized to look alike rather than measure alike: solid shapes (home, fill) a little smaller, thin or round
+-- ones (cross, anchor, cog, eye) a little larger. width is each drawn shape's, xOffset centres the anchor's art.
+local HEADER_BUTTONS = {
+    close = { icon = 'NorskenCustomCrossv3', size = 22, width = 16, rotation = 45, tooltip = L['Close Settings'] },
+    home = { icon = 'HomeButtonv2', size = 16, tooltip = L['Open Home Page'] },
+    global = { icon = 'cogwheel', size = 19, width = 18, tooltip = L['Open Global Settings'] },
+    anchors = { icon = 'anchor', size = 20, width = 18, xOffset = 1, tooltip = L['Open Anchors'] },
+    theme = { icon = 'fill', size = 17, tooltip = L['Open Theme Settings'] },
+    preview = { icon = 'eye', size = 23, width = 20, tooltip = L['Preview Every Display'] },
+}
+
+---A window header button both addons have, for AddHeaderButton.
+---@param name 'close'|'home'|'global'|'anchors'|'theme'|'preview'
+---@param onClick fun(button: any) the header button, SetActive marks a toggle on
+---@return table
+function Shared:HeaderButton(name, onClick)
+    local def = HEADER_BUTTONS[name]
+    return {
+        icon = Core.Media.GUITextures .. def.icon .. '.png',
+        glow = Core.Media.GUITextures .. def.icon .. '_glow.png',
+        size = def.size,
+        width = def.width,
+        xOffset = def.xOffset,
+        rotation = def.rotation,
+        tooltip = def.tooltip,
+        onClick = onClick,
+    }
 end

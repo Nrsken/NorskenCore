@@ -67,7 +67,7 @@ local pcall = pcall
 local C_Timer = C_Timer
 local UIParent = UIParent
 local pi = math.pi
-local GetAtlasInfo = C_Texture and C_Texture.GetAtlasInfo
+local GetAtlasInfo = C_Texture.GetAtlasInfo
 
 local WIDGET_TYPE = "Dropdown"
 local DROPDOWN_HEIGHT = 24

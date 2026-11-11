@@ -136,6 +136,7 @@ API.ColorModeOptions = Private.ColorModeOptions
 API.LoadCustomColors = Private.LoadCustomColors
 API.GetClassColor = Private.GetClassColor
 API.ColorTextByClass = Private.ColorTextByClass
+API.FormatCasterName = Private.FormatCasterName
 API.RGBAToHex = Private.RGBAToHex
 API.ColorTextByTheme = Private.ColorTextByTheme
 API.GetAccentColor = Private.GetAccentColor
@@ -198,6 +199,7 @@ API.AuraPreview = Private.AuraPreview
 API.GetTriggerBranches = Private.GetTriggerBranches
 API.GetTriggerBranchCount = Private.GetTriggerBranchCount
 API.ResolveAuraGrowth = Private.ResolveAuraGrowth
+API.ResolveAuraFlow = Private.ResolveAuraFlow
 API.GetAuraGridSize = Private.GetAuraGridSize
 API.SkinAuraButton = Private.SkinAuraButton
 

@@ -353,7 +353,7 @@ function AuraCards:Dispel(page, db, ctx)
         })
     end
 
-    card:Separator()
+    card:Separator(nil, { inSection = true }) -- a plain one would end the section this card is built into
 
     local dispelIconRow = card:Row(rowHL, 0)
     dispelIconRow:Checkbox(L['Show Dispel Icon'], {

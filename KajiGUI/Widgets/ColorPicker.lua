@@ -144,6 +144,7 @@ function ColorPickerMixin:OnAcquire(parent, labelText, config)
     if config.mixed then
         self.hexText:SetText("")
     end
+    self.hexText:SetShown(not config.hideHex)
     self._callback = config.callback
 
     self.swatch:EnableMouse(true)
@@ -172,6 +173,7 @@ end
 ---@field callback? KajiGUIColorChanged
 ---@field notice? KajiGUINotice a marker after the label, see Kaji.SetNotice
 ---@field mixed? KajiGUIMixedEntry[] the things it edits disagree: black with no hex, see Kaji.SetMixed
+---@field hideHex? boolean the swatch alone, for a table column the hex would run out of
 
 Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local theme = gui.theme

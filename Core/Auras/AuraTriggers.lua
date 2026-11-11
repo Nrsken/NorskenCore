@@ -219,12 +219,17 @@ function AuraTriggers:ToAuraFilter(trigger)
     return self:New({ Unit = trigger.Unit, Base = base, branches = branches })
 end
 
+---Every trigger's link to a shipped list, in trigger order.
 ---@param trigger table?
----@return table? shipped
-function AuraTriggers:GetShipped(trigger)
+---@return table[] shipped
+function AuraTriggers:GetShippedLists(trigger)
+    local lists = {}
     for _, branch in ipairs(trigger and trigger.branches or {}) do
-        if branch.shipped then return branch.shipped end
+        if branch.shipped then
+            lists[#lists + 1] = branch.shipped
+        end
     end
+    return lists
 end
 
 ---How many groups a trigger will build, one per branch. maxFrameCount is a per-group cap, so callers

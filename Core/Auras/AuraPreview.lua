@@ -6,7 +6,7 @@ local Private = select(2, ...)
 local AuraPreview = {}
 Private.AuraPreview = AuraPreview
 
-local max, min, floor = math.max, math.min, math.floor
+local max, floor, ceil = math.max, math.floor, math.ceil
 local ipairs, pairs = ipairs, pairs
 local CreateFrame = CreateFrame
 local tsort = table.sort
@@ -15,11 +15,12 @@ local Mixin = Mixin
 local next = next
 local wipe = wipe
 
-local CreateDurationTextBinding = C_DurationUtil and C_DurationUtil.CreateDurationTextBinding
-local CreateDuration = C_DurationUtil and C_DurationUtil.CreateDuration
-local GetSpellTexture = C_Spell and C_Spell.GetSpellTexture
+local CreateDurationTextBinding = C_DurationUtil.CreateDurationTextBinding
+local CreateDuration = C_DurationUtil.CreateDuration
+local GetSpellTexture = C_Spell.GetSpellTexture
+local GetSpellName = C_Spell.GetSpellName
 
-local IconStyle = Enum and Enum.CustomAuraButtonDispelTypeTextureStyle.Icon
+local IconStyle = Enum.CustomAuraButtonDispelTypeTextureStyle.Icon
 local Filters = AuraUtil.AuraFilters
 
 local FALLBACK_ICON = 136243
@@ -178,20 +179,32 @@ end
 ---@param classSpells number[]?
 ---@param dispel string
 ---@param slot number
----@return number|string
-local function EntryIcon(spells, classSpells, dispel, slot)
-    if spells then return SpellIcon(spells[(slot - 1) % #spells + 1]) end
-    if classSpells then return SpellIcon(classSpells[(slot - 1) % #classSpells + 1]) end
+---@return number spellID
+local function EntrySpell(spells, classSpells, dispel, slot)
+    if spells then return spells[(slot - 1) % #spells + 1] end
+    if classSpells then return classSpells[(slot - 1) % #classSpells + 1] end
 
     -- Harmful with no whitelist, the icon follows the dispel type, so the art matches the border.
-    return SpellIcon(DEBUFF_SPELLS[dispel] or DEBUFF_SPELLS.None)
+    return DEBUFF_SPELLS[dispel] or DEBUFF_SPELLS.None
 end
 
 ---Fill in one display's fake auras, reusing the entry tables so a rebuild allocates nothing.
 ---@param state table
 local function BuildEntries(state)
-    local spells, dispels, harmful = ResolveDisplay(Private:GetTriggerBranches(state.filter))
+    local branches = Private:GetTriggerBranches(state.filter)
+    local spells, dispels, harmful = ResolveDisplay(branches)
     local classSpells = ClassSpells(spells, harmful)
+
+    -- A display that styles each trigger's buttons apart shares its dummies out, each trigger with its own spells.
+    local split = state.config.skin ~= nil and #branches > 1
+    local own
+    if split then
+        own = {}
+        for b, branch in ipairs(branches) do
+            local branchSpells, branchDispels, branchHarmful = ResolveDisplay({ branch })
+            own[b] = { spells = branchSpells, dispels = branchDispels, harmful = branchHarmful, classSpells = ClassSpells(branchSpells, branchHarmful) }
+        end
+    end
 
     local lead = state.lead
     local leadCount = lead and lead.count or 0
@@ -206,18 +219,31 @@ local function BuildEntries(state)
 
         local slot = index - leadCount -- the lead runs its own spells, the rest carry on from one
         local timing = TIMINGS[(index - 1) % #TIMINGS + 1]
-        local dispel = dispels[(index - 1) % #dispels + 1]
+        local branchIndex = 1
+        local entrySpells, entryDispels, entryHarmful, entryClassSpells = spells, dispels, harmful, classSpells
+        if split then
+            -- spread so every trigger gets a share while there are enough dummies, the remainder one each
+            branchIndex = floor((index - 1) * #branches / state.count) + 1
+            local resolved = own[branchIndex]
+            entrySpells, entryDispels, entryHarmful, entryClassSpells = resolved.spells, resolved.dispels, resolved.harmful, resolved.classSpells
+            slot = index - ceil((branchIndex - 1) * state.count / #branches)
+        end
+        local dispel = entryDispels[(index - 1) % #entryDispels + 1]
 
-        entry.harmful = harmful
+        entry.branch = branchIndex
+        entry.harmful = entryHarmful
         entry.dispel = dispel ~= 'None' and dispel or nil
         entry.duration = timing.duration
         entry.stacks = timing.stacks
 
+        local spellID
         if slot < 1 then
-            entry.icon = SpellIcon(lead.spells[(index - 1) % #lead.spells + 1])
+            spellID = lead.spells[(index - 1) % #lead.spells + 1]
         else
-            entry.icon = EntryIcon(spells, classSpells, dispel, slot)
+            spellID = EntrySpell(entrySpells, entryClassSpells, dispel, slot)
         end
+        entry.icon = SpellIcon(spellID)
+        entry.name = GetSpellName(spellID) or ''
     end
 
     for index = state.count + 1, #entries do
@@ -325,6 +351,43 @@ function DummyMixin:AddDispelTypeTexture(texture, options)
     slot.texture, slot.options = texture, options
 end
 
+function DummyMixin:ClearIcon()
+    self.nuiIcon = nil
+end
+
+function DummyMixin:ClearApplicationCount()
+    self.nuiCount, self.nuiCountFormatter = nil, nil
+end
+
+function DummyMixin:ClearDurationText()
+    self.nuiTime, self.nuiTimeOptions = nil, nil
+end
+
+function DummyMixin:SetSpellName(fontString)
+    self.nuiName = fontString
+end
+
+function DummyMixin:ClearSpellName()
+    self.nuiName = nil
+end
+
+function DummyMixin:SetCasterName(fontString, options)
+    self.nuiCaster, self.nuiCasterOptions = fontString, options
+end
+
+function DummyMixin:ClearCasterName()
+    self.nuiCaster, self.nuiCasterOptions = nil, nil
+end
+
+function DummyMixin:ClearDispelTypeTextures()
+    self.nuiDispelCount = 0
+end
+
+-- A fake aura never reaches its pandemic window.
+function DummyMixin:AddPandemicRegion(region)
+    region:SetAlpha(0)
+end
+
 -- The dummy is a stand-in for a real button, so it never shows a tooltip, never hides in combat and never cancels the aura.
 function DummyMixin:SetTooltipAnchorPoint() end
 
@@ -363,7 +426,8 @@ local function ResetDummy(button)
     button.Cooldown:Hide()
 
     button.nuiIcon, button.nuiCooldown, button.nuiCount, button.nuiCountFormatter = nil, nil, nil, nil
-    button.nuiTime, button.nuiTimeOptions = nil, nil
+    button.nuiTime, button.nuiTimeOptions, button.nuiName = nil, nil, nil
+    button.nuiCaster, button.nuiCasterOptions = nil, nil
     button.nuiDispelCount = 0
 end
 
@@ -381,9 +445,15 @@ local function FinishDummy(button)
             button.nuiBinding = binding
         end
 
-        -- The same formatter object a real button is given, so the text matches down to the color codes.
-        local formatter = button.nuiTimeOptions and button.nuiTimeOptions.textFormatter
-        if formatter then binding:SetFormatter(formatter) end
+        -- What a real button does with the same options (CustomAuraButtonSharedMixin:SetDurationText), so the text
+        -- matches down to the colour codes.
+        local options = button.nuiTimeOptions
+        binding:SetToDefaults()
+        if options and options.textFormat then
+            binding:SetTextFormat(options.textFormat.formatString, options.textFormat.components)
+        elseif options and options.textFormatter then
+            binding:SetFormatter(options.textFormatter)
+        end
         binding:SetFontString(button.nuiTime)
         binding:SetEnabled(true)
     elseif button.nuiBinding then
@@ -391,13 +461,21 @@ local function FinishDummy(button)
     end
 end
 
----Run the real skin over a dummy.
+---Run the real skin over a dummy: the display's own `options.skin(button, branch)` when it styles its buttons itself.
 ---@param owner table stand-in for the container, which a preview never touches
 ---@param button table
 ---@param options table
-local function SkinButton(owner, button, options)
+---@param branch number the trigger branch the dummy stands in for
+local function SkinButton(owner, button, options, branch)
+    local cooldown = button.nuiCooldown
     ResetDummy(button)
-    Private:SkinAuraButton(owner, options, button)
+    if options.skin then
+        -- a display's own skin builds its parts once and restyles them after, so the swipe it handed over stays
+        button.nuiCooldown = cooldown
+        options.skin(button, branch)
+    else
+        Private:SkinAuraButton(owner, options, button)
+    end
     FinishDummy(button)
 end
 
@@ -460,6 +538,11 @@ local function StartAura(button, entry, now)
     button.nuiExpiration = start + entry.duration
 
     if button.nuiIcon then button.nuiIcon:SetTexture(entry.icon) end
+    if button.nuiName then button.nuiName:SetText(entry.name) end
+    if button.nuiCaster then
+        local options = button.nuiCasterOptions or {}
+        button.nuiCaster:SetText(Private:FormatCasterName(options.useClassColors, options.showRealmName))
+    end
     if button.nuiCooldown then button.nuiCooldown:SetCooldown(start, entry.duration) end
     if button.nuiCount then
         local formatter = button.nuiCountFormatter
@@ -489,14 +572,14 @@ local function Layout(state)
     local config = state.config
     local width = config.width or config.size or 24
     local height = config.height or config.size or 24
-    local xStep = width + (config.elementSpacing or 0)
-    local yStep = height + (config.lineSpacing or 0)
-
-    -- How many the native flow layout fits before it wraps, from the same maximumLineSize it is given.
-    local perLine = state.count
-    if config.maximumLineSize then
-        perLine = max(1, floor((config.maximumLineSize + (config.elementSpacing or 0)) / xStep))
+    local frameWidth, frameHeight, perLine = Private:GetAuraGridSize(config, state.count)
+    -- a vertical flow fills columns first, so its element spacing runs down and its line spacing across
+    local byColumn = config.layoutAxis == AnchorUtil.FlowLayoutAxis.Vertical
+    local xGap, yGap = config.elementSpacing or 0, config.lineSpacing or 0
+    if byColumn then
+        xGap, yGap = yGap, xGap
     end
+    local xStep, yStep = width + xGap, height + yGap
 
     -- anchorPoint is the corner growth starts from, so LEFT walks back from the right edge and UP walks up from the bottom one.
     -- The config carries either the plain token or a FlowDirection value.
@@ -508,17 +591,19 @@ local function Layout(state)
     local point = config.anchorPoint or 'TOPLEFT'
 
     local frame = state.frame
-    local lines = 0
 
     for index = 1, state.count do
         local button = AcquireButton(frame, index)
-        local column = (index - 1) % perLine
+        local along = (index - 1) % perLine
         local line = floor((index - 1) / perLine)
-        lines = line + 1
+        local column, row = along, line
+        if byColumn then
+            column, row = line, along
+        end
 
         button:SetSize(width, height)
         button:ClearAllPoints()
-        button:SetPoint(point, frame, point, column * xStep * xDir, line * yStep * yDir)
+        button:SetPoint(point, frame, point, column * xStep * xDir, row * yStep * yDir)
         button:Show()
     end
 
@@ -528,13 +613,9 @@ local function Layout(state)
 
     -- Anchored the way the container is anchored, never to the container,
     -- it carries forbidden aspects and nothing unrestricted is allowed to hang off it.
-    local columns = min(perLine, state.count)
     frame:ClearAllPoints()
     frame:SetPoint(config.containerPoint or point, state.anchorTo, state.anchorPoint, state.anchorX, state.anchorY)
-    frame:SetSize(
-        max(1, columns) * width + (max(1, columns) - 1) * (config.elementSpacing or 0),
-        max(1, lines) * height + (max(1, lines) - 1) * (config.lineSpacing or 0)
-    )
+    frame:SetSize(frameWidth, frameHeight)
 end
 
 ---Redraw a display. Geometry and aura data are cheap enough to redo on every settings change, the skin pass is not,
@@ -553,7 +634,7 @@ local function Refresh(state, reskin)
     for index = 1, state.count do
         local button = AcquireButton(frame, index)
         if reskin or not button.nuiSkinned then
-            SkinButton(state.owner, button, (index <= leadCount) and lead.config or state.config)
+            SkinButton(state.owner, button, (index <= leadCount) and lead.config or state.config, state.entries[index].branch)
             button.nuiSkinned = true
         end
     end
@@ -767,7 +848,7 @@ local function BuildIndicatorEntries(state)
         entry.dispel = dispel ~= 'None' and dispel or nil
         entry.duration = timing.duration
         entry.stacks = timing.stacks
-        entry.icon = EntryIcon(spells, ClassSpells(spells, harmful), dispel, index)
+        entry.icon = SpellIcon(EntrySpell(spells, ClassSpells(spells, harmful), dispel, index))
     end
 
     for index = state.count + 1, #entries do

@@ -645,6 +645,20 @@ function Kaji.RowSelectionProgress(row)
     return Smooth(row.selection.lit), Smooth(row.selection.hover)
 end
 
+local HOVER_LIGHTEN = 0.6 -- how far a fully hovered colour goes toward textPrimary
+
+---A colour lightened toward textPrimary as it's hovered, every hover in the window's lists, tabs and buttons.
+---@param theme table
+---@param rest number[]
+---@param hover number 0 at rest, 1 fully hovered
+---@return number r
+---@return number g
+---@return number b
+function Kaji.HoverColor(theme, rest, hover)
+    local hi, k = theme.textPrimary, hover * HOVER_LIGHTEN
+    return rest[1] + (hi[1] - rest[1]) * k, rest[2] + (hi[2] - rest[2]) * k, rest[3] + (hi[3] - rest[3]) * k
+end
+
 local function PaintRowSelection(row, theme)
     local s = row.selection
     local l, h = Kaji.RowSelectionProgress(row)
@@ -865,7 +879,7 @@ local ICON_GLOW_CANVAS = 2 -- baked glow files are the icon's blurred shape on a
 ---@param glowPath? string|number
 ---@param gui KajiGUIInstance
 ---@param rotation? number radians, matching the icon's
----@return fun(alpha: number)
+---@return fun(alpha: number, color?: number[]) the glow in the accent, or in the icon's own colour
 function Kaji.AddIconGlow(owner, icon, width, height, glowPath, gui, rotation)
     if not glowPath then return function() end end
     local theme = gui.theme
@@ -875,8 +889,8 @@ function Kaji.AddIconGlow(owner, icon, width, height, glowPath, gui, rotation)
     glow:SetPoint("TOPLEFT", icon, "TOPLEFT", -dx, dy)
     glow:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", dx, -dy)
     if rotation then glow:SetRotation(rotation) end
-    return function(alpha)
-        local a = theme.accent
+    return function(alpha, color)
+        local a = color or theme.accent
         glow:SetVertexColor(a[1], a[2], a[3], alpha * theme.iconGlowAlpha)
     end
 end

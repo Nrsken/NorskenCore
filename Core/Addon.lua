@@ -189,6 +189,7 @@ local COMMANDS = {
 function Private:RegisterCommands(slashes, own)
     local addon = self
     local key = self.name:upper()
+    self.slashCommand = slashes[1]
     for index, slash in ipairs(slashes) do
         _G['SLASH_' .. key .. index] = slash
     end

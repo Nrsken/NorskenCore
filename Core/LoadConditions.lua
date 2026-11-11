@@ -30,20 +30,20 @@ local type = type
 local After = C_Timer.After
 local GetInstanceInfo = GetInstanceInfo
 
-local GetSpecialization = C_SpecializationInfo and C_SpecializationInfo.GetSpecialization
-local GetSpecializationInfo = C_SpecializationInfo and C_SpecializationInfo.GetSpecializationInfo
-local GetActiveConfigID = C_ClassTalents and C_ClassTalents.GetActiveConfigID
-local GetConfigInfo = C_Traits and C_Traits.GetConfigInfo
-local GetTreeNodes = C_Traits and C_Traits.GetTreeNodes
-local GetNodeInfo = C_Traits and C_Traits.GetNodeInfo
-local GetSubTreeInfo = C_Traits and C_Traits.GetSubTreeInfo
-local GetBestMapForUnit = C_Map and C_Map.GetBestMapForUnit
-local GetMapGroupID = C_Map and C_Map.GetMapGroupID
-local GetMapChildrenInfo = C_Map and C_Map.GetMapChildrenInfo
-local IsSpellKnownOrInSpellBook = C_SpellBook and C_SpellBook.IsSpellKnownOrInSpellBook
-local IsInPetBattle = C_PetBattles and C_PetBattles.IsInBattle
-local IsWarModeActive = C_PvP and C_PvP.IsWarModeActive
-local GetGlidingInfo = C_PlayerInfo and C_PlayerInfo.GetGlidingInfo
+local GetSpecialization = C_SpecializationInfo.GetSpecialization
+local GetSpecializationInfo = C_SpecializationInfo.GetSpecializationInfo
+local GetActiveConfigID = C_ClassTalents.GetActiveConfigID
+local GetConfigInfo = C_Traits.GetConfigInfo
+local GetTreeNodes = C_Traits.GetTreeNodes
+local GetNodeInfo = C_Traits.GetNodeInfo
+local GetSubTreeInfo = C_Traits.GetSubTreeInfo
+local GetBestMapForUnit = C_Map.GetBestMapForUnit
+local GetMapGroupID = C_Map.GetMapGroupID
+local GetMapChildrenInfo = C_Map.GetMapChildrenInfo
+local IsSpellKnownOrInSpellBook = C_SpellBook.IsSpellKnownOrInSpellBook
+local IsInPetBattle = C_PetBattles.IsInBattle
+local IsWarModeActive = C_PvP.IsWarModeActive
+local GetGlidingInfo = C_PlayerInfo.GetGlidingInfo
 
 local PET_SPELLS = Enum.SpellBookSpellBank.Pet
 

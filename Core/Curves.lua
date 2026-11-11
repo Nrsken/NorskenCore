@@ -4,8 +4,8 @@ local Private = select(2, ...)
 local CreateColor = CreateColor
 local unpack = unpack
 
-local CreateCurve = C_CurveUtil and C_CurveUtil.CreateCurve
-local CreateColorCurve = C_CurveUtil and C_CurveUtil.CreateColorCurve
+local CreateCurve = C_CurveUtil.CreateCurve
+local CreateColorCurve = C_CurveUtil.CreateColorCurve
 
 local Step = Enum.LuaCurveType.Step
 

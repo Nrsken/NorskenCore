@@ -23,6 +23,9 @@
 *                     to vary them per item; a static table works too. An item whose tabs resolve
 *                     to an empty list gets no strip at all, so a page can mix plain items and
 *                     tabbed ones.
+*     An item with `page = id` opens that registered clean page beside the column instead: its own
+*     sidebar as a second column and its content, as it shows on its own. Its lifecycle hooks don't run.
+*     ShowPage's `target.subItemKey` picks the item in that second column.
 *
 * A descriptor may also declare page lifecycle hooks, for pages that drive something outside the
 * window while they are open (a live preview, say):
@@ -103,7 +106,6 @@ end
 
 local TAB_HPAD = 14 -- horizontal padding on each side of a tab label
 local SLASH = 8 -- the 45° separator between neighbouring tabs, as tall as it is wide
-local HOVER_LIGHTEN = 0.6 -- how far a hovered label goes toward textPrimary, as in the sidebar
 local DISABLED_ALPHA = 0.35
 
 -- Scratch tables reused across a single Layout pass.
@@ -186,10 +188,8 @@ local function CreateTabStrip(gui, parent, opts)
     ---A tab's label: textSecondary at rest, lightening while hovered, the accent as it's selected.
     local function PaintLabel(tab)
         local l, h = Kaji.RowSelectionProgress(tab)
-        local rest, hi, ac = theme.textSecondary, theme.textPrimary, theme.accent
-        local r = rest[1] + (hi[1] - rest[1]) * h * HOVER_LIGHTEN
-        local g = rest[2] + (hi[2] - rest[2]) * h * HOVER_LIGHTEN
-        local b = rest[3] + (hi[3] - rest[3]) * h * HOVER_LIGHTEN
+        local rest, ac = theme.textSecondary, theme.accent
+        local r, g, b = Kaji.HoverColor(theme, rest, h)
         tab.label:SetTextColor(r + (ac[1] - r) * l, g + (ac[2] - g) * l, b + (ac[3] - b) * l, tab.disabled and DISABLED_ALPHA or 1)
     end
 
@@ -445,6 +445,7 @@ function InstanceMixin:CreateContentHost(parent, opts)
 
     local tabStrip, miniSidebar
     local sidebarInset = 0
+    local nested, nestedInset = nil, 0 -- the second column of a page opened from a column item
     local header, headerHeight = nil, 0
 
     -- The header spans the whole host, above the mini sidebar, the strip and the scroll region alike.
@@ -498,7 +499,7 @@ function InstanceMixin:CreateContentHost(parent, opts)
 
     local scrollbarVisible = false
     local function ApplyScrollChildWidth()
-        local w = frame:GetWidth() - sidebarInset
+        local w = frame:GetWidth() - sidebarInset - nestedInset
         scrollChild:NCSetWidth(scrollbarVisible and (w - scrollbarWidth) or w)
     end
 
@@ -589,6 +590,14 @@ function InstanceMixin:CreateContentHost(parent, opts)
         msf:ClearAllPoints()
         msf:NCSetPoint("TOPLEFT", frame, "TOPLEFT", 0, -headerHeight)
         msf:NCSetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+    end
+
+    -- the second column goes with whatever shows next unless an item opens it again
+    local function HideNested()
+        if nested then
+            nested.frame:Hide()
+        end
+        nestedInset = 0
     end
 
     local function OnColumnSelect(key, item)
@@ -744,6 +753,43 @@ function InstanceMixin:CreateContentHost(parent, opts)
         -- show, and a later user item click also routes through here (with no target).
         local target = host._pendingTarget
         host._pendingTarget = nil
+        -- a page opened beside the column: its own list as a second column, its content beside that
+        if item and item.page then
+            if tabStrip then
+                tabStrip.frame:Hide()
+            end
+            host._currentTab = nil
+
+            local pageId, nestedPage = item.page, gui._pages[item.page]
+            local sd = nestedPage.sidebar
+            if not nested then
+                nested = gui:CreateMiniSidebar(frame, {
+                    onSelect = function(key, entry)
+                        host._itemMemory[host._nestedId] = key
+                        ClearScrollChild(gui, scrollChild)
+                        host.page = nil
+                        BuildPage(gui._pages[host._nestedId], nil, key, entry)
+                        ResetScroll()
+                    end,
+                })
+            end
+            host._nestedId = pageId
+
+            local items = nested:SetConfig(sd)
+            nested.frame:ClearAllPoints()
+            nested.frame:NCSetPoint("TOPLEFT", miniSidebar.frame, "TOPRIGHT", 0, 0)
+            nested.frame:NCSetPoint("BOTTOMLEFT", miniSidebar.frame, "BOTTOMRIGHT", 0, 0)
+            nested.frame:Show()
+            nestedInset = sd.width or 192
+            AnchorScrollBeside(nested.frame)
+
+            local nestedKey, nestedItem = ResolveInitialItem(items, target and target.subItemKey, host._itemMemory[pageId], sd.default)
+            nested:SetSelected(nestedKey)
+            host._itemMemory[pageId] = nestedKey
+            BuildPage(nestedPage, nil, nestedKey, nestedItem)
+            return
+        end
+        HideNested()
         local tabs = ResolveTabs(descriptor, itemKey, item)
 
         -- An item can opt out of sub-tabs entirely by resolving to an empty list; the content then
@@ -812,7 +858,7 @@ function InstanceMixin:CreateContentHost(parent, opts)
 
     ---Builds and shows the page registered under id.
     ---@param id string
-    ---@param target? table { tabId?, itemKey? } a search result's context, so the shown page opens
+    ---@param target? table { tabId?, itemKey?, subItemKey? } a search result's context, so the shown page opens
     --- on the tab / sidebar item that owns the matched widget. Consumed once by the initial show.
     function host:ShowPage(id, target)
         local descriptor = gui._pages and gui._pages[id]
@@ -827,6 +873,7 @@ function InstanceMixin:CreateContentHost(parent, opts)
         end
 
         ClearScrollChild(gui, scrollChild)
+        HideNested()
         host.page = nil
         host.currentId = id
         host._descriptor = descriptor

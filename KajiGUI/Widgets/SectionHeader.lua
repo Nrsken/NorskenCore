@@ -31,7 +31,7 @@ local Mixin = Mixin
 local ipairs = ipairs
 local mpi = math.pi
 local min = math.min
-local GetAtlasInfo = C_Texture and C_Texture.GetAtlasInfo
+local GetAtlasInfo = C_Texture.GetAtlasInfo
 
 local WIDGET_TYPE = "SectionHeader"
 local HEIGHT = 26
@@ -111,7 +111,7 @@ function SectionHeaderMixin:UpdateColors()
     local theme = self.gui.theme
     Kaji.RefreshBackdrop(self)
     self.label:SetTextColor(theme.textPrimary[1], theme.textPrimary[2], theme.textPrimary[3], 1)
-    self.arrow:SetVertexColor(theme.textSecondary[1], theme.textSecondary[2], theme.textSecondary[3], 0.9)
+    self.arrow:SetVertexColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
     for _, action in ipairs(ACTIONS) do
         if action.texture then
             SetIcon(self.actions[action.key].icon, action, theme)

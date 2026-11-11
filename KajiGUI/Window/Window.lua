@@ -22,6 +22,7 @@ local pixel = Private.Pixel
 local CreateFrame = CreateFrame
 local Mixin = Mixin
 local ipairs = ipairs
+local wipe = wipe
 local type = type
 local rad = math.rad
 local max = math.max
@@ -32,6 +33,11 @@ local GameTooltip = GameTooltip
 local UIParent = UIParent
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
+local HEADER_SLOT = 24 -- a header button's height and its icon's default size
+local HEADER_GAP = 8 -- between the drawn shapes of neighbouring header buttons
+local SOCIAL_ICON = 21 -- a footer button's height and its icon's default size
+local SOCIAL_LIFT = 2 -- how far a hovered footer icon rises
+local ICON_HOVER = 0.5 -- an accent icon lightens half as far as a label, a small shift on the bright colour
 
 -- every window any addon made, so something that clears the screen (anchors, the frame chooser) puts them all away
 Kaji.windows = {}
@@ -41,6 +47,7 @@ Kaji.windows = {}
 ---@field frame Frame & BackdropTemplate
 ---@field header Frame
 ---@field footer Frame
+---@field _footerText? FontString
 ---@field content KajiGUIContentHost
 ---@field contentContainer Frame
 ---@field _state? table
@@ -48,7 +55,7 @@ Kaji.windows = {}
 ---@field _defH number
 local WindowMixin = {}
 
--- Resolves a logo/version anchor spec { point, [relLayerIndex], relPoint, x, y }. When the second
+-- Resolves a logo layer anchor spec { point, [relLayerIndex], relPoint, x, y }. When the second
 -- element is a number it anchors to that layer's texture, otherwise to the logo container.
 local function ParseAnchor(spec, container, layerTex)
     if not spec then return "LEFT", container, "LEFT", 0, 0 end
@@ -94,15 +101,6 @@ local function BuildHeader(window, logoCfg)
             layer._paintGlow = Kaji.AddIconGlow(container, t, layer.size, layer.size, layer.glow, gui)
         end
 
-        if logoCfg.version then
-            local v = header:CreateFontString(nil, "OVERLAY")
-            v:NCSetPoint(ParseAnchor(logoCfg.versionAnchor, container, layerTex))
-            v:SetFont("Fonts\\FRIZQT__.TTF", theme.fontSizeSmall or 10, "")
-            v:SetText(logoCfg.version)
-            v:SetJustifyH("LEFT")
-            v:SetShadowColor(0, 0, 0, 0)
-            window._logoVersion = v
-        end
     end
 
     local function Restyle()
@@ -115,10 +113,6 @@ local function BuildHeader(window, logoCfg)
                     layer._tex:SetVertexColor(c[1], c[2], c[3], layer.alpha or c[4] or 1)
                     layer._paintGlow(layer.alpha or 1)
                 end
-            end
-            if window._logoVersion then
-                local c = theme[logoCfg.versionColor or "textSecondary"]
-                window._logoVersion:SetTextColor(c[1], c[2], c[3], 1)
             end
         end
     end
@@ -208,52 +202,53 @@ end
 
 -- Public window methods --
 
----Adds a header button, auto-packed from the right edge in add order.
----@param config table { icon, glow?, size?, width?, height?, onClick?, tooltip?, rotation?, strata?, yOffset? }
+---Adds a header button, auto-packed from the right edge in add order. Its slot is as wide as the icon's drawn
+---shape and the shapes sit a fixed gap apart, so the spacing reads even whatever padding each icon's art has.
+---@param config table { icon, glow?, size?, width?, xOffset?, onClick?, tooltip?, rotation?, strata?, yOffset? } width: the drawn shape's, xOffset centres off-centre art
 ---@return Button
 function WindowMixin:AddHeaderButton(config)
     local gui, theme, header = self.gui, self.gui.theme, self.header
-    local size = config.size or 22
+    local size = config.size or HEADER_SLOT
     local width = config.width or size
 
     local btn = CreateFrame("Button", nil, header)
-    btn:NCSetSize(width, config.height or size)
+    btn:NCSetSize(width, HEADER_SLOT)
     btn:NCSetPoint("RIGHT", header, "RIGHT", self._headerCursor, config.yOffset or 0)
-    self._headerCursor = self._headerCursor - width - theme.paddingSmall
+    self._headerCursor = self._headerCursor - width - HEADER_GAP
     if config.strata then btn:SetFrameStrata(config.strata) end
 
     local tex = btn:CreateTexture(nil, "ARTWORK")
-    tex:SetAllPoints()
+    tex:NCSetSize(size, size)
+    tex:NCSetPoint("CENTER", btn, "CENTER", config.xOffset or 0, 0)
     tex:SetTexture(config.icon)
     tex:NCDisablePixelSnap()
     if config.rotation then tex:SetRotation(rad(config.rotation)) end
     btn:SetNormalTexture(tex)
-    local paintGlow = Kaji.AddIconGlow(btn, tex, width, config.height or size, config.glow, gui, config.rotation and rad(config.rotation))
+    local paintGlow = Kaji.AddIconGlow(btn, tex, size, size, config.glow, gui, config.rotation and rad(config.rotation))
 
-    local function ApplyAlpha(a)
-        tex:SetVertexColor(theme.accent[1], theme.accent[2], theme.accent[3], a)
-        paintGlow(a)
+    -- the accent at rest, lightened a little on hover; the setter reads the accent live for theme changes
+    local function Paint(hover)
+        tex:SetVertexColor(Kaji.HoverColor(theme, theme.accent, hover * ICON_HOVER))
+        paintGlow(1)
     end
-    ApplyAlpha(0.7)
-    -- Tween only alpha; the setter reads accent live so theme changes keep the tint correct.
-    local animateAlpha = Animations:CreateColorAnimator(btn, function(_, _, _, a) ApplyAlpha(a) end,
-        { 0, 0, 0, 0.7 }, theme.animDuration)
+    Paint(0)
+    local animateHover = Animations:CreateColorAnimator(btn, function(hover) Paint(hover) end, { 0, 0, 0, 0 }, theme.animDuration)
 
-    -- A button that toggles something rests lit rather than dimmed, so the state reads without a hover.
-    local function IdleAlpha()
-        return btn._active and 1 or 0.7
+    -- A button that toggles something rests lightened, so the state reads without a hover.
+    local function IdleHover()
+        return btn._active and 1 or 0
     end
 
     ---@param active boolean
     function btn:SetActive(active)
         btn._active = active and true or false
-        animateAlpha(0, 0, 0, IdleAlpha())
+        animateHover(IdleHover(), 0, 0, 0)
     end
 
-    gui:OnThemeChanged(function() ApplyAlpha(IdleAlpha()) end)
+    gui:OnThemeChanged(function() Paint(IdleHover()) end)
 
     btn:SetScript("OnEnter", function()
-        animateAlpha(0, 0, 0, 1)
+        animateHover(1, 0, 0, 0)
         if config.tooltip then
             GameTooltip:SetOwner(btn, "ANCHOR_RIGHT", 0, 10)
             GameTooltip:SetText(config.tooltip, theme.accent[1], theme.accent[2], theme.accent[3], 1, false)
@@ -261,7 +256,7 @@ function WindowMixin:AddHeaderButton(config)
         end
     end)
     btn:SetScript("OnLeave", function()
-        animateAlpha(0, 0, 0, IdleAlpha())
+        animateHover(IdleHover(), 0, 0, 0)
         GameTooltip:Hide()
     end)
     if config.onClick then
@@ -271,46 +266,77 @@ function WindowMixin:AddHeaderButton(config)
     return btn
 end
 
----Adds a footer social button, auto-packed from the left edge in add order.
----@param config table { icon, glow?, text?, width?, onClick?, tooltip? }
+---Adds a footer social button, an icon auto-packed from the left edge in add order. It rests muted and takes its
+---own colour on hover, with its glow and a small lift. As in the header, its slot is as wide as the icon's drawn
+---shape and the shapes sit a fixed gap apart.
+---@param config table { icon, glow?, size?, width?, color?, onClick?, tooltip?, tooltipText? } color: the icon's rgb on hover and its tooltip title's, the accent without it
 ---@return Button
 function WindowMixin:AddFooterSocial(config)
     local gui, theme, footer = self.gui, self.gui.theme, self.footer
-    local width = config.width or 68
+    local size = config.size or SOCIAL_ICON
+    local width = config.width or size
 
     local btn = CreateFrame("Button", nil, footer)
-    btn:NCSetSize(width, 21)
+    btn:NCSetSize(width, SOCIAL_ICON)
     btn:NCSetPoint("LEFT", footer, "LEFT", self._footerCursor, 0)
     self._footerCursor = self._footerCursor + width + theme.paddingMedium
 
     local tex = btn:CreateTexture(nil, "ARTWORK")
-    tex:NCSetSize(21, 21)
-    tex:NCSetPoint("LEFT", btn, "LEFT", 0, 0)
+    tex:NCSetSize(size, size)
     tex:SetTexture(config.icon)
     tex:NCDisablePixelSnap()
-    local paintGlow = Kaji.AddIconGlow(btn, tex, 21, 21, config.glow, gui)
+    local paintGlow = Kaji.AddIconGlow(btn, tex, size, size, config.glow, gui)
 
-    local label = btn:CreateFontString(nil, "OVERLAY")
-    label:NCSetPoint("LEFT", tex, "RIGHT", theme.paddingSmall, 1)
-    gui:ApplyFont(label, "normal")
-    label:SetText(config.text or "")
-    label:SetShadowColor(0, 0, 0, 0)
-
-    local function Restyle(hover)
-        local a = hover and 1 or 0.7
-        tex:SetVertexColor(theme.accent[1], theme.accent[2], theme.accent[3], a)
-        paintGlow(a)
-        label:SetTextColor(theme.textSecondary[1], theme.textSecondary[2], theme.textSecondary[3], a)
+    local function Paint(hover)
+        local rest, color = theme.textSecondary, config.color or theme.accent
+        tex:SetVertexColor(rest[1] + (color[1] - rest[1]) * hover, rest[2] + (color[2] - rest[2]) * hover, rest[3] + (color[3] - rest[3]) * hover)
+        paintGlow(hover, color)
+        tex:NCSetPoint("CENTER", btn, "CENTER", 0, hover * SOCIAL_LIFT)
     end
-    Restyle(false)
-    gui:OnThemeChanged(function() Restyle(false) end)
+    Paint(0)
+    local animateHover = Animations:CreateColorAnimator(btn, function(hover) Paint(hover) end, { 0, 0, 0, 0 }, theme.animDuration)
+    gui:OnThemeChanged(function() Paint(0) end)
 
     btn:RegisterForClicks("LeftButtonUp")
     btn:SetScript("OnClick", function() safecall(config.onClick) end)
-    btn:SetScript("OnEnter", function() Restyle(true) end)
-    btn:SetScript("OnLeave", function() Restyle(false) end)
+    btn:SetScript("OnEnter", function()
+        animateHover(1, 0, 0, 0)
+        if config.tooltip then
+            local color, secondary = config.color or theme.accent, theme.textSecondary
+            GameTooltip:SetOwner(btn, "ANCHOR_TOP", 0, 4)
+            GameTooltip:SetText(config.tooltip, color[1], color[2], color[3], 1, false)
+            if config.tooltipText then
+                GameTooltip:AddLine(config.tooltipText, secondary[1], secondary[2], secondary[3])
+            end
+            GameTooltip:Show()
+        end
+    end)
+    btn:SetScript("OnLeave", function()
+        animateHover(0, 0, 0, 0)
+        GameTooltip:Hide()
+    end)
 
     return btn
+end
+
+---Puts a line of muted text in the footer after the socials, so add them first; the right end is the resize handle's.
+---@param text string
+function WindowMixin:SetFooterText(text)
+    local label = self._footerText
+    if not label then
+        local gui, theme = self.gui, self.gui.theme
+        label = self.footer:CreateFontString(nil, "OVERLAY")
+        label:NCSetPoint("LEFT", self.footer, "LEFT", self._footerCursor + theme.paddingSmall, 0)
+        gui:ApplyFont(label, "small")
+        label:SetShadowColor(0, 0, 0, 0)
+        local function Restyle()
+            label:SetTextColor(theme.textMuted[1], theme.textMuted[2], theme.textMuted[3], 1)
+        end
+        Restyle()
+        gui:OnThemeChanged(Restyle)
+        self._footerText = label
+    end
+    label:SetText(text)
 end
 
 ---Builds and shows the page registered under id, remembering it as the current page.
@@ -329,12 +355,13 @@ end
 
 ---Builds the navigation sidebar + search box from a config list and wires selection to ShowPage.
 ---@param config table[] sidebar entry list (headers / items)
----@param opts? table { isDisabled?: fun(entry): boolean }
+---@param opts? table { isDisabled?: fun(entry): boolean, redirect?: fun(id): boolean, search?: table[] entries searched like the config's but not listed }
 ---@return table sidebar
 function WindowMixin:SetSidebar(config, opts)
     opts = opts or {}
     local gui, theme, frame = self.gui, self.gui.theme, self.frame
     self._sidebarConfig = config
+    local searchConfig = {} -- the config's entries, then opts.search's: the config gains entries after this runs
     local searchBoxHeight = Kaji.SearchBoxHeight(theme)
 
     -- Inset the content to the right of the sidebar column.
@@ -386,7 +413,14 @@ function WindowMixin:SetSidebar(config, opts)
             if text == "" then
                 sidebar:ClearResults()
             else
-                sidebar:ShowResults(gui:Search(text, config))
+                wipe(searchConfig)
+                for _, entry in ipairs(config) do
+                    searchConfig[#searchConfig + 1] = entry
+                end
+                for _, entry in ipairs(opts.search or {}) do
+                    searchConfig[#searchConfig + 1] = entry
+                end
+                sidebar:ShowResults(gui:Search(text, searchConfig))
             end
         end,
     })
@@ -546,7 +580,7 @@ end
 ---@field name? string global frame name
 ---@field size? number[] { width, height }
 ---@field minSize? number[] { minWidth, minHeight }
----@field logo? table { layers = { {texture,size,anchor,color,alpha}, ... }, version?, versionAnchor?, versionColor? }
+---@field logo? table { layers = { {texture,size,anchor,color,alpha}, ... } }
 ---@field state? table { load: fun(): table?, save: fun(data: table) } addon-owned persistence
 ---@field defaultPage? string page id shown on first open
 ---@field onShow? fun()
@@ -610,7 +644,7 @@ function InstanceMixin:CreateGUIWindow(opts)
     window._currentId = opts.defaultPage
     window._minW, window._minH = minW, minH
     window._defW, window._defH = w, h
-    window._headerCursor = -(theme.paddingSmall + 2) -- running right edge for header buttons
+    window._headerCursor = -(theme.paddingMedium + 2) -- running right edge for header buttons
     window._footerCursor = theme.paddingMedium       -- running left edge for footer socials
     window.inCombat = InCombatLockdown() and true or false
 

@@ -24,16 +24,16 @@ local securecallfunction = securecallfunction
 local UnitAffectingCombat = UnitAffectingCombat
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 
-local GetAddOnRestrictionState = C_RestrictedActions and C_RestrictedActions.GetAddOnRestrictionState
-local ShouldUnitIdentityBeSecret = C_Secrets and C_Secrets.ShouldUnitIdentityBeSecret
-local CanCompareUnitTokens = C_Secrets and C_Secrets.CanCompareUnitTokens
-local GetSpellAuraSecrecy = C_Secrets and C_Secrets.GetSpellAuraSecrecy
-local ShouldAurasBeSecret = C_Secrets and C_Secrets.ShouldAurasBeSecret
-local ShouldCooldownsBeSecret = C_Secrets and C_Secrets.ShouldCooldownsBeSecret
+local GetAddOnRestrictionState = C_RestrictedActions.GetAddOnRestrictionState
+local ShouldUnitIdentityBeSecret = C_Secrets.ShouldUnitIdentityBeSecret
+local CanCompareUnitTokens = C_Secrets.CanCompareUnitTokens
+local GetSpellAuraSecrecy = C_Secrets.GetSpellAuraSecrecy
+local ShouldAurasBeSecret = C_Secrets.ShouldAurasBeSecret
+local ShouldCooldownsBeSecret = C_Secrets.ShouldCooldownsBeSecret
 
-local NeverSecret = Enum and Enum.SecrecyLevel.NeverSecret
-local RestrictionType = Enum and Enum.AddOnRestrictionType
-local RestrictionState = Enum and Enum.AddOnRestrictionState
+local NeverSecret = Enum.SecrecyLevel.NeverSecret
+local RestrictionType = Enum.AddOnRestrictionType
+local RestrictionState = Enum.AddOnRestrictionState
 local RestrictionInactive = RestrictionState and RestrictionState.Inactive
 
 function Restricted:OnInitialize()

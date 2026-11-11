@@ -10,13 +10,13 @@ local CreateColor = CreateColor
 local tonumber = tonumber
 local unpack = unpack
 
-local enumUp = Enum and Enum.NumericRuleFormatRounding.Up
-local enumDown = Enum and Enum.NumericRuleFormatRounding.Down
-local enumNearest = Enum and Enum.NumericRuleFormatRounding.Nearest
+local enumUp = Enum.NumericRuleFormatRounding.Up
+local enumDown = Enum.NumericRuleFormatRounding.Down
+local enumNearest = Enum.NumericRuleFormatRounding.Nearest
 
 Private.MINUTES_SECONDS_FORMAT = '%d:%02d' -- the one breakpoint format with two numbers, 2:10
 
-local CreateNumericRuleFormatter = C_StringUtil and C_StringUtil.CreateNumericRuleFormatter
+local CreateNumericRuleFormatter = C_StringUtil.CreateNumericRuleFormatter
 
 local TOKEN_NORMAL, TOKEN_PERCENT, TOKEN_PLACEHOLDER = 0, 1, 2
 
