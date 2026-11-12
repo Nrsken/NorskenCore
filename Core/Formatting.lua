@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 local math_floor = math.floor
 local math_max = math.max
@@ -14,14 +14,14 @@ local enumUp = Enum.NumericRuleFormatRounding.Up
 local enumDown = Enum.NumericRuleFormatRounding.Down
 local enumNearest = Enum.NumericRuleFormatRounding.Nearest
 
-Private.MINUTES_SECONDS_FORMAT = '%d:%02d' -- the one breakpoint format with two numbers, 2:10
+Core.MINUTES_SECONDS_FORMAT = '%d:%02d' -- the one breakpoint format with two numbers, 2:10
 
 local CreateNumericRuleFormatter = C_StringUtil.CreateNumericRuleFormatter
 
 local TOKEN_NORMAL, TOKEN_PERCENT, TOKEN_PLACEHOLDER = 0, 1, 2
 
 -- the styles FormatTime knows, with a sample for the pickers; MM:SS.f is left out, only a timer refreshing fast enough for tenths offers it
-Private.TimeFormats = {
+Core.TimeFormats = {
     ['MM:SS']  = '01:30',
     ['M:SS']   = '1:30',
     ['MmSs']   = '01m 30s',
@@ -31,14 +31,14 @@ Private.TimeFormats = {
     ['Smart']  = '1m / 30s',
 }
 
--- what a text can put between two parts, for the pickers; filled in place since API.lua hands the table out at load
-Private.Separators = {}
-Private:OnLanguageSet(function()
-    local separators = Private.Separators
+-- what can sit between two parts of a text; filled in place, GUI files keep it from load
+Core.Separators = {}
+Core:OnLanguageSet(function()
+    local separators = Core.Separators
     separators['||'] = '|'
     separators['-'] = '-'
     separators['/'] = '/'
-    separators[' '] = Private.L['Space']
+    separators[' '] = Core.L['Space']
     separators['•'] = '•'
     separators['>'] = '>'
     separators['>>'] = '>>'
@@ -49,7 +49,7 @@ end)
 ---@param seconds number
 ---@param format? string a TimeFormats key or 'MM:SS.f' (defaults to "MM:SS")
 ---@return string
-function Private:FormatTime(seconds, format)
+function Core:FormatTime(seconds, format)
     seconds = seconds or 0
     if seconds < 0 then seconds = 0 end
 
@@ -88,7 +88,7 @@ end
 ---@param replacements table<string, string> Token name without the leading "%" -> replacement text, may already contain color codes.
 ---@param wrapLiteral? fun(text: string): string Wrap each literal run, e.g. to color it, omit to leave literals untouched.
 ---@return string
-function Private:FormatTokens(formatStr, replacements, wrapLiteral)
+function Core:FormatTokens(formatStr, replacements, wrapLiteral)
     if not formatStr or formatStr == "" then return "" end
 
     local result = {}
@@ -191,7 +191,7 @@ local formatterCache = {}
 ---@return number div seconds per displayed unit
 ---@return number step
 ---@return boolean nearest
-function Private:GetDurationFormatUnit(fmt)
+function Core:GetDurationFormatUnit(fmt)
     if fmt:find('dd$') then return 86400, 1, true end -- '%dd'; a bare d$ would also match seconds' '%d'
     if fmt:find('h$') then return 3600, 1, true end
     if fmt:find('m$') then return 60, 1, true end
@@ -199,7 +199,7 @@ function Private:GetDurationFormatUnit(fmt)
 end
 
 local function DurationComponent(fmt)
-    local div, step, nearest = Private:GetDurationFormatUnit(fmt)
+    local div, step, nearest = Core:GetDurationFormatUnit(fmt)
     -- Seconds leave div out, as the formatter was always fed them.
     return { div = div ~= 1 and div or nil, step = step, rounding = nearest and enumNearest or enumUp }
 end
@@ -214,7 +214,7 @@ local function ResolveBreakpointColors(useBreakpointColors, singleColor)
         return nil
     end
 
-    local stored = Private:GetSharedSettings().globalMedia.profileColorBreakPoint
+    local stored = Core:GetSharedSettings().globalMedia.profileColorBreakPoint
     local colors = {}
     for i = 1, #COLOR_KEYS do colors[i] = stored[COLOR_KEYS[i]] end
     return colors
@@ -222,7 +222,7 @@ end
 
 ---@param colors? number[][] Per-breakpoint rgba from ResolveBreakpointColors.
 local function BuildDurationBreakpoints(colors)
-    local points = Private:GetSharedSettings().globalMedia.profileBreakPoints
+    local points = Core:GetSharedSettings().globalMedia.profileBreakPoints
     local breakpoints, previous = {}, 0
 
     for i = 1, #POINT_KEYS do
@@ -231,7 +231,7 @@ local function BuildDurationBreakpoints(colors)
         local threshold = (i == 1) and 0 or math_max(tonumber(point.threshold) or 0, previous + 1)
         local format = colors and CreateColor(unpack(colors[i])):WrapTextInColorCode(point.format) or point.format
 
-        if point.format == Private.MINUTES_SECONDS_FORMAT then
+        if point.format == Core.MINUTES_SECONDS_FORMAT then
             -- Whole seconds rounded up first, like the seconds formats, then split into minutes and the rest.
             breakpoints[i] = {
                 threshold = threshold,
@@ -257,7 +257,7 @@ end
 ---@param below number seconds, 0 for no decimals
 ---@param precision number decimals, 1 or 2
 ---@return table formatter
-function Private:GetPrecisionDurationFormatter(below, precision)
+function Core:GetPrecisionDurationFormatter(below, precision)
     local key = 'precision:' .. below .. ':' .. precision
     local formatter = formatterCache[key]
     if not formatter then
@@ -278,7 +278,7 @@ function Private:GetPrecisionDurationFormatter(below, precision)
     return formatter
 end
 
-function Private:RefreshAuraDurationFormatter()
+function Core:RefreshAuraDurationFormatter()
     formatterCache = {}
 end
 
@@ -286,7 +286,7 @@ end
 ---@param useBreakpointColors? boolean Use per-breakpoint colorized format strings for instant threshold color changes.
 ---@param singleColor? number[] Optional single RGBA color to apply across all breakpoints.
 ---@return table formatter A NumericFormatter usable as SetDurationText's `textFormatter` option.
-function Private:GetAuraDurationFormatter(useBreakpointColors, singleColor)
+function Core:GetAuraDurationFormatter(useBreakpointColors, singleColor)
     local key = singleColor and tconcat(singleColor, ':') or useBreakpointColors and 'breakpoint' or 'plain'
 
     local formatter = formatterCache[key]

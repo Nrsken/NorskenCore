@@ -39,9 +39,9 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
@@ -87,7 +87,7 @@ local SCROLL_EDGE = 24 -- the list scrolls while a dragged row is this close to 
 local SCROLL_SPEED = 300 -- pixels a second at the very edge
 local ICON_BORDER = { 0, 0, 0, 1 }
 local SECTION_GAP = 8 -- above a head that follows rows; folded sections stack without it
-local BOX_BACKDROP = { bgFile = 'Interface\\Buttons\\WHITE8X8', edgeFile = 'Interface\\Buttons\\WHITE8X8', edgeSize = 1 }
+local BOX_BACKDROP = { bgFile = Core.WhiteTexture, edgeFile = Core.WhiteTexture, edgeSize = 1 }
 
 ---An item's crop and tint, back to the default zoomed icon when it names neither.
 ---@param texture Texture

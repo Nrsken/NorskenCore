@@ -1,7 +1,7 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
-Private.MELEE_RANGE_ABILITIES = {
+Core.MELEE_RANGE_ABILITIES = {
     -- Melee DPS
     [71]  = 6552,   -- Arms Warrior: Pummel
     [72]  = 6552,   -- Fury Warrior: Pummel
@@ -25,7 +25,7 @@ Private.MELEE_RANGE_ABILITIES = {
     [66]  = 35395,  -- Protection Paladin: Crusader Strike
 }
 
-Private.RANGED_RANGE_ABILITIES = {
+Core.RANGED_RANGE_ABILITIES = {
     [102]  = 5176,   -- Balance Druid: Wrath (40yd)
     [1467] = 361469, -- Devastation Evoker: Living Flame (25yd)
     [1473] = 361469, -- Augmentation Evoker: Living Flame (25yd)
@@ -42,7 +42,7 @@ Private.RANGED_RANGE_ABILITIES = {
     [1480] = 473662, -- Devourer Demon Hunter: Consume (25yd)
 }
 
-Private.MOVEMENT_SPELLS = {
+Core.MOVEMENT_SPELLS = {
     -- Death Knight
     [250]  = { spellID = 48265, iconID = 237561 },    -- Blood: Death's Advance
     [251]  = { spellID = 48265, iconID = 237561 },    -- Frost: Death's Advance
@@ -98,7 +98,7 @@ Private.MOVEMENT_SPELLS = {
     [73]   = { spellID = 6544, iconID = 236171 },     -- Protection: Heroic Leap
 }
 
-Private.CLASS_INTERRUPTS = {
+Core.CLASS_INTERRUPTS = {
     [1] = { 6552 },                                          -- Warrior
     [2] = { 96231, 31935 },                                  -- Paladin
     [3] = { 147362, 187707 },                                -- Hunter
@@ -115,7 +115,7 @@ Private.CLASS_INTERRUPTS = {
 }
 
 -- A nil specId means every spec of the class has a pet, a number restricts it to that one spec.
-Private.PET_CLASSES = {
+Core.PET_CLASSES = {
     HUNTER = {
         summonSpellId = 883,
         specId = nil
@@ -145,7 +145,7 @@ Private.PET_CLASSES = {
 
 -- Table with all item slots, their paperdoll frame and any enchant keywords that target them.
 ---@type NRSKNUI.ItemSlotInfo[]
-Private.ITEM_SLOTS = {
+Core.ITEM_SLOTS = {
     { slot = INVSLOT_HEAD,     frame = _G['CharacterHeadSlot'],          enchants = { 'helm', 'head' },                socketable = true, },
     { slot = INVSLOT_NECK,     frame = _G['CharacterNeckSlot'],          enchants = { 'neck' },                        socketable = true, },
     { slot = INVSLOT_SHOULDER, frame = _G['CharacterShoulderSlot'],      enchants = { 'shoulder' } },
@@ -165,7 +165,7 @@ Private.ITEM_SLOTS = {
 }
 
 -- Season data.
-Private.ITEM_TRACKS = {
+Core.ITEM_TRACKS = {
     { key = 'MYTH',     min = 318, max = 344, letter = 'M', color = { 1.00, 0.50, 0.00 } },
     { key = 'HERO',     min = 305, max = 322, letter = 'H', color = { 0.78, 0.30, 0.78 } },
     { key = 'CHAMPION', min = 292, max = 309, letter = 'C', color = { 0.00, 0.70, 1.00 } },
@@ -173,26 +173,26 @@ Private.ITEM_TRACKS = {
 }
 
 -- Keys are matched against the tooltip text, so like the crafted marker this only works on English clients.
-Private.ITEM_VENOMFORGED = {
+Core.ITEM_VENOMFORGED = {
     { key = 'Ascendant Venomforged: Hero', itemLevel = 328, letter = 'H', color = { 0.00, 0.70, 1.00 } },
     { key = 'Ascendant Venomforged: Myth', itemLevel = 341, letter = 'M', color = { 1.00, 0.50, 0.00 } },
 }
 
 -- PvP gear carries an explicit item level floor instead of an upgrade track.
-Private.PVP_ITEM_TRACKS = {
+Core.PVP_ITEM_TRACKS = {
     { key = 'CONQUEST', itemLevel = 344, letter = 'C', color = { 1.00, 0.50, 0.00 } },
     { key = 'HONOR',    itemLevel = 331, letter = 'H', color = { 0.00, 0.70, 1.00 } },
 }
 
 -- Crafted gear carries an explicit item level floor instead of an upgrade track and a seasonal text marker in the tooltip.
-Private.CRAFTED_ITEM_MARKER = 'Tidal Crafted'
-Private.CRAFTED_ITEM_TRACKS = {
+Core.CRAFTED_ITEM_MARKER = 'Tidal Crafted'
+Core.CRAFTED_ITEM_TRACKS = {
     { key = 'MYTH', itemLevel = 331 },
     { key = 'HERO', itemLevel = 318 },
 }
 
 -- Reusable delve glove imbues, shown apart from regular enchants.
-Private.BATTLE_ART_ITEMS = {
+Core.BATTLE_ART_ITEMS = {
     [280563] = true, -- Falco Strikes
     [283996] = true, -- Heat Wave
     [283997] = true, -- Ursine's Ironhide
@@ -200,7 +200,7 @@ Private.BATTLE_ART_ITEMS = {
 }
 
 -- Second tooltip line on gear from instanced content.
-Private.ITEM_DIFFICULTY_TAGS = {
+Core.ITEM_DIFFICULTY_TAGS = {
     [PLAYER_DIFFICULTY1] = 'NORMAL',
     [PLAYER_DIFFICULTY2] = 'HEROIC',
     [PLAYER_DIFFICULTY3] = 'LFR',
@@ -209,7 +209,7 @@ Private.ITEM_DIFFICULTY_TAGS = {
 }
 
 -- All gem types as of Midnight 12.0.0.
-Private.GEM_SOCKET_TYPES = {
+Core.GEM_SOCKET_TYPES = {
     { name = 'Prismatic',  locale = 'EMPTY_SOCKET_PRISMATIC',  icon = 458977 },
     { name = 'Meta',       locale = 'EMPTY_SOCKET_META',       icon = 136257 },
     { name = 'Tinker',     locale = 'EMPTY_SOCKET_TINKER',     icon = 2958630 },
@@ -222,27 +222,27 @@ do
     local ipairs, tinsert, sort = ipairs, table.insert, table.sort
 
     ---@type table<number, NRSKNUI.ItemSlotInfo>
-    Private.ITEM_SLOT_INFO = {}
+    Core.ITEM_SLOT_INFO = {}
     ---@type number[]
-    Private.SOCKETABLE_SLOTS = {}
+    Core.SOCKETABLE_SLOTS = {}
     ---@type { keyword: string, slots: number[] }[]
-    Private.ENCHANT_SLOT_KEYWORDS = {}
+    Core.ENCHANT_SLOT_KEYWORDS = {}
     ---@type table<string, NRSKNUI.ItemSlotInfo|table>
-    Private.ITEM_TRACK_INFO = {}
+    Core.ITEM_TRACK_INFO = {}
 
     local byKeyword = {}
 
-    for _, info in ipairs(Private.ITEM_SLOTS) do
-        Private.ITEM_SLOT_INFO[info.slot] = info
+    for _, info in ipairs(Core.ITEM_SLOTS) do
+        Core.ITEM_SLOT_INFO[info.slot] = info
 
         if info.socketable then
-            tinsert(Private.SOCKETABLE_SLOTS, info.slot)
+            tinsert(Core.SOCKETABLE_SLOTS, info.slot)
         end
 
         for _, keyword in ipairs(info.enchants or {}) do
             if not byKeyword[keyword] then
                 byKeyword[keyword] = { keyword = keyword, slots = {} }
-                tinsert(Private.ENCHANT_SLOT_KEYWORDS, byKeyword[keyword])
+                tinsert(Core.ENCHANT_SLOT_KEYWORDS, byKeyword[keyword])
             end
             tinsert(byKeyword[keyword].slots, info.slot)
         end
@@ -250,15 +250,15 @@ do
 
     -- Longest keyword first so "Two-Handed Weapon" matches 'weapon' rather than 'hand'. Matching
     -- has to be ordered, otherwise a pairs() walk resolves ambiguous enchants differently per run.
-    sort(Private.ENCHANT_SLOT_KEYWORDS, function(a, b) return #a.keyword > #b.keyword end)
+    sort(Core.ENCHANT_SLOT_KEYWORDS, function(a, b) return #a.keyword > #b.keyword end)
 
-    for _, track in ipairs(Private.ITEM_TRACKS) do
-        Private.ITEM_TRACK_INFO[track.key] = track
+    for _, track in ipairs(Core.ITEM_TRACKS) do
+        Core.ITEM_TRACK_INFO[track.key] = track
     end
-    for _, track in ipairs(Private.PVP_ITEM_TRACKS) do
-        Private.ITEM_TRACK_INFO[track.key] = track
+    for _, track in ipairs(Core.PVP_ITEM_TRACKS) do
+        Core.ITEM_TRACK_INFO[track.key] = track
     end
-    for _, track in ipairs(Private.ITEM_VENOMFORGED) do
-        Private.ITEM_TRACK_INFO[track.key] = track
+    for _, track in ipairs(Core.ITEM_VENOMFORGED) do
+        Core.ITEM_TRACK_INFO[track.key] = track
     end
 end

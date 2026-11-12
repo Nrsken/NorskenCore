@@ -12,13 +12,13 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local L = Private.L
+local L = Core.L
 
 ---@class KajiGUISidebarItem : Button
 ---@field id? string
@@ -59,7 +59,7 @@ function InstanceMixin:CreateSidebar(parent, opts)
 
     -- the column is page ground like the content area's, the list a panel on it as a page's list is
     local frame = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
+    frame:SetBackdrop({ bgFile = Core.WhiteTexture })
     Kaji.AddSurfaceTexture(frame, gui)
     Kaji.AddSurfaceTexture(frame, gui, "page")
 

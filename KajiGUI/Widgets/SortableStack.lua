@@ -23,13 +23,13 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local Animations = Private.Animations
+local Animations = Core.Animations
 
 local CreateFrame = CreateFrame
 local GetCursorPosition = GetCursorPosition
@@ -70,7 +70,7 @@ local FLASH_TIME = 0.8 -- the moved row's accent wash fading out
 local FADE_TIME = 0.25 -- lines and captions fading back in after a move
 local LINE_SPEED = 18 -- how fast the drop line slides to a new seam, per second as a share of the distance
 local GHOST_ALPHA = 0.95
-local GHOST_BACKDROP = { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 }
+local GHOST_BACKDROP = { bgFile = Core.WhiteTexture, edgeFile = Core.WhiteTexture, edgeSize = 1 }
 
 -- Where each named list drew its rows last, and the row moved last, kept across pooled rebuilds.
 local memory = {}

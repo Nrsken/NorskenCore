@@ -1,6 +1,6 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
-local L = Private.L
+local Core = select(2, ...)
+local L = Core.L
 
 local C_AddOns = C_AddOns
 local tonumber = tonumber
@@ -12,16 +12,16 @@ Which Norsken addons this Core can run. Each one names the lowest API it works w
 Raise API_VERSION when Core adds something an addon starts to need, MIN_SUPPORTED only when something is removed.
 ]]
 
-Private.API_VERSION = 1
+local API_VERSION = 1
 local MIN_SUPPORTED = 1
 
 local PREFIX = '|cffe677f9Norsken|r|cffb3b3b3Core|r: '
 
 ---Warn in chat about every loaded addon built for a different Core.
-function Private:CheckAddonVersions()
+function Core:CheckAddonVersions()
     for index = 1, C_AddOns.GetNumAddOns() do
         local minimum = C_AddOns.IsAddOnLoaded(index) and tonumber(C_AddOns.GetAddOnMetadata(index, 'X-NorskenCore-Minimum'))
-        if minimum and minimum > Private.API_VERSION then
+        if minimum and minimum > API_VERSION then
             DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. format(L['%s needs a newer NorskenCore, update NorskenCore.'], (C_AddOns.GetAddOnInfo(index))))
         elseif minimum and minimum < MIN_SUPPORTED then
             local name = C_AddOns.GetAddOnInfo(index)

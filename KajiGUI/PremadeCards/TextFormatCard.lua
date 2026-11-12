@@ -14,12 +14,12 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 
 
-local L = Private.L
+local L = Core.L
 
 --- Format editbox, justify dropdown and X/Y offset sliders bound to a db table.
 Kaji.premadeCards.TextFormatCard = {

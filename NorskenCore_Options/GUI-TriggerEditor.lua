@@ -4,7 +4,7 @@ local Core = _G.NorskenCore
 local TriggerEditor = {}
 Core.GUITriggerEditor = TriggerEditor
 local L = Core.L
-local rowH = Core.KajiGUI.DEFAULT_THEME.rowHeight
+local rowH = Core.Kaji.DEFAULT_THEME.rowHeight
 
 local AuraTriggers = Core.AuraTriggers
 local Premade = Core.AuraFiltersPremade

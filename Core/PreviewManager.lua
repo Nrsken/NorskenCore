@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 local pairs = pairs
 local setmetatable = setmetatable
@@ -42,7 +42,7 @@ end
 local function ResolvePage(addon, pageId, into)
     if not pageId then return end
 
-    for _, entry in pairs(Private.Anchors.registry) do
+    for _, entry in pairs(Core.Anchors.registry) do
         if entry.addon == addon and entry.guiPath == pageId and entry.module and IsPreviewable(entry.module) then
             into[entry.module] = pageId
         end
@@ -143,7 +143,7 @@ function PreviewManager:Refresh()
         end
     end
 
-    Private:SendMessage('NRSKNUI_PREVIEWS_CHANGED')
+    Core.Ace:SendMessage('NRSKNUI_PREVIEWS_CHANGED')
 end
 
 ---@param open boolean
@@ -238,7 +238,7 @@ end
 ---An addon's own previews. Its window and modules are its own, only anchors bring them together.
 ---@param addon table
 ---@return NRSKNUI.PreviewManager
-function Private:NewPreviewManager(addon)
+function Core:NewPreviewManager(addon)
     return setmetatable({
         addon = addon,
         guiOpen = false,

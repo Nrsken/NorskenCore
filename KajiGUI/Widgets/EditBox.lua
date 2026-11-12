@@ -14,12 +14,12 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local Animations = Private.Animations
+local Animations = Core.Animations
 local safecall = Kaji.safecall
 
 local CreateFrame = CreateFrame

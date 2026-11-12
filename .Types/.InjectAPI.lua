@@ -68,7 +68,7 @@ function EditBox:SetFontJustify(source, parent, offsetX, offsetY, skip, bound, f
 ---@field SetBackgroundTexture fun(self: Frame, path: string?)
 ---@field UpdateBackdropFromDB fun(self: Frame, db: table)
 ---@field SetBorderColor fun(self: Frame, r: number, g: number, b: number, a: number?)
----@field ToggleBackdrop fun(self: Frame, show: boolean)
+---@field SetBackdropShown fun(self: Frame, shown: boolean) Show/hide the background and the edges together
 ---@field NCSetSize fun(self: Frame, width: number, height?: number, ...) Pixel-snapped SetSize (falls back to width for height)
 ---@field NCSetWidth fun(self: Frame, width: number, ...) Pixel-snapped SetWidth
 ---@field NCSetHeight fun(self: Frame, height: number, ...) Pixel-snapped SetHeight
@@ -76,11 +76,11 @@ function EditBox:SetFontJustify(source, parent, offsetX, offsetY, skip, bound, f
 ---@field NCSetInside fun(self: Frame, anchor?: table, xOffset?: number, yOffset?: number, anchor2?: table) Anchor inset to a frame's corners (defaults 1px)
 ---@field NCSetGridPoint fun(self: Frame, point: string, relativeTo?: Frame|string, relativePoint?: string, offsetX?: number, offsetY?: number) SetPoint but snaps the resulting edges onto the pixel grid (for anchoring to off-grid frames)
 ---@field NCDisablePixelSnap fun(self: Frame) Disable Blizzard's grid snapping / texel bias on this object
----@field NCAddBorders fun(self: Frame, noPixelSnap: boolean?) Add a 1px border to all 4 edges (or custom size/color)
+---@field NCAddBorders fun(self: Frame, inset: number?, keepPixelSnap: boolean?) Four 1px OVERLAY edges, inset from the frame's edges (default 0); does nothing on a frame that has them
 ---@field SetBorderLayer fun(self: Frame, layer: string, sublevel?: number) Set the draw layer of all 4 edges (e.g. 'ARTWORK', 'OVERLAY')
----@field SetBorderParent fun(self: Frame, parent: Frame, sublevel?: number) Reparent all 4 edges to a new parent (e.g. the frame's texture)
+---@field SetBorderParent fun(self: Frame, parent: Frame) Draw the edges from another frame (one above a statusbar fill)
 ---@field SetBorderShown fun(self: Frame, shown: boolean) Show/hide all 4 edges
----@field NCApplyOnUpdate fun(self: Frame, throttle?: number, callback?: fun(self: Frame, elapsed: number)) Add a callback to run on the frame's OnUpdate script (multiple callbacks can be added)
+---@field NCApplyOnUpdate fun(self: Frame, throttle?: number, callback?: fun(self: Frame, elapsed: number)) Run callback at most once every throttle seconds; replaces the OnUpdate script, no arguments clears it
 ---@field NCSetScheduledUpdate fun(self: Frame, callback: fun(self: Frame), whenVisible?: boolean) Install a coalesced one-shot handler; arm it with ScheduleUpdate
 ---@field NCScheduleUpdate fun(self: Frame) Arm the SetScheduledUpdate handler to run once next frame; repeated calls coalesce
 ---@field SetOnUpdateMode fun(self: Frame, mode: number) Set the OnUpdateMode (Enum.OnUpdateMode) for this frame; see docs for details
@@ -113,21 +113,19 @@ local Frame
 ---@field container NUIAuraContainer?
 ---@field CreateAuraContainer fun(self: NUIAuraHostFrame, config: table?): NUIAuraContainer?
 
----Strip textures/atlases in a controlled way. `'Keyed'` recurses keyed children then clears own regions.
+---Strip Blizzard art: the mode picks the textures, the action what happens to them.
 ---
 ---[Documentation](https://github.com/Nrsken/NorskenUI/blob/PTR/Docs/API.md#ncstriptextures)
----@param stripType? string nil | 'Keyed' | 'Kill' | 'Layer' | 'Atlas' | 'ClearHide' | 'Alpha'
----@param a? string|string[]|boolean 'Layer'/'Atlas': layer/atlas name(s) · 'Keyed': banish (kill)
----@param b? boolean 'Keyed': alphaZero — set alpha 0 instead of clearing
-function Frame:NCStripTextures(stripType, a, b) end
+---@param mode? string nil (clear) | 'Alpha' | 'ClearHide' | 'Kill' | 'Keyed' | 'Layer' | 'Atlas'
+---@param arg? string|string[] 'Keyed': the action for every texture it reaches ('Alpha', 'ClearHide', 'Kill'), clear by default · 'Layer'/'Atlas': the draw layer(s) or atlas name(s) to hide
+function Frame:NCStripTextures(mode, arg) end
 
----Build a pixel-perfect backdrop (bg + 4 border edges) and mix in the backdrop API.
+---The background, 0.8 black until coloured; NCAddBorders adds edges. Once per frame.
 ---
 ---[Documentation](https://github.com/Nrsken/NorskenUI/blob/PTR/Docs/API.md#nccreatebackdrop)
----@param noBorders? boolean skip the four border edges, for frames that draw their own
----@param inset? number pixel inset of the bg and edges from the frame's rect, defaults to 1
----@param insetY number? Optional vertical inset, defaults to `inset`. Negatives sit outside the frame.
-function Frame:NCCreateBackdrop(noBorders, inset, insetY) end
+---@param inset? number from the frame's edges, default 1 so edges at 0 sit around it
+---@param insetY? number vertical inset, default `inset`; negatives sit outside the frame
+function Frame:NCCreateBackdrop(inset, insetY) end
 
 ---Return true if a NorskenUI backdrop was already added.
 ---
@@ -166,7 +164,7 @@ function Frame:NCStyleChildFontStrings(source, getSize, outline, shadow, skip, s
 ---@field SetBackgroundTexture fun(self: Button, path: string?)
 ---@field UpdateBackdropFromDB fun(self: Button, db: table)
 ---@field SetBorderColor fun(self: Button, r: number, g: number, b: number, a: number?)
----@field ToggleBackdrop fun(self: Button, show: boolean)
+---@field SetBackdropShown fun(self: Button, shown: boolean) Show/hide the background and the edges together
 ---@field NCSetSize fun(self: Button, width: number, height?: number, ...) Pixel-snapped SetSize (falls back to width for height)
 ---@field NCSetWidth fun(self: Button, width: number, ...) Pixel-snapped SetWidth
 ---@field NCSetHeight fun(self: Button, height: number, ...) Pixel-snapped SetHeight
@@ -175,30 +173,29 @@ function Frame:NCStyleChildFontStrings(source, getSize, outline, shadow, skip, s
 ---@field NCSetGridPoint fun(self: Button, point: string, relativeTo?: Frame|string, relativePoint?: string, offsetX?: number, offsetY?: number) SetPoint but snaps the resulting edges onto the pixel grid (for anchoring to off-grid frames)
 ---@field NCDisablePixelSnap fun(self: Button) Disable Blizzard's grid snapping / texel bias on this object
 ---@field NCStyleButton fun(self: Button, noHover?: boolean, noPushed?: boolean, noChecked?: boolean) Swap Blizzard highlight/pushed/checked art for flat additive overlays
----@field NCAddBorders fun(self: Button, noPixelSnap: boolean?) Add a 1px border to all 4 edges (or custom size/color)
+---@field NCAddBorders fun(self: Button, inset: number?, keepPixelSnap: boolean?) Four 1px OVERLAY edges, inset from the frame's edges (default 0); does nothing on a frame that has them
 ---@field SetBorderLayer fun(self: Button, layer: string, sublevel?: number) Set the draw layer of all 4 edges (e.g. 'ARTWORK', 'OVERLAY')
----@field SetBorderParent fun(self: Button, parent: Frame) Reparent all 4 edges to a new parent (e.g. the frame's texture)
+---@field SetBorderParent fun(self: Button, parent: Frame) Draw the edges from another frame (one above a statusbar fill)
 ---@field SetBorderShown fun(self: Button, shown: boolean) Show/hide all 4 edges
----@field NCApplyOnUpdate fun(self: Button, throttle?: number, callback?: fun(self: Button, elapsed: number)) Add a callback to run on the frame's OnUpdate script (multiple callbacks can be added)
+---@field NCApplyOnUpdate fun(self: Button, throttle?: number, callback?: fun(self: Button, elapsed: number)) Run callback at most once every throttle seconds; replaces the OnUpdate script, no arguments clears it
 ---@field NCSetScheduledUpdate fun(self: Button, callback: fun(self: Button), whenVisible?: boolean) Install a coalesced one-shot handler; arm it with ScheduleUpdate
 ---@field NCScheduleUpdate fun(self: Button) Arm the SetScheduledUpdate handler to run once next frame; repeated calls coalesce
 ---@field SetAlphaFromBoolean fun(self: Button, value: boolean|number|nil, alphaIfTrue?: number, alphaIfFalse?: number)
 local Button
 
----Strip textures/atlases in a controlled way. `'Keyed'` recurses keyed children then clears own regions.
+---Strip Blizzard art: the mode picks the textures, the action what happens to them.
 ---
 ---[Documentation](https://github.com/Nrsken/NorskenUI/blob/PTR/Docs/API.md#ncstriptextures)
----@param stripType? string nil | 'Keyed' | 'Kill' | 'Layer' | 'Atlas' | 'ClearHide' | 'Alpha'
----@param a? string|string[]|boolean 'Layer'/'Atlas': layer/atlas name(s) · 'Keyed': banish (kill)
----@param b? boolean 'Keyed': alphaZero — set alpha 0 instead of clearing
-function Button:NCStripTextures(stripType, a, b) end
+---@param mode? string nil (clear) | 'Alpha' | 'ClearHide' | 'Kill' | 'Keyed' | 'Layer' | 'Atlas'
+---@param arg? string|string[] 'Keyed': the action for every texture it reaches ('Alpha', 'ClearHide', 'Kill'), clear by default · 'Layer'/'Atlas': the draw layer(s) or atlas name(s) to hide
+function Button:NCStripTextures(mode, arg) end
 
----Build a pixel-perfect backdrop (bg + 4 border edges) and mix in the backdrop API.
+---The background, 0.8 black until coloured; NCAddBorders adds edges. Once per frame.
 ---
 ---[Documentation](https://github.com/Nrsken/NorskenUI/blob/PTR/Docs/API.md#nccreatebackdrop)
----@param noBorders? boolean skip the four border edges, for frames that draw their own
----@param inset? number pixel inset of the bg and edges from the frame's rect, defaults to 1
-function Button:NCCreateBackdrop(noBorders, inset) end
+---@param inset? number from the frame's edges, default 1 so edges at 0 sit around it
+---@param insetY? number vertical inset, default `inset`; negatives sit outside the frame
+function Button:NCCreateBackdrop(inset, insetY) end
 
 ---Return true if a NorskenUI backdrop was already added.
 ---
@@ -226,7 +223,7 @@ function Button:NCApplyPosition(Config, setParent, extraX, extraY) end
 ---@field SetBackgroundTexture fun(self: StatusBar, path: string?)
 ---@field UpdateBackdropFromDB fun(self: StatusBar, db: table)
 ---@field SetBorderColor fun(self: StatusBar, r: number, g: number, b: number, a: number?)
----@field ToggleBackdrop fun(self: StatusBar, show: boolean)
+---@field SetBackdropShown fun(self: StatusBar, shown: boolean) Show/hide the background and the edges together
 ---@field NCSetSize fun(self: StatusBar, width: number, height?: number, ...) Pixel-snapped SetSize (falls back to width for height)
 ---@field NCSetWidth fun(self: StatusBar, width: number, ...) Pixel-snapped SetWidth
 ---@field NCSetHeight fun(self: StatusBar, height: number, ...) Pixel-snapped SetHeight
@@ -234,29 +231,28 @@ function Button:NCApplyPosition(Config, setParent, extraX, extraY) end
 ---@field NCSetInside fun(self: StatusBar, anchor?: table, xOffset?: number, yOffset?: number, anchor2?: table) Anchor inset to a frame's corners (defaults 1px)
 ---@field NCSetGridPoint fun(self: StatusBar, point: string, relativeTo?: Frame|string, relativePoint?: string, offsetX?: number, offsetY?: number) SetPoint but snaps the resulting edges onto the pixel grid (for anchoring to off-grid frames)
 ---@field NCDisablePixelSnap fun(self: StatusBar) Disable Blizzard's grid snapping / texel bias on this object
----@field NCAddBorders fun(self: StatusBar, noPixelSnap: boolean?) Add a 1px border to all 4 edges (or custom size/color)
+---@field NCAddBorders fun(self: StatusBar, inset: number?, keepPixelSnap: boolean?) Four 1px OVERLAY edges, inset from the frame's edges (default 0); does nothing on a frame that has them
 ---@field SetBorderLayer fun(self: StatusBar, layer: string, sublevel?: number) Set the draw layer of all 4 edges (e.g. 'ARTWORK', 'OVERLAY')
----@field SetBorderParent fun(self: StatusBar, parent: Frame) Reparent all 4 edges to a new parent (e.g. the frame's texture)
+---@field SetBorderParent fun(self: StatusBar, parent: Frame) Draw the edges from another frame (one above a statusbar fill)
 ---@field SetBorderShown fun(self: StatusBar, shown: boolean) Show/hide all 4 edges
----@field NCApplyOnUpdate fun(self: StatusBar, throttle?: number, callback?: fun(self: StatusBar, elapsed: number)) Add a callback to run on the frame's OnUpdate script (multiple callbacks can be added)
+---@field NCApplyOnUpdate fun(self: StatusBar, throttle?: number, callback?: fun(self: StatusBar, elapsed: number)) Run callback at most once every throttle seconds; replaces the OnUpdate script, no arguments clears it
 ---@field NCSetScheduledUpdate fun(self: StatusBar, callback: fun(self: StatusBar), whenVisible?: boolean) Install a coalesced one-shot handler; arm it with ScheduleUpdate
 ---@field NCScheduleUpdate fun(self: StatusBar) Arm the SetScheduledUpdate handler to run once next frame; repeated calls coalesce
 local StatusBar
 
----Strip textures/atlases in a controlled way. `'Keyed'` recurses keyed children then clears own regions.
+---Strip Blizzard art: the mode picks the textures, the action what happens to them.
 ---
 ---[Documentation](https://github.com/Nrsken/NorskenUI/blob/PTR/Docs/API.md#ncstriptextures)
----@param stripType? string nil | 'Keyed' | 'Kill' | 'Layer' | 'Atlas' | 'ClearHide' | 'Alpha'
----@param a? string|string[]|boolean 'Layer'/'Atlas': layer/atlas name(s) · 'Keyed': banish (kill)
----@param b? boolean 'Keyed': alphaZero — set alpha 0 instead of clearing
-function StatusBar:NCStripTextures(stripType, a, b) end
+---@param mode? string nil (clear) | 'Alpha' | 'ClearHide' | 'Kill' | 'Keyed' | 'Layer' | 'Atlas'
+---@param arg? string|string[] 'Keyed': the action for every texture it reaches ('Alpha', 'ClearHide', 'Kill'), clear by default · 'Layer'/'Atlas': the draw layer(s) or atlas name(s) to hide
+function StatusBar:NCStripTextures(mode, arg) end
 
----Build a pixel-perfect backdrop (bg + 4 border edges) and mix in the backdrop API.
+---The background, 0.8 black until coloured; NCAddBorders adds edges. Once per frame.
 ---
 ---[Documentation](https://github.com/Nrsken/NorskenUI/blob/PTR/Docs/API.md#nccreatebackdrop)
----@param noBorders? boolean skip the four border edges, for frames that draw their own
----@param inset? number pixel inset of the bg and edges from the frame's rect, defaults to 1
-function StatusBar:NCCreateBackdrop(noBorders, inset) end
+---@param inset? number from the frame's edges, default 1 so edges at 0 sit around it
+---@param insetY? number vertical inset, default `inset`; negatives sit outside the frame
+function StatusBar:NCCreateBackdrop(inset, insetY) end
 
 ---Return true if a NorskenUI backdrop was already added.
 ---
@@ -288,16 +284,15 @@ function StatusBar:NCApplyPosition(Config, setParent, extraX, extraY) end
 ---@field NCSetGridPoint fun(self: Texture, point: string, relativeTo?: Frame|string, relativePoint?: string, offsetX?: number, offsetY?: number) SetPoint but snaps the resulting edges onto the pixel grid (for anchoring to off-grid frames)
 ---@field NCDisablePixelSnap fun(self: Texture) Disable Blizzard's grid snapping / texel bias on this texture
 ---@field NCSetZoom fun(self: Texture, zoom?: number) Apply a zoom crop via SetTexCoord (uses NRSKNUI.GlobalZoom when omitted)
----@field NCStripTextures fun(self: Texture, stripType?: string, a?: string|string[]|boolean, b?: boolean) Strip this texture (clear, or per `stripType`). Same modes as the frame version.
+---@field NCStripTextures fun(self: Texture, mode?: string, arg?: string|string[]) Strip this texture (clear, or per `mode`). Same modes as the frame version.
 local Texture
 
----Strip this texture (clear, or per `stripType`). Same modes as the frame version.
+---Strip this texture (clear, or per `mode`). Same modes as the frame version.
 ---
 ---[Documentation](https://github.com/Nrsken/NorskenUI/blob/PTR/Docs/API.md#ncstriptextures)
----@param stripType? string nil | 'Keyed' | 'Kill' | 'Layer' | 'Atlas' | 'ClearHide' | 'Alpha'
----@param a? string|string[]|boolean 'Layer'/'Atlas': layer/atlas name(s) · 'Keyed': banish (kill)
----@param b? boolean 'Keyed': alphaZero — set alpha 0 instead of clearing
-function Texture:NCStripTextures(stripType, a, b) end
+---@param mode? string nil (clear) | 'Alpha' | 'ClearHide' | 'Kill' | 'Keyed' | 'Layer' | 'Atlas'
+---@param arg? string|string[] 'Keyed': the action for every texture it reaches ('Alpha', 'ClearHide', 'Kill'), clear by default · 'Layer'/'Atlas': the draw layer(s) or atlas name(s) to hide
+function Texture:NCStripTextures(mode, arg) end
 
 ---Apply a zoom crop via SetTexCoord (uses NRSKNUI.GlobalZoom when omitted).
 ---

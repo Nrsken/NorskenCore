@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 ---@type fun(unit: UnitToken, target: UnitToken, canAssistImmunePC: boolean?, canAssistUninteractable: boolean?): boolean
 local UnitCanAssist = UnitCanAssist
@@ -85,7 +85,7 @@ end
 ---@return string containerPoint the container's own point, where it attaches to its owner
 ---@return string horizontalFlow 'LEFT' | 'RIGHT'
 ---@return string verticalFlow 'UP' | 'DOWN'
-function Private:ResolveAuraGrowth(horizontal, vertical, anchorTo)
+function Core:ResolveAuraGrowth(horizontal, vertical, anchorTo)
     local horizontalFlow = (horizontal == 'LEFT') and 'LEFT' or 'RIGHT'
     local verticalFlow = (vertical == 'UP') and 'UP' or 'DOWN'
 
@@ -111,7 +111,7 @@ local GROW_FILL = { RIGHT = 'R', LEFT = 'L', HORIZONTAL = 'R', DOWN = 'D', UP = 
 ---@param width number one button's width
 ---@param height number one button's height
 ---@return table flow the container config's layout keys
-function Private:ResolveAuraFlow(layout, width, height)
+function Core:ResolveAuraFlow(layout, width, height)
     local grow = layout.Grow
     local grid = grow == 'GRID'
     local fill = layout.GridType
@@ -123,7 +123,7 @@ function Private:ResolveAuraFlow(layout, width, height)
             fill = first .. (layout.Align == 'RIGHT' and 'L' or 'R')
         end
     end
-    local rowFirst, xSign, ySign, corner = Private:ParseGridType(fill)
+    local rowFirst, xSign, ySign, corner = Core:ParseGridType(fill)
 
     -- The container sizes itself to its auras, so anchoring it by a centre keeps them centred as they come and go.
     local centred = grow == 'HORIZONTAL' or grow == 'VERTICAL'
@@ -159,7 +159,7 @@ end
 ---@return number height
 ---@return number perLine
 ---@return number lines
-function Private:GetAuraGridSize(config, count)
+function Core:GetAuraGridSize(config, count)
     count = max(1, count)
     local width = config.width or config.size or 24
     local height = config.height or config.size or 24
@@ -187,7 +187,7 @@ end
 
 -- Check what type of duration text coloring is enabled in the global media settings.
 local function GetGlobalDurationColorMode()
-    local media = Private:GetSharedSettings().globalMedia
+    local media = Core:GetSharedSettings().globalMedia
     local useBreakpointColors = media and media.durationBreakpointColors
     local useCurveColors = media and media.durationCurveColors
     local useSingleColor = media and media.durationSingleColor
@@ -213,7 +213,7 @@ end
 ---@param container table AuraContainer element
 ---@param options table group/slot options (carries size/font/toggle overrides)
 ---@param button table native AuraButton
-function Private:SkinAuraButton(container, options, button)
+function Core:SkinAuraButton(container, options, button)
     options = options or {}
 
     -- Size the button and add a backdrop for border. The backdrop takes no settings and is anchored to
@@ -221,9 +221,8 @@ function Private:SkinAuraButton(container, options, button)
     local size = Opt(options, container, 'size', 24)
     button:SetSize(Opt(options, container, 'width', size), Opt(options, container, 'height', size))
     button:EnableMouse(not Opt(options, container, 'disableMouse'))
-    if not button.backdropBackground then -- the field CreateBackdrop sets, injected methods do not reach an AuraButton
-        Private:CreateBackdrop(button, nil, 0)
-    end
+    Core.CreateBackdrop(button, 0)
+    Core.AddBorders(button)
 
     -- Tooltip anchor and combat hiding. The native button handles the tooltip itself, we just tell it where to go.
     button:SetTooltipAnchorPoint(
@@ -296,11 +295,11 @@ function Private:SkinAuraButton(container, options, button)
 
         local useBreakpointColors, useCurveColors, useSingleColor, singleColor = GetGlobalDurationColorMode()
         local configuredCurve = Opt(options, container, 'durationTextColorCurve')
-        local colorCurve = (configuredCurve == true) and Private.curves.AuraDurationColor or configuredCurve
+        local colorCurve = (configuredCurve == true) and Core.curves.AuraDurationColor or configuredCurve
 
         button:SetDurationText(time, {
             textFormatter = Opt(options, container, 'durationTextFormatter')
-                or Private:GetAuraDurationFormatter(useBreakpointColors, (useSingleColor and singleColor) or nil),
+                or Core:GetAuraDurationFormatter(useBreakpointColors, (useSingleColor and singleColor) or nil),
             textColor = (useCurveColors and colorCurve) and {
                 curve = colorCurve,
                 property = Enum.DurationTextBindingProperty.RemainingDuration,
@@ -312,7 +311,7 @@ function Private:SkinAuraButton(container, options, button)
     local borderColor = Opt(options, container, 'borderColor')
     if borderColor then
         local enchantBorder = overlay:CreateTexture(nil, 'OVERLAY')
-        enchantBorder:SetTexture(Private.Media.GUITextures .. 'AuraOverlay.png') -- Use our own border texture.
+        enchantBorder:SetTexture(Core.Media.GUITextures .. 'AuraOverlay.png') -- Use our own border texture.
         enchantBorder:NCDisablePixelSnap()
         enchantBorder:NCSetInside(button)
         enchantBorder:SetVertexColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
@@ -323,7 +322,7 @@ function Private:SkinAuraButton(container, options, button)
     local showDebuffBorder = Opt(options, container, 'showDebuffBorder')
     if showBuffBorder or showDebuffBorder then
         local border = overlay:CreateTexture(nil, 'OVERLAY')
-        border:SetTexture(Private.Media.GUITextures .. 'AuraOverlay.png') -- Use our own border texture.
+        border:SetTexture(Core.Media.GUITextures .. 'AuraOverlay.png') -- Use our own border texture.
         border:NCDisablePixelSnap()
         border:NCSetInside(button)
         button.Border = border
@@ -332,7 +331,7 @@ function Private:SkinAuraButton(container, options, button)
             showWhenHelpful = showBuffBorder == true,
             showWhenHarmful = showDebuffBorder == true,
             showWithoutDispelType = Opt(options, container, 'showWithoutDispelType') == true,
-            customDispelColorMap = Opt(options, container, 'customDispelColorMap', Private.Colors.dispel),
+            customDispelColorMap = Opt(options, container, 'customDispelColorMap', Core.Colors.dispel),
             customDispelColorCurve = Opt(options, container, 'customDispelColorCurve'),
         })
     end
@@ -409,7 +408,7 @@ local function ResolveDisplayOptions(container, options)
     options.sortDirection = options.sortDirection or container.sortDirection or AuraContainerSortDirection.Normal
 
     if not options.initializeFrame then
-        options.initializeFrame = GenerateClosure(Private.SkinAuraButton, Private, container, options)
+        options.initializeFrame = GenerateClosure(Core.SkinAuraButton, Core, container, options)
     end
 end
 
@@ -418,11 +417,11 @@ end
 ---@param candidateFilters table?
 ---@return boolean?
 local function ResolveIdentityDependence(filterString, candidateFilters)
-    if not Private.AuraFilters:HasSpellIDCandidates(candidateFilters) then return nil end
+    if not Core.AuraFilters:HasSpellIDCandidates(candidateFilters) then return nil end
 
     local anySecret = false
     for spellId in pairs(candidateFilters.includeSpellIDs) do
-        if Private:IsSpellAuraSecret(spellId) then
+        if Core:IsSpellAuraSecret(spellId) then
             anySecret = true
             break
         end
@@ -580,7 +579,7 @@ end
 ---@param trigger table?
 ---@return table[] branches
 local function ResolveBranches(trigger)
-    local branches = Private:GetTriggerBranches(trigger)
+    local branches = Core:GetTriggerBranches(trigger)
     if branches and branches[1] then return branches end
     return { { filterString = AuraFilterTokens.Harmful } }
 end
@@ -678,7 +677,7 @@ end
 function ContainerMixin:ReapplyFilters()
     if not self.filterBindings then return end
 
-    Private:RunWhenSafe(function()
+    Core:RunWhenSafe(function()
         for _, binding in ipairs(self.filterBindings) do
             SyncBinding(self, binding)
         end
@@ -904,7 +903,7 @@ local function RegisterWatcher(watcher)
     local unit = watcher.unit
 
     -- An unrecognised token turns every RegisterUnitEvent into a unitless one, firing for the whole roster.
-    if not Private:IsValidUnitToken(unit) then return end
+    if not Core:IsValidUnitToken(unit) then return end
 
     for _, event in ipairs(UNIT_GATE_EVENTS) do
         watcher:RegisterUnitEvent(event, unit, unit ~= 'player' and 'player' or nil)
@@ -992,9 +991,9 @@ end
 function ContainerMixin:AddItemEnchant(slot, options)
     options = options or {}
 
-    if options.borderColor == nil then options.borderColor = Private.Colors.enchantColor end
+    if options.borderColor == nil then options.borderColor = Core.Colors.enchantColor end
     if options.hidePermanent == nil then options.hidePermanent = self.hidePermanent end
-    if not options.initializeFrame then options.initializeFrame = GenerateClosure(Private.SkinAuraButton, Private, self, options) end
+    if not options.initializeFrame then options.initializeFrame = GenerateClosure(Core.SkinAuraButton, Core, self, options) end
 
     enchantContainers[self] = true
 
@@ -1049,5 +1048,5 @@ local function CreateAuraContainer(self, config)
     return Mixin(container, ContainerMixin)
 end
 
-Private:InjectAPI(CreateFrame('Frame'), { CreateAuraContainer = CreateAuraContainer })
-Private:InjectAPI(CreateFrame('Button'), { CreateAuraContainer = CreateAuraContainer })
+Core:InjectAPI(CreateFrame('Frame'), { CreateAuraContainer = CreateAuraContainer })
+Core:InjectAPI(CreateFrame('Button'), { CreateAuraContainer = CreateAuraContainer })

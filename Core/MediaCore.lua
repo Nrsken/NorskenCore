@@ -1,6 +1,6 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
-local LSM = Private.Libs.LSM
+local Core = select(2, ...)
+local LSM = Core.Libs.LSM
 
 local type = type
 local pcall = pcall
@@ -19,14 +19,14 @@ local westAndRU = LSM.LOCALE_BIT_western + LSM.LOCALE_BIT_ruRU
 local FALLBACK_FONT = STANDARD_TEXT_FONT or (GameFontNormal and GameFontNormal:GetFont()) or 'Fonts\\FRIZQT__.TTF'
 local FALLBACK_SIZE = 12
 local DEFAULT_FONT_NAME = 'Expressway'
-local SOLID = Private.WhiteTexture
+local SOLID = Core.WhiteTexture
 local fallbackPaths = {
     font = FALLBACK_FONT,
     statusbar = [[Interface\TargetingFrame\UI-StatusBar]],
     spark = SOLID,
 }
 
-Private.Media = {
+Core.Media = {
     Fonts = {},
     Statusbars = {},
     Sounds = {},
@@ -51,7 +51,7 @@ local mediaPaths = {
 }
 
 ---Register one media file with LSM. Types with a media folder above take a bare file name and
----get Private.Media populated, types without one take the finished path or atlas name.
+---get Core.Media populated, types without one take the finished path or atlas name.
 ---@param MediaType string
 ---@param FileName string file name, or a complete path/atlas for types with no media folder
 ---@param DisplayName string | boolean true reuses the file name, a string names it explicitly
@@ -65,10 +65,10 @@ local function RegisterLSMMedia(MediaType, FileName, DisplayName, LocaleMask)
         -- Get the full media path
         local fullFilePath = mediaPathForType .. FileName
 
-        -- Insert into Private.Media, can be use like this later: Private.Media.Fonts.Expressway, this returns the full media path.
+        -- Core.Media.Fonts.Expressway and the like hold the full path
         local pathKey = mediaKeys[MediaType]
         if pathKey then
-            Private.Media[pathKey][cleanFileName] = fullFilePath
+            Core.Media[pathKey][cleanFileName] = fullFilePath
         end
 
         local nameKey
@@ -113,22 +113,22 @@ do
     local lastResolvedPath
     local function ReapplyIfFontChanged()
         if not lastResolvedPath then return end
-        local profileFont = Private:GetSharedSettings().globalMedia.profileFont
+        local profileFont = Core:GetSharedSettings().globalMedia.profileFont
         if not profileFont then return end
 
-        local path = Private:ResolveMediaPath('font', profileFont.FontFace)
+        local path = Core:ResolveMediaPath('font', profileFont.FontFace)
         if path == lastResolvedPath then return end
         lastResolvedPath = path
 
-        Private:DeferUntilUnrestricted(0, function()
-            Private:SharedSettingsChanged(true)
-            Private:RefreshFontStyles()
+        Core:DeferUntilUnrestricted(0, function()
+            Core:SharedSettingsChanged(true)
+            Core:RefreshFontStyles()
         end)
     end
 
     -- a font registered before login is in place when the addons first style
-    Private:RegisterEvent('PLAYER_LOGIN', function()
-        lastResolvedPath = Private:ResolveMediaPath('font', Private:GetSharedSettings().globalMedia.profileFont.FontFace)
+    Core.Ace:RegisterEvent('PLAYER_LOGIN', function()
+        lastResolvedPath = Core:ResolveMediaPath('font', Core:GetSharedSettings().globalMedia.profileFont.FontFace)
     end)
 
     -- Hidden frame that we yeet outside the screen, we will add fontstrings to this later.
@@ -173,7 +173,7 @@ end
 ---@param mediaType string 'font' | 'statusbar' | 'sound'
 ---@param name string|nil LSM name or literal path
 ---@return string|nil path per-type fallback when unresolved (nil for sounds)
-function Private:ResolveMediaPath(mediaType, name)
+function Core:ResolveMediaPath(mediaType, name)
     if name and name ~= '' then
         if LSM:IsValid(mediaType, name) then
             local path = LSM:Fetch(mediaType, name, true)
@@ -191,7 +191,7 @@ end
 ---Resolve a module's effective font straight to a usable font path.
 ---@param moduleDB table?
 ---@return string path
-function Private:GetFont(moduleDB)
+function Core:GetFont(moduleDB)
     local global = self:GetSharedSettings().globalMedia
     local name
     if global and global.Enabled and global.profileFont.Enabled then
@@ -210,7 +210,7 @@ end
 ---@param moduleDB table?
 ---@param override string? per-element texture name, wins outright when set.
 ---@return string path
-function Private:GetStatusbar(moduleDB, override)
+function Core:GetStatusbar(moduleDB, override)
     -- A per-element override is an explicit pick, so it beats the global bar too. Without this
     -- the global texture silently swallowed every element override (global media is on by default).
     if override then
@@ -234,7 +234,7 @@ end
 ---nil means a flat backdrop, which a module off UseGlobalBar always keeps.
 ---@param moduleDB table?
 ---@return string? path
-function Private:GetBarBackground(moduleDB)
+function Core:GetBarBackground(moduleDB)
     if moduleDB and moduleDB.UseGlobalBar == false then return end
     local name = self:GetSharedSettings().globalMedia.profileBar.backgroundTexture
     return name and self:ResolveMediaPath('statusbar', name)
@@ -243,7 +243,7 @@ end
 ---@param moduleDB table?
 ---@param key? string the module's own color key, BorderColor by default
 ---@return number[] rgba
-function Private:GetBorderColor(moduleDB, key)
+function Core:GetBorderColor(moduleDB, key)
     if moduleDB and moduleDB.UseGlobalBorder == false then
         return moduleDB[key or 'BorderColor']
     end
@@ -253,7 +253,7 @@ end
 ---@param moduleDB table?
 ---@param key? string the module's own color key, BackdropColor by default
 ---@return number[] rgba
-function Private:GetBackdropColor(moduleDB, key)
+function Core:GetBackdropColor(moduleDB, key)
     if moduleDB and moduleDB.UseGlobalBackdrop == false then
         return moduleDB[key or 'BackdropColor']
     end
@@ -280,7 +280,7 @@ end
 ---@param moduleDB table?
 ---@param barHeight number? height of the bar the spark rides on, omit to keep the caller's size.
 ---@param override string? per-element spark name, wins over the global texture but not its scale.
-function Private:SetSpark(texture, moduleDB, barHeight, override)
+function Core:SetSpark(texture, moduleDB, barHeight, override)
     local global = self:GetSharedSettings().globalMedia
     local globalSpark = global and global.Enabled and global.profileSpark
 
@@ -326,7 +326,7 @@ end
 
 ---@param name string LSM sound name or literal path
 ---@param channel string?
-function Private:PlaySafeSound(name, channel)
+function Core:PlaySafeSound(name, channel)
     local resolved = self:ResolveMediaPath('sound', name)
     if not resolved then return end
 

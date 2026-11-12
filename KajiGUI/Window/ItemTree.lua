@@ -1,9 +1,9 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 
-local L = Private.L
+local L = Core.L
 
 local CreateFrame = CreateFrame
 local GetCursorPosition = GetCursorPosition
@@ -24,8 +24,8 @@ local tremove = table.remove
 local C_Timer = C_Timer
 local pi = math.pi
 
-local MEDIA = Private.Media.GUITextures
-local WHITE = 'Interface\\Buttons\\WHITE8X8'
+local MEDIA = Core.Media.GUITextures
+local WHITE = Core.WhiteTexture
 local BOX_BACKDROP = { bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 }
 
 local WIDTH = 260
@@ -128,7 +128,7 @@ end
 
 --[[
 The collection list: a page's own things (CDM displays, BigWigs timers) as icon rows in banded sections,
-a ContentArea column picked with `sidebar.create = NRSKNUI.KajiGUI.CreateItemTree`. Navigation pages use Kaji's
+a ContentArea column picked with `sidebar.create = NRSKNUI.Kaji.CreateItemTree`. Navigation pages use Kaji's
 MiniSidebar instead.
 
 `sd.items()` returns { general?, sections = { { key, text, collapsed, rows, preview? } } }.
@@ -594,7 +594,7 @@ local function CreateTree(gui, parent, opts)
         return clip
     end
 
-    local Snap = Private.Pixel.ToPixelGrid
+    local Snap = Core.Pixel.ToPixelGrid
 
     ---Places everything every frame; offsets are differences of snapped absolute y, so a row in a clip never rounds twice.
     local function Relayout()

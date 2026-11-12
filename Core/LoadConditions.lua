@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 --TODO: Add: item equipped, player level
 
@@ -49,7 +49,7 @@ local PET_SPELLS = Enum.SpellBookSpellBank.Pet
 
 ---@class LoadConditions
 local LoadConditions = {}
-Private.LoadConditions = LoadConditions
+Core.LoadConditions = LoadConditions
 
 local callbacks = {}
 local stateCallbacks = {}
@@ -127,25 +127,23 @@ local function CheckGroup(config)
     return true
 end
 
--- Combat state
--- Read from the REGEN event our own frame gets: Private:InCombat()'s flag is set by another frame's handler for
--- the same event, which may run after ours; InCombatLockdown() can still read false on PLAYER_REGEN_DISABLED.
+-- combat state from our own REGEN event: InCombat() and InCombatLockdown() can lag it
 local inCombat = false
 
 local function InCombat()
     if eventFrame then
         return inCombat
     end
-    return Private:InCombat() -- nothing has registered yet, so no events are tracked
+    return Core:InCombat() -- nothing has registered yet, so no events are tracked
 end
 
 -- Check Role condition
 local function CheckRole(config)
     if not config or not config.Types then return true end
     if not HasAnyEnabled(config.Types) then return true end
-    if not Private.MySpec.role then return true end
+    if not Core.MySpec.role then return true end
 
-    if not config.Types[Private.MySpec.role] then return false end
+    if not config.Types[Core.MySpec.role] then return false end
 
     return true
 end
@@ -154,9 +152,9 @@ end
 local function CheckPosition(config)
     if not config or not config.Types then return true end
     if not HasAnyEnabled(config.Types) then return true end
-    if not Private.MySpec.position then return true end
+    if not Core.MySpec.position then return true end
 
-    if not config.Types[Private.MySpec.position] then return false end
+    if not config.Types[Core.MySpec.position] then return false end
 
     return true
 end
@@ -372,7 +370,7 @@ local STATES = {
     {
         key = "Restricted",
         label = "Secret Restrictions Active",
-        read = function() return Private:IsRestricted() end,
+        read = function() return Core:IsRestricted() end,
         events = { ADDON_RESTRICTION_STATE_CHANGED = true },
     },
     { key = "Resting", label = "Resting", read = IsResting, events = { PLAYER_UPDATE_RESTING = true }, triggerOnly = true },
@@ -399,7 +397,7 @@ local STATES = {
     },
 }
 LoadConditions.STATES = STATES
-Private.Kaji.loadStates = STATES -- the load card builds its state picker from this list
+Core.Kaji.loadStates = STATES -- the load card builds its state picker from this list
 
 local function CheckState(config)
     for _, state in ipairs(STATES) do
@@ -513,7 +511,7 @@ local function SetupEventFrame()
     if eventFrame then return end
 
     -- a reload in combat starts here already in combat, before any REGEN event
-    inCombat = Private:InCombat() or UnitAffectingCombat("player")
+    inCombat = Core:InCombat() or UnitAffectingCombat("player")
     inEncounter = IsEncounterInProgress()
     eventFrame = CreateFrame("Frame")
     eventFrame:RegisterEvent("ENCOUNTER_START")

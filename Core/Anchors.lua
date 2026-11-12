@@ -1,11 +1,11 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
-local L = Private.L
-local Animations = Private.Animations
+local Core = select(2, ...)
+local L = Core.L
+local Animations = Core.Animations
 ---@class NRSKNUI.Anchors
 ---@field addon table the addon this handle belongs to, see NewAnchors
 local Anchors = {}
-Private.Anchors = Anchors
+Core.Anchors = Anchors
 Anchors.isActive = false
 Anchors.registry = {}
 Anchors.overlays = {}
@@ -31,6 +31,7 @@ local type = type
 local C_Timer = C_Timer
 local UIParent = UIParent
 local setmetatable = setmetatable
+local scrubsecretvalues = scrubsecretvalues
 
 -- One system for every addon. Each has a handle reading this table through __index, so state only ever
 -- gets written to Anchors itself: on self it would land on that one handle.
@@ -40,7 +41,7 @@ local Theme       -- its theme, only one addon's overlays and panel exist on scr
 -- nudge panels, one per addon: Kaji widgets belong to the instance that built them and stay in its theme
 local panels = {}
 
-local ARROW_TEXTURE = Private.Media.GUITextures .. 'collapse.tga'
+local ARROW_TEXTURE = Core.Media.GUITextures .. 'collapse.tga'
 
 -- Overlay Config
 local FILL_ALPHA = 0.8
@@ -421,7 +422,7 @@ local function CollectSnapLines(dragKey)
         -- the open group's box holds what's dragged and doesn't follow it, so it isn't a line to snap to
         if key ~= dragKey and key ~= Anchors.focusKey and overlay:IsShown() and InView(overlay.entry) then
             -- a box around a display holding an aura can't be read while auras are secret, it's skipped
-            local left, bottom, width, height = Private:ScrubSecrets(overlay:GetRect())
+            local left, bottom, width, height = scrubsecretvalues(overlay:GetRect())
             if left and bottom and width and height then
                 edgesX[#edgesX + 1], edgesX[#edgesX + 2] = left, left + width
                 edgesY[#edgesY + 1], edgesY[#edgesY + 2] = bottom, bottom + height
@@ -545,7 +546,7 @@ dragUpdateFrame:SetScript('OnUpdate', UpdateDrag)
 
 local function OnDragStart(overlay)
     -- Overlays stay mouse-live while they fade out, so re-check the session is open.
-    if not Anchors.isActive or Anchors.switching or Private:InCombat() then return end
+    if not Anchors.isActive or Anchors.switching or Core:InCombat() then return end
 
     local entry = overlay.entry
     if entry.locked then return end
@@ -566,12 +567,12 @@ local function OnDragStart(overlay)
     dragCursorX, dragCursorY = dragCursorX / scale, dragCursorY / scale
 
     dragRatio = scale / UIParent:GetEffectiveScale()
-    local left, bottom, width, height = Private:ScrubSecrets(frame:GetRect()) -- a text display's size turns secret with its text
+    local left, bottom, width, height = scrubsecretvalues(frame:GetRect()) -- a text display's size turns secret with its text
     dragCenterX = left and width and (left + width / 2) * dragRatio or nil
     dragCenterY = bottom and height and (bottom + height / 2) * dragRatio or nil
 
     -- the box is what snaps, it can be bigger than the frame (a group's area)
-    local boxLeft, boxBottom, boxWidth, boxHeight = Private:ScrubSecrets(overlay:GetRect())
+    local boxLeft, boxBottom, boxWidth, boxHeight = scrubsecretvalues(overlay:GetRect())
     if boxLeft and boxBottom and boxWidth and boxHeight then
         dragBox = { boxLeft, boxLeft + boxWidth, boxBottom, boxBottom + boxHeight, boxLeft + boxWidth / 2, boxBottom + boxHeight / 2 }
     else
@@ -585,7 +586,7 @@ local function OnDragStart(overlay)
         guideY = decorHost:CreateTexture(nil, 'OVERLAY')
         guideY:NCSetHeight(1)
         readout = decorHost:CreateFontString(nil, 'OVERLAY')
-        readout:SetFont(Private.Media.Fonts.Expressway, 12, 'OUTLINE')
+        readout:SetFont(Core.Media.Fonts.Expressway, 12, 'OUTLINE')
     end
     guideX:SetColorTexture(Theme.accent[1], Theme.accent[2], Theme.accent[3], 0.8)
     guideY:SetColorTexture(Theme.accent[1], Theme.accent[2], Theme.accent[3], 0.8)
@@ -715,7 +716,7 @@ function Anchors:CreateOverlay(key)
     end
 
     local text = overlay:CreateFontString(nil, 'OVERLAY')
-    text:SetFont(Private.Media.Fonts.Expressway, TEXT_FONT_SIZE, 'OUTLINE')
+    text:SetFont(Core.Media.Fonts.Expressway, TEXT_FONT_SIZE, 'OUTLINE')
     text:SetShadowOffset(0, 0)
     text:SetShadowColor(0, 0, 0, 0)
     text:SetText(entry.displayName)
@@ -769,7 +770,7 @@ function Anchors:UpdateOverlay(key)
         left, bottom, right, top = entry.bounds(entry.module)
     end
 
-    local frameLeft, frameBottom = Private:ScrubSecrets(frame:GetRect())
+    local frameLeft, frameBottom = scrubsecretvalues(frame:GetRect())
     if left and frameLeft then
         -- bounds are in UIParent's units and the overlay's offsets too, the frame's rect isn't
         local ratio = frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
@@ -872,7 +873,7 @@ function Anchors:UpdateMarkers()
     end
 
     -- a frame the game locks can't be anchored to
-    if not (point and Private:CanAccessObject(relTo)) then
+    if not (point and Core:CanAccessObject(relTo)) then
         if markerOwn then
             markerOwn:Hide()
             markerTarget:Hide()
@@ -1025,7 +1026,7 @@ local function ShowView()
     Anchors:ShowPanel()
     Anchors:RefreshTheme() -- overlays and panels outlive a session, the theme may have changed since
     C_Timer.After(LAYOUT_SETTLE_DELAY, function() Anchors:OnExternalPositionChange() end)
-    Private:SendMessage('NRSKNUI_ANCHORS_CHANGED')
+    Core.Ace:SendMessage('NRSKNUI_ANCHORS_CHANGED')
 end
 
 ---Work inside a group: its own displays get boxes and the rest of the view steps away. nil goes back to the top.
@@ -1042,7 +1043,7 @@ end
 ---@param aceModule? table show only this module's anchors, from its settings header; every anchor without it
 function Anchors:Enter(aceModule)
     if Anchors.isActive then return end
-    if Private:InCombat() then
+    if Core:InCombat() then
         self.addon:Print(L['Cannot open Anchors during combat.'])
         return
     end
@@ -1053,7 +1054,7 @@ function Anchors:Enter(aceModule)
 
     -- every settings window steps aside while positioning, Exit brings back the ones that were open
     Anchors.suspended = {}
-    for _, window in ipairs(Private.Kaji.windows) do
+    for _, window in ipairs(Core.Kaji.windows) do
         if window:Suspend() then
             Anchors.suspended[#Anchors.suspended + 1] = window
         end
@@ -1132,11 +1133,11 @@ function Anchors:Exit()
         window:Resume()
     end
     Anchors.suspended = nil
-    Private:SendMessage('NRSKNUI_ANCHORS_CHANGED')
+    Core.Ace:SendMessage('NRSKNUI_ANCHORS_CHANGED')
 end
 
 -- a settings window opened while positioning ends it, the suspended windows come back with it
-Private.Kaji.beforeWindowShow = function()
+Core.Kaji.beforeWindowShow = function()
     Anchors:Exit()
 end
 
@@ -1176,8 +1177,8 @@ function Anchors:CreatePanel()
     panel:SetScript('OnDragStart', panel.StartMoving)
     panel:SetScript('OnDragStop', panel.StopMovingOrSizing)
     panel:SetBackdrop({
-        bgFile = Private.WhiteTexture,
-        edgeFile = Private.WhiteTexture,
+        bgFile = Core.WhiteTexture,
+        edgeFile = Core.WhiteTexture,
         edgeSize = 1,
     })
     panel:SetBackdropColor(Theme.bgLight[1], Theme.bgLight[2], Theme.bgLight[3], 1)
@@ -1214,7 +1215,7 @@ function Anchors:CreatePanel()
     title:SetWidth(PANEL_WIDTH - 20)
     title:SetWordWrap(false)
     panel.title = title
-    title:SetFont(Private.Media.Fonts.Expressway, 16, 'OUTLINE')
+    title:SetFont(Core.Media.Fonts.Expressway, 16, 'OUTLINE')
     title:SetShadowOffset(0, 0)
     title:SetShadowColor(0, 0, 0, 0)
     title:SetText(L['Nudge Tool'])
@@ -1222,7 +1223,7 @@ function Anchors:CreatePanel()
 
     local selected = body:CreateFontString(nil, 'OVERLAY')
     selected:SetPoint('TOP', title, 'BOTTOM', 0, -2)
-    selected:SetFont(Private.Media.Fonts.Expressway, 12, 'OUTLINE')
+    selected:SetFont(Core.Media.Fonts.Expressway, 12, 'OUTLINE')
     selected:SetShadowOffset(0, 0)
     selected:SetShadowColor(0, 0, 0, 0)
     selected:SetTextColor(Theme.accent[1], Theme.accent[2], Theme.accent[3], 1)
@@ -1447,7 +1448,7 @@ end
 ---An addon's own handle on the anchor system. What it registers is its own and it opens on its own theme.
 ---@param addon table needs GUI, Theme, Print, OpenOptions and PreviewManager
 ---@return NRSKNUI.Anchors
-function Private:NewAnchors(addon)
+function Core:NewAnchors(addon)
     addons[#addons + 1] = addon
     return setmetatable({ addon = addon }, { __index = Anchors })
 end

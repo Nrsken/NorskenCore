@@ -1,11 +1,8 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
----@class NorskenPixelMixin
-local PixelMixin = {}
-Private.PixelMixin = PixelMixin
+local Core = select(2, ...)
 ---@class NorskenPixel
 local Pixel = {}
-Private.Pixel = Pixel
+Core.Pixel = Pixel
 
 local CreateFrame = CreateFrame
 local GetPhysicalScreenSize = GetPhysicalScreenSize
@@ -37,7 +34,7 @@ local function Recompute()
     end
 
     local scale = UIParent:GetEffectiveScale()
-    if canaccessvalue and not canaccessvalue(scale) then return end
+    if not canaccessvalue(scale) then return end
 
     mult = perfectPixel / scale
 
@@ -75,16 +72,6 @@ local function GetMult()
     return mult
 end
 
----Returns the value only when it is safe to read, otherwise nil.
----@param value any
----@return any|nil
-local function SafeValue(value)
-    if not canaccessvalue or canaccessvalue(value) then
-        return value
-    end
-    return nil
-end
-
 ---Snaps a coordinate to the nearest physical pixel. At mult 1 the grid is whole units, so
 ---measured values (GetWidth after a drag) still need rounding, never early-out on mult == 1.
 ---@param value number
@@ -100,7 +87,7 @@ end
 ---Works on textures directly and on status bars via their fill texture. Runs once per object.
 ---@param object Frame|Texture|FontString|MaskTexture|Line
 local function SetPixelSnap(object)
-    if not object or object.NCPixelSnapDisabled then return end
+    if not object or object.nuiPixelSnapDisabled then return end
     if (issecrettable and issecrettable(object)) or (object.IsForbidden and object:IsForbidden()) then return end
 
     local target = object
@@ -118,7 +105,7 @@ local function SetPixelSnap(object)
         object:SetRoundLayoutToNearestPixel(true)
     end
 
-    object.NCPixelSnapDisabled = true
+    object.nuiPixelSnapDisabled = true
 end
 
 ---Sets the size of a frame to the nearest pixel grid.
@@ -228,10 +215,10 @@ local function SetGridPoint(object, point, relativeTo, relativePoint, offsetX, o
     local objF = POINT_FRACTION[point]
     local relF = POINT_FRACTION[relativePoint]
 
-    local relLeft = objF and relF and SafeValue(relativeTo:GetLeft())
-    local relBottom = relLeft and SafeValue(relativeTo:GetBottom())
-    local relW = relBottom and SafeValue(relativeTo:GetWidth())
-    local relH = relW and SafeValue(relativeTo:GetHeight())
+    local relLeft = objF and relF and Core:SafeValue(relativeTo:GetLeft())
+    local relBottom = relLeft and Core:SafeValue(relativeTo:GetBottom())
+    local relW = relBottom and Core:SafeValue(relativeTo:GetWidth())
+    local relH = relW and Core:SafeValue(relativeTo:GetHeight())
 
     -- Unknown point or secret/unlaid-out geometry, fall back to a plain offset-rounded placement.
     if not relH then
@@ -249,107 +236,18 @@ local function SetGridPoint(object, point, relativeTo, relativePoint, offsetX, o
     object:SetPoint(point, relativeTo, relativePoint, offsetX + dx, offsetY + dy)
 end
 
----Calculates the best anchor point and offsets for a frame to be positioned on the pixel grid.
----@param frame Frame
----@return string point, number x, number y
-local function CalculateFramePosition(frame)
-    if not frame then return 'CENTER', 0, 0 end
-    local centerX, centerY = UIParent:GetCenter()
-    local screenWidth = UIParent:GetRight()
-    local frameX, frameY = frame:GetCenter()
-    if not (centerX and centerY and screenWidth and frameX and frameY) then
-        return 'CENTER', 0, 0
-    end
-
-    local point = 'BOTTOM'
-    local x, y
-    if frameY >= centerY then
-        point = 'TOP'
-        y = -(UIParent:GetTop() - frame:GetTop())
-    else
-        y = frame:GetBottom()
-    end
-
-    if frameX >= (screenWidth * 2 / 3) then
-        point = point .. 'RIGHT'
-        x = frame:GetRight() - screenWidth
-    elseif frameX <= (screenWidth / 3) then
-        point = point .. 'LEFT'
-        x = frame:GetLeft()
-    else
-        x = frameX - centerX
-    end
-
-    return point, floor(x + 0.5), floor(y + 0.5)
-end
-
----Snaps a frame's top-left corner to the pixel grid, keeping its size and bottom-right corner fixed.
----@param frame Frame
----@param forceAbsolute boolean? Re-derive a fresh corner anchor from the frame's screen position.
-local function SnapFrameToPixels(frame, forceAbsolute)
-    if not frame then return end
-    local point, relativeTo, relativePoint, xOfs, yOfs = frame:GetPoint(1)
-    if not point then return end
-
-    if forceAbsolute then
-        local newPoint, x, y = CalculateFramePosition(frame)
-        frame:ClearAllPoints()
-        frame:SetPoint(newPoint, UIParent, newPoint, x, y)
-    else
-        local snappedX = ToPixelGrid(xOfs or 0)
-        local snappedY = ToPixelGrid(yOfs or 0)
-        frame:ClearAllPoints()
-        frame:SetPoint(point, relativeTo or UIParent, relativePoint or point, snappedX, snappedY)
-    end
-end
-
----Rounds a frame's size to whole pixels.
----@param frame Frame
-local function SnapFrameSize(frame)
-    if not frame then return end
-    local width, height = frame:GetSize()
-    frame:SetSize(ToPixelGrid(width), ToPixelGrid(height))
-end
-
----Snaps both a frame's size and position onto the pixel grid, keeping the current anchor.
----@param frame Frame
-local function SnapFrame(frame)
-    if not frame then return end
-    SnapFrameSize(frame)
-    SnapFrameToPixels(frame)
-end
-
----Snaps a frame's edges to the pixel grid, keeping its top-left corner fixed. 
----If the frame is unanchored, it will be snapped to the nearest pixel grid.
----@param frame Frame
-local function SnapFrameEdges(frame)
-    if not frame then return end
-    local left, top = frame:GetLeft(), frame:GetTop()
-    if not left or not top then
-        SnapFrame(frame)
-        return
-    end
-    SnapFrameSize(frame)
-    frame:ClearAllPoints()
-    frame:SetPoint('TOPLEFT', UIParent, 'BOTTOMLEFT', ToPixelGrid(left), ToPixelGrid(top))
-end
-
 -- what InjectAPI puts on every region as the NC methods
-PixelMixin.SetPixelSnap = SetPixelSnap
-PixelMixin.SetPixelSize = SetPixelSize
-PixelMixin.SetPixelWidth = SetPixelWidth
-PixelMixin.SetPixelHeight = SetPixelHeight
-PixelMixin.SetPixelPoint = SetPixelPoint
-PixelMixin.SetPixelInside = SetPixelInside
-PixelMixin.SetGridPoint = SetGridPoint
+local methods = Core.FrameMethods
+methods.NCDisablePixelSnap = SetPixelSnap
+methods.NCSetSize = SetPixelSize
+methods.NCSetWidth = SetPixelWidth
+methods.NCSetHeight = SetPixelHeight
+methods.NCSetPoint = SetPixelPoint
+methods.NCSetInside = SetPixelInside
+methods.NCSetGridPoint = SetGridPoint
 
--- The values and whole-frame helpers; placing a region goes through the injected NC methods.
+-- the grid values and number maths; placing a region goes through the NC methods
 Pixel.ToPixelGrid = ToPixelGrid
 Pixel.GetMult = GetMult
 Pixel.GetPerfectPixel = GetPerfectPixel
 Pixel.GetBestPixelSize = GetBestPixelSize
-Pixel.CalculateFramePosition = CalculateFramePosition
-Pixel.SnapFrameToPixels = SnapFrameToPixels
-Pixel.SnapFrameSize = SnapFrameSize
-Pixel.SnapFrame = SnapFrame
-Pixel.SnapFrameEdges = SnapFrameEdges

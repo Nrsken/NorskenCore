@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 local LCG = LibStub('LibCustomGlow-1.0')
 
@@ -11,8 +11,8 @@ local procOptions = {}
 ---@param frame Frame
 ---@param db table GlowType/GlowColor/GlowLines/GlowFrequency/GlowLength/GlowThickness/GlowBorder/GlowScale/GlowStartAnim/GlowDuration
 ---@param key? string
-function Private:StartGlow(frame, db, key)
-    Private:StopGlow(frame, key)
+function Core:StartGlow(frame, db, key)
+    Core:StopGlow(frame, key)
 
     local glowType = db.GlowType
     if glowType == 'autocast' then
@@ -33,7 +33,7 @@ end
 ---Stop every glow type StartGlow can put on the frame under this key.
 ---@param frame Frame
 ---@param key? string
-function Private:StopGlow(frame, key)
+function Core:StopGlow(frame, key)
     LCG.PixelGlow_Stop(frame, key)
     LCG.AutoCastGlow_Stop(frame, key)
     LCG.ButtonGlow_Stop(frame)

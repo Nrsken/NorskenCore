@@ -2,7 +2,7 @@
 local Core = _G.NorskenCore
 local Shared = Core.GUISharedPages
 local L = Core.L
-local rowHL = Core.KajiGUI.DEFAULT_THEME.rowHeightLast
+local rowHL = Core.Kaji.DEFAULT_THEME.rowHeightLast
 
 local format = string.format
 

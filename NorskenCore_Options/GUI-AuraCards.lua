@@ -4,7 +4,7 @@ local Core = _G.NorskenCore
 local AuraCards = {}
 Core.GUIAuraCards = AuraCards
 local L = Core.L
-local Theme = Core.KajiGUI.DEFAULT_THEME
+local Theme = Core.Kaji.DEFAULT_THEME
 local rowH = Theme.rowHeight
 local rowHL = Theme.rowHeightLast
 

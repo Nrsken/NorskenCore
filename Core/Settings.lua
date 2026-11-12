@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 local LibStub = LibStub
 local CopyTable = CopyTable
@@ -128,26 +128,27 @@ local defaults = {
     },
 }
 
+local sharedDB
 local hadSavedValues
 
 -- what's built from the settings, rebuilt whenever they change under it
 local function Rebuild()
-    Private:RefreshCurves()
-    Private:LoadCustomColors()
-    Private:RefreshAuraDurationFormatter()
+    Core:RefreshCurves()
+    Core:LoadCustomColors()
+    Core:RefreshAuraDurationFormatter()
 end
 
-function Private:OnInitialize()
+function Core.Ace:OnInitialize()
     -- read before AceDB fills in the defaults: an addon's own settings only count on a fresh store
     local saved = _G.NorskenCoreDB
     hadSavedValues = saved ~= nil and saved.global ~= nil and next(saved.global) ~= nil
-    self.sharedDB = LibStub('AceDB-3.0'):New('NorskenCoreDB', defaults, true)
+    sharedDB = LibStub('AceDB-3.0'):New('NorskenCoreDB', defaults, true)
     Rebuild()
 end
 
 ---@return NRSKNUI.SharedSettings shared
-function Private:GetSharedSettings()
-    return Private.sharedDB.global
+function Core:GetSharedSettings()
+    return sharedDB.global
 end
 
 -- a drag in the shared pages calls in many times a second, re-applying every addon on each one drops frames
@@ -157,21 +158,21 @@ local settleTimer
 ---A shared setting changed, whichever addon's window did it: every addon applies it in its own way,
 ---once the edits settle.
 ---@param font boolean? the global font was the one to change
-function Private:SharedSettingsChanged(font)
+function Core:SharedSettingsChanged(font)
     if font then
-        Private:SendMessage('NRSKNUI_PROFILE_FONT_CHANGED')
+        Core.Ace:SendMessage('NRSKNUI_PROFILE_FONT_CHANGED')
     end
     if settleTimer then
         settleTimer:Cancel()
     end
     settleTimer = C_Timer.NewTimer(SETTLE_DELAY, function()
         settleTimer = nil
-        Private:SendMessage('NRSKNUI_SHARED_SETTINGS_CHANGED')
+        Core.Ace:SendMessage('NRSKNUI_SHARED_SETTINGS_CHANGED')
     end)
 end
 
 ---@return table defaults what GetSharedSettings starts from
-function Private:GetSharedDefaults()
+function Core:GetSharedDefaults()
     return defaults.global
 end
 
@@ -220,7 +221,7 @@ end
 ---Works on anything with these settings at the top: an old profile, or a block from an export string.
 ---@param data table
 ---@return boolean
-function Private:HoldsSharedSettings(data)
+function Core:HoldsSharedSettings(data)
     if type(data.Colors) == 'table' then return true end
 
     local media = data.globalMedia
@@ -238,8 +239,8 @@ end
 ---@param active string
 ---@param profileKeys table<string, string>? character to profile name
 ---@return table? profile nil when no profile was ever customised
-function Private:ChooseSharedSource(profiles, active, profileKeys)
-    if profiles[active] and Private:HoldsSharedSettings(profiles[active]) then
+function Core:ChooseSharedSource(profiles, active, profileKeys)
+    if profiles[active] and Core:HoldsSharedSettings(profiles[active]) then
         return profiles[active]
     end
 
@@ -250,7 +251,7 @@ function Private:ChooseSharedSource(profiles, active, profileKeys)
 
     local best
     for name, profile in pairs(profiles) do
-        if Private:HoldsSharedSettings(profile) then
+        if Core:HoldsSharedSettings(profile) then
             local count, top = users[name] or 0, users[best] or 0
             if not best or count > top or (count == top and name < best) then
                 best = name
@@ -266,8 +267,8 @@ end
 ---@param colors table?
 ---@param language string?
 ---@return boolean adopted whether this call copied anything over
-function Private:AdoptSharedSettings(globalMedia, colors, language)
-    local shared = Private:GetSharedSettings()
+function Core:AdoptSharedSettings(globalMedia, colors, language)
+    local shared = Core:GetSharedSettings()
     if shared.Adopted then return false end
 
     shared.Adopted = true
@@ -289,7 +290,7 @@ end
 ---@param profiles table<string, table>
 ---@param source table the profile the settings were copied from
 ---@return boolean differ
-function Private:SharedSettingsDiffer(profiles, source)
+function Core:SharedSettingsDiffer(profiles, source)
     for _, profile in pairs(profiles) do
         if not Same(profile.globalMedia or {}, source.globalMedia or {})
             or not Same(profile.Colors or {}, source.Colors or {}) then
@@ -302,8 +303,8 @@ end
 ---Takes on the look an export string carries. Old strings only hold what differed from the defaults,
 ---so everything goes back to the defaults first or the result would be half theirs and half ours.
 ---@param block table
-function Private:ApplySharedSettings(block)
-    local shared = Private:GetSharedSettings()
+function Core:ApplySharedSettings(block)
+    local shared = Core:GetSharedSettings()
     for _, section in ipairs({ 'globalMedia', 'Colors' }) do
         Restore(shared[section], defaults.global[section])
         if type(block[section]) == 'table' then
@@ -313,6 +314,6 @@ function Private:ApplySharedSettings(block)
     Rebuild()
 
     -- every addon re-applies, not only the one importing; the font may have changed too
-    Private:SharedSettingsChanged(true)
-    Private:DeferUntilUnrestricted(0, function() Private:RefreshFontStyles() end)
+    Core:SharedSettingsChanged(true)
+    Core:DeferUntilUnrestricted(0, function() Core:RefreshFontStyles() end)
 end

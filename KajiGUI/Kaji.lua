@@ -41,12 +41,12 @@ For comment styling I am using Better Comments extension for VSCode, with a cust
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
 ---@field windows KajiGUIWindowMixin[] every settings window, see Window.lua
 ---@field beforeWindowShow fun(window: KajiGUIWindowMixin)? runs before any window shows, Anchors.lua sets it
 ---@field loadStates table? the load conditions' state list, LoadConditions.lua hands it over
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 
 local Mixin = Mixin
 

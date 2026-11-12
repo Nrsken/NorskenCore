@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 local CreateColor = CreateColor
 local unpack = unpack
@@ -61,7 +61,7 @@ CountdownAlpha:AddPoint(0, 0)
 CountdownAlpha:AddPoint(1.5, 1)
 
 local function BuildAuraDurationColorCurve()
-    local db = Private:GetSharedSettings().globalMedia
+    local db = Core:GetSharedSettings().globalMedia
     local c, points = db.profileColorCurve, db.profileBreakPoints
 
     local curve = CreateColorCurve()
@@ -82,7 +82,7 @@ end
 ---@field BarSparkAlpha CurveObject
 ---@field CountdownAlpha CurveObject
 ---@field AuraDurationColor ColorCurveObject set by RefreshCurves, the settings don't exist while this file loads
-Private.curves = {
+Core.curves = {
     DurationDecimals = DurationDecimals,
     PercentDecimals = PercentDecimals,
     HealthMissingAlpha = HealthMissingAlpha,
@@ -91,6 +91,6 @@ Private.curves = {
     ActionDesaturation = ActionDesaturation,
 }
 
-function Private:RefreshCurves()
+function Core:RefreshCurves()
     self.curves.AuraDurationColor = BuildAuraDurationColorCurve()
 end

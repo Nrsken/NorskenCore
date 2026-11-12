@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 local pcall = pcall
 local type = type
@@ -18,7 +18,7 @@ local OPTIMIZE_SIZE = Enum.CompressionLevel.OptimizeForSize
 
 ---@param data table
 ---@return string? encoded nil when the data can't be packed
-function Private:EncodeTable(data)
+function Core:EncodeTable(data)
     local ok, encoded = pcall(function()
         return EncodeBase64(CompressString(SerializeCBOR(data), DEFLATE, OPTIMIZE_SIZE))
     end)
@@ -29,7 +29,7 @@ end
 
 ---@param text string without any prefix
 ---@return table? data nil when the text isn't a packed table
-function Private:DecodeTable(text)
+function Core:DecodeTable(text)
     -- untrusted pasted text and these natives raise rather than return nil
     local ok, data = pcall(function()
         local compressed = DecodeBase64(text)

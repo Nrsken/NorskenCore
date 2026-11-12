@@ -12,6 +12,11 @@
     <Script file='Enums.lua' />
     <Script file='Constants.lua' />
     <Script file='Restricted.lua' />
+    <Script file='Frames/Hide.lua' />
+    <Script file='Frames/Backdrop.lua' />
+    <Script file='Frames/Update.lua' />
+    <Script file='Frames/Style.lua' />
+    <Script file='Frames/Position.lua' />
     <Script file='InjectAPI.lua' />
     <Script file='Formatting.lua' />
     <Script file='Encoding.lua' />
@@ -32,5 +37,4 @@
     <Script file='DynamicGroup.lua' />
     <Include file='..\KajiGUI\KajiGUI.xml' />
     <Script file='Addon.lua' />
-    <Script file='API.lua' />
 </Ui>

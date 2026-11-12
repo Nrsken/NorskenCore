@@ -19,14 +19,14 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local Animations = Private.Animations
+local Animations = Core.Animations
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
+local pixel = Core.Pixel
 
 local tostring = tostring
 local tonumber = tonumber
@@ -343,14 +343,14 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     fillBar:NCSetHeight(6)
     fillBar:NCSetPoint("LEFT", sliderBG, "LEFT", 1, 0)
     fillBar:NCSetPoint("RIGHT", slider, "RIGHT", -10, 0)
-    fillBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+    fillBar:SetStatusBarTexture(Core.WhiteTexture)
     local fill = fillBar:GetStatusBarTexture()
     fill:NCDisablePixelSnap()
     row.fillBar = fillBar
 
     local function Halo(point, relPoint)
         local t = fillBar:CreateTexture(nil, "ARTWORK", nil, -1)
-        t:SetTexture("Interface\\Buttons\\WHITE8X8")
+        t:SetTexture(Core.WhiteTexture)
         t:NCSetHeight(FILL_GLOW_HEIGHT)
         t:NCSetPoint(point .. "LEFT", fill, relPoint .. "LEFT", 0, 0)
         t:NCSetPoint(point .. "RIGHT", fill, relPoint .. "RIGHT", 0, 0)

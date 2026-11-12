@@ -42,12 +42,12 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local L = Private.L
+local L = Core.L
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin
@@ -576,14 +576,14 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     end
     container.chromeEdges = edges
     container._glow = Kaji.CreateFrameGlow(fill, gui, BUTTON_GLOW_REACH, container)
-    container._animateBorder, container._syncBorder = Private.Animations:CreateHoverColorAnimator(container,
+    container._animateBorder, container._syncBorder = Core.Animations:CreateHoverColorAnimator(container,
         function(r, g, b, a)
             for _, edge in ipairs(edges) do edge:SetColorTexture(r, g, b, a or 1) end
         end,
         gui.theme.widgetBorder, gui.theme.accent, gui.theme.animDuration)
 
     -- One tween drives border, alpha and colour together; only its alpha channel is used.
-    container._animateHover, container._syncHover = Private.Animations:CreateColorAnimator(container, function(_, _, _, progress)
+    container._animateHover, container._syncHover = Core.Animations:CreateColorAnimator(container, function(_, _, _, progress)
         container._hoverProgress = progress
         if container._hover then
             container:PaintHover()

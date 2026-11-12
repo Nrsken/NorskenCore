@@ -1,6 +1,6 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
-local L = Private.L
+local Core = select(2, ...)
+local L = Core.L
 
 local pairs = pairs
 local ipairs = ipairs
@@ -14,15 +14,15 @@ local animEnum = Enum.FontStringScaleAnimationMode
 local vertexEnum = Enum.FontStringScaleAnimationMode.Vertex
 local fontSizeEnum = Enum.FontStringScaleAnimationMode.FontSize
 
-local DEFAULT_SIZE = Private.Media.FallbackSize
-local DEFAULT_FONT_NAME = Private.Media.DefaultFont
+local DEFAULT_SIZE = Core.Media.FallbackSize
+local DEFAULT_FONT_NAME = Core.Media.DefaultFont
 
 local styledFonts, styledJustify = {}, {}
 
 ---Return the shared global font name, or the default if not set.
 ---@return string
 local function GetGlobalFontName()
-    local global = Private:GetSharedSettings().globalMedia
+    local global = Core:GetSharedSettings().globalMedia
     if global.Enabled and global.profileFont.Enabled then
         return global.profileFont.FontFace or DEFAULT_FONT_NAME
     end
@@ -30,7 +30,7 @@ local function GetGlobalFontName()
 end
 
 ---@type { value: string|string[], label: string }[]
-Private.FontOutlines = {
+local FONT_OUTLINES = {
     { value = 'NONE',                                                   label = 'None' },
     { value = 'OUTLINE',                                                label = 'Outline' },
     { value = 'THICKOUTLINE',                                           label = 'Thick' },
@@ -42,25 +42,24 @@ Private.FontOutlines = {
 }
 
 -- Validation set derived from the canonical list. NONE is excluded, it maps to ''.
-Private.ValidOutlines = { [''] = true }
-for _, option in ipairs(Private.FontOutlines) do
+local ValidOutlines = { [''] = true }
+for _, option in ipairs(FONT_OUTLINES) do
     local value = option.value
     if type(value) == 'table' then
         for _, flags in ipairs(value) do
-            Private.ValidOutlines[flags] = true
+            ValidOutlines[flags] = true
         end
     elseif value ~= 'NONE' then
-        Private.ValidOutlines[value] = true
+        ValidOutlines[value] = true
     end
 end
-local ValidOutlines = Private.ValidOutlines
 
 ---Get a localized label for a stored outline flag string.
 ---@param flags string|nil stored flags, nil or '' reads as no outline
 ---@return string? label localized, or the raw flags when nothing in the canonical list matches
-function Private:GetOutlineLabel(flags)
+function Core:GetOutlineLabel(flags)
     if not flags or flags == '' then flags = 'NONE' end
-    for _, option in ipairs(Private.FontOutlines) do
+    for _, option in ipairs(FONT_OUTLINES) do
         local value = option.value
         if type(value) == 'table' then
             for _, alias in ipairs(value) do
@@ -76,9 +75,9 @@ end
 ---Get a list of outline options for a GUI dropdown, optionally keeping the SLUG variants.
 ---@param includeSlug boolean? keep the SLUG variants, slug is otherwise its own axis
 ---@return { value: string, text: string }[]
-function Private:GetOutlineOptions(includeSlug)
+function Core:GetOutlineOptions(includeSlug)
     local options = {}
-    for _, option in ipairs(Private.FontOutlines) do
+    for _, option in ipairs(FONT_OUTLINES) do
         local value = option.value
         if type(value) == 'table' then value = value[1] end
         if includeSlug or not value:find('SLUG') then
@@ -93,7 +92,7 @@ end
 ---@param slugPref boolean? force slug on top of the outline, nil lets the value decide
 ---@return string flags the final SetFont flag string, slug included when active
 ---@return boolean slug whether slug ended up active (drives scale-animation mode)
-function Private:ResolveFlags(value, slugPref)
+function Core:ResolveFlags(value, slugPref)
     local flags = type(value) == 'string' and value:upper():gsub('%s+', '') or ''
     if flags == 'NONE' then flags = '' end
     -- Legacy alias: SOFTOUTLINE (old CreateSoftOutline overlay) renders as a normal outline.
@@ -266,7 +265,7 @@ local function SetFontStyle(self, source, size, outline, shadow, skip, setOwner)
     local font
     if type(source) == 'table' then
         local db = source
-        local global = Private:GetSharedSettings().globalMedia
+        local global = Core:GetSharedSettings().globalMedia
         local useGlobal = global.Enabled and global.profileFont.Enabled and db.UseGlobalFont ~= false
 
         -- Leave font nil under global so it resolves (and re-resolves) the global face.
@@ -281,9 +280,9 @@ local function SetFontStyle(self, source, size, outline, shadow, skip, setOwner)
         font = source
     end
 
-    local fontPath = Private:ResolveMediaPath('font', font or GetGlobalFontName()) --[[@as string]]
+    local fontPath = Core:ResolveMediaPath('font', font or GetGlobalFontName()) --[[@as string]]
     size = (type(size) == 'number' and size > 0) and size or DEFAULT_SIZE
-    local style, slug = Private:ResolveFlags(outline)
+    local style, slug = Core:ResolveFlags(outline)
     local obj = AcquireFontObject(fontPath, size, style, ShadowSignature(shadow), shadow)
 
     -- SLUG needs vertex-based scaling, everything else uses font-size scaling.
@@ -404,7 +403,7 @@ end
 
 ---Re-apply every registered string. Runs on profile change, call after a global font change too.
 ---skip == true keeps the setters from mutating their registries mid-loop.
-function Private:RefreshFontStyles()
+function Core:RefreshFontStyles()
     for fs, data in pairs(styledFonts) do
         SetFontStyle(fs, data.source, data.size, data.outline, data.shadow, true, data.setOwner)
     end
@@ -442,16 +441,16 @@ do
         SetFontJustify = SetFontJustify,
     }
     local fontString = CreateFrame('Frame'):CreateFontString()
-    Private:InjectAPI(fontString, methods)
-    Private:InjectAPI(_G.GameFontNormal, methods)
+    Core:InjectAPI(fontString, methods)
+    Core:InjectAPI(_G.GameFontNormal, methods)
 
     -- GetWidestDigit is a FontString-only metric (Font/EditBox have no GetStringWidth).
-    Private:InjectAPI(fontString, { GetWidestDigit = GetWidestDigit })
+    Core:InjectAPI(fontString, { GetWidestDigit = GetWidestDigit })
 
     -- EditBox has SetFontObject too, but it is not a FontString, so it needs its own proxy to get the methods.
-    local editBoxProxy = CreateFrame('EditBox', nil, Private.HiddenFrame)
+    local editBoxProxy = CreateFrame('EditBox', nil, Core.HiddenFrame)
     editBoxProxy:SetAutoFocus(false)
     editBoxProxy:ClearFocus()
     editBoxProxy:Hide()
-    Private:InjectAPI(editBoxProxy, methods)
+    Core:InjectAPI(editBoxProxy, methods)
 end

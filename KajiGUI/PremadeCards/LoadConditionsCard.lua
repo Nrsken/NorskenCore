@@ -19,11 +19,11 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 
-local L = Private.L
+local L = Core.L
 local SPEC_NAME_HEIGHT = 18
 local SPEC_ROW_HEIGHT = 30
 local SPEC_COLUMNS, SPEC_COLUMNS_WIDE = 3, 4

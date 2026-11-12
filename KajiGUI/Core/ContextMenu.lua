@@ -33,9 +33,9 @@ GUI:ShowContextMenu({
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
@@ -59,7 +59,7 @@ local HOVER_BAR_WIDTH = 2
 local ARROW_SIZE = 12
 local CHILD_LEVEL_STEP = 10
 
-local BACKDROP = { bgFile = 'Interface\\Buttons\\WHITE8X8', edgeFile = 'Interface\\Buttons\\WHITE8X8', edgeSize = 1 }
+local BACKDROP = { bgFile = Core.WhiteTexture, edgeFile = Core.WhiteTexture, edgeSize = 1 }
 
 ---One menu panel; submenus are child panels parented to it, so hiding the root hides them all.
 ---@param gui table
@@ -130,7 +130,7 @@ local function NewPanel(gui, parent)
 
             item.hover = item.button:CreateTexture(nil, 'BACKGROUND', nil, 1)
             item.hover:SetAllPoints()
-            item.hover:SetTexture('Interface\\Buttons\\WHITE8X8')
+            item.hover:SetTexture(Core.WhiteTexture)
             item.hover:Hide()
             item.bar = item.button:CreateTexture(nil, 'ARTWORK')
             item.bar:NCSetWidth(HOVER_BAR_WIDTH)

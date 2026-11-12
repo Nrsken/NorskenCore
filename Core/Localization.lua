@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 -- Our own locale registry instead of AceLocale: AceLocale drops every locale but the client's while
 -- the files load, so it can't follow a language picked in the options.
@@ -9,7 +9,7 @@ local setmetatable = setmetatable
 local pairs, ipairs = pairs, ipairs
 
 -- the ten locales we ship files for, in the order the picker lists them, with their own names
-Private.LANGUAGES = {
+Core.LANGUAGES = {
     { key = 'enUS', text = 'English' },
     { key = 'deDE', text = 'Deutsch' },
     { key = 'esES', text = 'Español' },
@@ -44,7 +44,7 @@ local englishWriter = setmetatable({}, {
 })
 
 -- Lookups ask the chosen language, then English, then show the key itself.
-Private.L = setmetatable({}, {
+Core.L = setmetatable({}, {
     __index = function(_, key)
         local value = active and active[key]
         if value == nil then
@@ -60,7 +60,7 @@ Private.L = setmetatable({}, {
 ---The table a locale file writes its strings into, e.g. `L['Enable'] = 'Aktivieren'`.
 ---@param locale string
 ---@return table
-function Private:NewLocale(locale)
+function Core:NewLocale(locale)
     if locale == 'enUS' then
         return englishWriter
     end
@@ -82,7 +82,7 @@ end
 
 ---Pick the language for this session. Strings already shown keep theirs until a reload.
 ---@param choice string 'auto' or a locale from NRSKNUI.LANGUAGES
-function Private:SetLanguage(choice)
+function Core:SetLanguage(choice)
     language = (choice and choice ~= 'auto') and choice or clientLocale
     chosen = true
 
@@ -106,7 +106,7 @@ end
 ---Run 'build' once the saved language is applied or right away when it already is.
 ---Core files load before the saved choice exists, so text they translate at load would stay in the client's language.
 ---@param build fun()
-function Private:OnLanguageSet(build)
+function Core:OnLanguageSet(build)
     if chosen then
         return build()
     end
@@ -114,11 +114,11 @@ function Private:OnLanguageSet(build)
 end
 
 ---@return string locale the language strings are shown in
-function Private:GetLanguage()
+function Core:GetLanguage()
     return language
 end
 
 ---@return string locale the client's own language, as Auto would pick it
-function Private:GetClientLanguage()
+function Core:GetClientLanguage()
     return clientLocale
 end

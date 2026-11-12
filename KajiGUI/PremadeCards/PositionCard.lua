@@ -15,13 +15,13 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local L = Private.L
+local L = Core.L
 
 
 local ipairs, pairs = ipairs, pairs

@@ -40,16 +40,16 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local Animations = Private.Animations
+local Animations = Core.Animations
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
-local L = Private.L
-local LSM = Private.Libs.LSM
+local pixel = Core.Pixel
+local L = Core.L
+local LSM = Core.Libs.LSM
 
 local tostring = tostring
 local CreateFrame = CreateFrame
@@ -88,13 +88,13 @@ local SWATCH_WIDTH = 56
 local SWATCH_REST_ALPHA = 0.6 -- unselected list swatches, brought up to full on hover
 local SPARK_FILL_WIDTH = 35 -- how far the bar under a spark preview runs into the swatch
 local SPARK_FILL_ALPHA = 0.2
-local SOLID_SPARK = "Interface\\Buttons\\WHITE8X8"
+local SOLID_SPARK = Core.WhiteTexture
 local SOLID_SPARK_WIDTH = 2
 local ACTION_SIZE = 14
 local ACTION_GAP = 6
 
-local STANDARD_BACKDROP = { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 }
-local BORDER_ONLY_BACKDROP = { edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 }
+local STANDARD_BACKDROP = { bgFile = Core.WhiteTexture, edgeFile = Core.WhiteTexture, edgeSize = 1 }
+local BORDER_ONLY_BACKDROP = { edgeFile = Core.WhiteTexture, edgeSize = 1 }
 
 -- an option's own font keeps the theme's size and flags, so only the letters change
 local function ClearPreviewFont(gui, fontString, optionFont)
@@ -153,7 +153,7 @@ local function CreateSwatch(parent, rightInset, height)
     swatch:Hide()
 
     local fill = parent:CreateTexture(nil, "BORDER")
-    fill:SetTexture("Interface\\Buttons\\WHITE8X8")
+    fill:SetTexture(Core.WhiteTexture)
     fill:NCSetWidth(SPARK_FILL_WIDTH)
     fill:NCSetPoint("TOPLEFT", backing, "TOPLEFT", 0, 0)
     fill:NCSetPoint("BOTTOMLEFT", backing, "BOTTOMLEFT", 0, 0)
@@ -267,7 +267,7 @@ local function AcquireItemButton(gui, parent)
 
     local hoverBg = btn:CreateTexture(nil, "BACKGROUND")
     hoverBg:SetAllPoints()
-    hoverBg:SetTexture("Interface\\Buttons\\WHITE8X8")
+    hoverBg:SetTexture(Core.WhiteTexture)
     btn._hoverBg = hoverBg
 
     local hoverBar = btn:CreateTexture(nil, "ARTWORK")
@@ -760,7 +760,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         scrollbar:SetMinMaxValues(0, 100)
         scrollbar:SetValue(0)
         scrollbar:Hide()
-        scrollbar:SetThumbTexture("Interface\\Buttons\\WHITE8X8")
+        scrollbar:SetThumbTexture(Core.WhiteTexture)
         -- Snap scroll offsets to whole pixels; a fractional offset shifts the whole list off-grid.
         local isSnapping = false
         scrollbar:SetScript("OnValueChanged", function(bar, value)

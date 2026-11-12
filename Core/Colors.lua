@@ -1,11 +1,12 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
-local L = Private.L
+local Core = select(2, ...)
+local L = Core.L
 
 -- Module with a bunch of color utilities
 
 local math_floor = math.floor
 local format = string.format
+local issecretvalue = issecretvalue
 local type = type
 local tonumber = tonumber
 local CreateColor = CreateColor
@@ -22,22 +23,22 @@ local GetBlizzardClassColor = C_ClassColor.GetClassColor
 ---The one class colour source, the custom palette. Nil without a known class and until the palette loads.
 ---@param classToken? string
 ---@return ColorMixin?
-function Private:GetClassColor(classToken)
+function Core:GetClassColor(classToken)
     -- a secret token can't index the palette, so Blizzard's own colour is the only answer there
-    if Private:IsSecretValue(classToken) then
+    if issecretvalue(classToken) then
         return GetBlizzardClassColor(classToken)
     end
     if not classToken then return nil end
 
-    return Private.Colors.class[classToken]
+    return Core.Colors.class[classToken]
 end
 
 ---Wrap text in a class colour, unchanged without a known class.
 ---@param text string
 ---@param classToken? string
 ---@return string
-function Private:ColorTextByClass(text, classToken)
-    local color = Private:GetClassColor(classToken)
+function Core:ColorTextByClass(text, classToken)
+    local color = Core:GetClassColor(classToken)
     if not color then
         return text
     end
@@ -49,13 +50,13 @@ end
 ---@param useClassColors boolean?
 ---@param showRealmName boolean?
 ---@return string
-function Private:FormatCasterName(useClassColors, showRealmName)
-    local name = Private.MyName
-    if showRealmName and Private.MyRealm and Private.MyRealm ~= '' then
-        name = name .. '-' .. Private.MyRealm
+function Core:FormatCasterName(useClassColors, showRealmName)
+    local name = Core.MyName
+    if showRealmName and Core.MyRealm and Core.MyRealm ~= '' then
+        name = name .. '-' .. Core.MyRealm
     end
     -- the one place Blizzard's class colours are used: the game colours the real text itself, which stays secret
-    local color = useClassColors and RAID_CLASS_COLORS[Private.MyClass]
+    local color = useClassColors and RAID_CLASS_COLORS[Core.MyClass]
     return color and color:WrapTextInColorCode(name) or name
 end
 
@@ -64,29 +65,22 @@ end
 ---@param g? number
 ---@param b? number
 ---@return string hex
-function Private:RGBAToHex(r, g, b)
+function Core:RGBAToHex(r, g, b)
     r = math_floor((r or 1) * 255 + 0.5)
     g = math_floor((g or 1) * 255 + 0.5)
     b = math_floor((b or 1) * 255 + 0.5)
     return format("%02X%02X%02X", r, g, b)
 end
 
----Wrap text in the theme accent color escape code.
----@param text string
----@return string
-function Private:ColorTextByTheme(text)
-    return self.GUI:ColorText(text)
-end
-
 ---Get accent color components based on mode.
 ---@param colorMode? "class"|"theme"|"custom"
 ---@param customColor? RGBA Used when colorMode is "custom"
 ---@return number r, number g, number b, number a
-function Private:GetAccentColor(colorMode, customColor)
+function Core:GetAccentColor(colorMode, customColor)
     colorMode = colorMode or "custom"
 
     if colorMode == "class" then
-        local classColor = Private:GetClassColor(Private.MyClass)
+        local classColor = Core:GetClassColor(Core.MyClass)
         if not classColor then
             return 1, 1, 1, 1
         end
@@ -108,9 +102,9 @@ end
 ---@param b? number
 ---@param a? number
 ---@return ColorMixin
-function Private:CreateColor(r, g, b, a)
+function Core:CreateColor(r, g, b, a)
     if type(r) == 'table' then
-        return Private:CreateColor(r.r, r.g, r.b, r.a)
+        return Core:CreateColor(r.r, r.g, r.b, r.a)
     elseif type(r) == 'string' then
         -- load from hex
         local hex = r:gsub('#', '')
@@ -134,11 +128,11 @@ function Private:CreateColor(r, g, b, a)
     return color
 end
 
--- Color mode options for dropdowns in the GUI, filled in place since API.lua hands this table out at load
+-- for the GUI dropdowns; filled in place, GUI files keep this table from load
 ---@type { key: "class"|"custom"|"theme", text: string }[]
-Private.ColorModeOptions = {}
-Private:OnLanguageSet(function()
-    local options = Private.ColorModeOptions
+Core.ColorModeOptions = {}
+Core:OnLanguageSet(function()
+    local options = Core.ColorModeOptions
     options[1] = { key = "class", text = L['Class Color'] }
     options[2] = { key = "custom", text = L['Custom Color'] }
     options[3] = { key = "theme", text = L['Theme Color'] }
@@ -150,7 +144,7 @@ end)
 ---@param ... number RGB triplets (r1, g1, b1, r2, g2, b2, ...)
 ---@return number r, number g, number b
 ---@return ...number
-function Private:ColorGradient(Min, Max, ...)
+function Core:ColorGradient(Min, Max, ...)
     local Percent = (Max == 0) and 0 or (Min / Max)
 
     if Percent >= 1 then
@@ -173,12 +167,12 @@ end
 ---@param text string
 ---@param color RGBA
 ---@return string
-function Private:ColorText(text, color)
+function Core:ColorText(text, color)
     local r, g, b, a = unpack(color)
     return format("|c%02X%02X%02X%02X%s|r", (a or 1) * 255, r * 255, g * 255, b * 255, text)
 end
 
-Private.Colors = {
+Core.Colors = {
     class = {},
     reaction = {},
     power = {},
@@ -215,9 +209,9 @@ local POWER_TOKENS = {
     [19] = 'ESSENCE',
 }
 
----The shared color palette into Private.Colors. NRSKNUI_COLORS_UPDATED tells
+---The shared color palette into Core.Colors. NRSKNUI_COLORS_UPDATED tells
 ---whoever mirrors it (the unit frames push it into oUF.colors) to read it again.
-function Private:LoadCustomColors()
+function Core:LoadCustomColors()
     local db = self:GetSharedSettings().Colors
 
     local palette = self.Colors
@@ -254,5 +248,5 @@ function Private:LoadCustomColors()
     -- Status colors are consumed directly (RGBA) by the health handler.
     palette.status = db.Status
 
-    Private:SendMessage('NRSKNUI_COLORS_UPDATED')
+    Core.Ace:SendMessage('NRSKNUI_COLORS_UPDATED')
 end

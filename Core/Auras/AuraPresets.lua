@@ -1,17 +1,17 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class AuraFiltersPremade
 local Premade = {}
-Private.AuraFiltersPremade = Premade
-local L = Private.L
+Core.AuraFiltersPremade = Premade
+local L = Core.L
 
 local ipairs, pairs = ipairs, pairs
 local tsort = table.sort
 
 local Filters = AuraUtil.AuraFilters
 
-local BL_DEBUFFS = Private.AuraFilters.BloodlustDebuffs
-local MISC_DEBUFFS = Private.AuraFilters.Misc
+local BL_DEBUFFS = Core.AuraFilters.BloodlustDebuffs
+local MISC_DEBUFFS = Core.AuraFilters.Misc
 
 -- Display order: classes, then shared groups.
 Premade.Groups = {
@@ -20,7 +20,7 @@ Premade.Groups = {
 }
 
 local SHARED_GROUP_NAMES
-Private:OnLanguageSet(function()
+Core:OnLanguageSet(function()
     SHARED_GROUP_NAMES = {
         EXTERNALS = L['Externals'],
         RAIDCDS = L['Raid Cooldowns'],
@@ -218,7 +218,7 @@ for _, group in ipairs(PERSONAL_DEFENSIVES) do
 end
 -- Presets with `spells` are editable: triggers layer Added/Removed on top of the shipped list.
 local ByKey = {}
-Private:OnLanguageSet(function()
+Core:OnLanguageSet(function()
     Premade.Presets = {
         {
             key = 'preset:advancedDebuffs',

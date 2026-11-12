@@ -3,7 +3,7 @@
 
 * Animation helpers shared by Kaji's widgets and Core.
 
-Core files read `Private.Animations`.
+Core files read `Core.Animations`.
 
 # Animations APIs
 
@@ -41,10 +41,10 @@ local animWobble = Animations:Wobble(frame)
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class NorskenAnimations
 local Animations = {}
-Private.Animations = Animations
+Core.Animations = Animations
 
 local ipairs = ipairs
 

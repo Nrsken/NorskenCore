@@ -19,12 +19,12 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local pixel = Private.Pixel
+local pixel = Core.Pixel
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin

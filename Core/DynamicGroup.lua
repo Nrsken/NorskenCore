@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 local tinsert, tremove, tsort = table.insert, table.remove, table.sort
 local max, min, floor = math.max, math.min, math.floor
@@ -11,16 +11,6 @@ local select = select
 local error = error
 local Mixin = Mixin
 local wipe = wipe
-
-Private.GrowTypes = {
-    { key = "DOWN",       text = "Down" },
-    { key = "UP",         text = "Up" },
-    { key = "RIGHT",      text = "Right" },
-    { key = "LEFT",       text = "Left" },
-    { key = "HORIZONTAL", text = "Horizontal (centered)" },
-    { key = "VERTICAL",   text = "Vertical (centered)" },
-    { key = "GRID",       text = "Grid" },
-}
 
 ---@class NRSKNUI.DynamicGroup
 ---@field onLayout fun(group: NRSKNUI.DynamicGroup)? runs after every layout pass
@@ -131,7 +121,7 @@ end
 ---Parse a grid type string into its row/column orientation, axis signs and anchor point.
 ---@param gridType string|nil
 ---@return boolean rowFirst, number xSign, number ySign, string point
-function Private:ParseGridType(gridType)
+function Core:ParseGridType(gridType)
     gridType = type(gridType) == 'string' and gridType:upper() or 'RD'
     local c1, c2 = gridType:sub(1, 1), gridType:sub(2, 2)
     local horiz = (c1 == 'R' or c1 == 'L') and c1 or ((c2 == 'R' or c2 == 'L') and c2)
@@ -153,7 +143,7 @@ local function GridFactory(config)
     local spacing = Default(config.Spacing, 1)
     local rowSpacing = Default(config.RowSpacing, spacing)
     local gridWidth = max(1, floor(Default(config.GridWidth, 5)))
-    local rowFirst, xSign, ySign = Private:ParseGridType(config.GridType)
+    local rowFirst, xSign, ySign = Core:ParseGridType(config.GridType)
 
     return function(positions, active, numVisible)
         local primary, secondary = 0, 0
@@ -211,7 +201,7 @@ growers.VERTICAL = {
 }
 growers.GRID = {
     point = function(config)
-        local point = select(4, Private:ParseGridType(config.GridType))
+        local point = select(4, Core:ParseGridType(config.GridType))
         return point
     end,
     factory = GridFactory,
@@ -220,7 +210,7 @@ growers.GRID = {
 ---Register a custom grow type entry.
 ---@param growType string
 ---@param entry NRSKNUI.DynamicGroupGrower
-function Private:RegisterDynamicGroupGrower(growType, entry)
+function Core:RegisterDynamicGroupGrower(growType, entry)
     growers[growType] = entry
 end
 
@@ -390,7 +380,7 @@ function GroupMixin:DetachChild(childOrKey)
 
     local child = rec.child
     child:ClearAllPoints()
-    child:SetParent(Private.HiddenFrame)
+    child:SetParent(Core.HiddenFrame)
     self._pool:Release(rec.controlPoint)
 
     self._byChild[child] = nil
@@ -628,7 +618,7 @@ function GroupMixin:GetResolvedAnchor(grow)
     elseif grow == 'VERTICAL' then
         return 'CENTER'
     elseif grow == 'GRID' then
-        local point = select(4, Private:ParseGridType(self._config.GridType))
+        local point = select(4, Core:ParseGridType(self._config.GridType))
         return point
     end
 end
@@ -665,7 +655,7 @@ end
 ---@param parent? Frame defaults to UIParent
 ---@param config? NRSKNUI.DynamicGroupConfig
 ---@return NRSKNUI.DynamicGroup
-function Private:CreateDynamicGroup(name, parent, config)
+function Core:CreateDynamicGroup(name, parent, config)
     ---@class NRSKNUI.DynamicGroup
     local group = CreateFrame('Frame', name, parent or UIParent)
     Mixin(group, GroupMixin)

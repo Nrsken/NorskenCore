@@ -1,10 +1,10 @@
 ---@class NRSKNUI
 ---@field AuraPreview AuraPreview
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class AuraPreview
 ---@field indicators AuraIndicators? the addon drawing indicators, handed over by NorskenUI
 local AuraPreview = {}
-Private.AuraPreview = AuraPreview
+Core.AuraPreview = AuraPreview
 
 local max, floor, ceil = math.max, math.floor, math.ceil
 local ipairs, pairs = ipairs, pairs
@@ -101,7 +101,7 @@ end
 local function BranchDispels(includeDispelTypes)
     if not includeDispelTypes then return nil end
 
-    local colors = Private.Colors.dispel
+    local colors = Core.Colors.dispel
     local types
     for dispel in pairs(includeDispelTypes) do
         if colors[dispel] then
@@ -172,7 +172,7 @@ end
 ---@return number[]? classSpells
 local function ClassSpells(spells, harmful)
     if spells or harmful then return nil end
-    return CLASS_BUFF_SPELLS[Private.MyClass] or CLASS_BUFF_SPELLS.PRIEST
+    return CLASS_BUFF_SPELLS[Core.MyClass] or CLASS_BUFF_SPELLS.PRIEST
 end
 
 ---@param spells number[]?
@@ -191,7 +191,7 @@ end
 ---Fill in one display's fake auras, reusing the entry tables so a rebuild allocates nothing.
 ---@param state table
 local function BuildEntries(state)
-    local branches = Private:GetTriggerBranches(state.filter)
+    local branches = Core:GetTriggerBranches(state.filter)
     local spells, dispels, harmful = ResolveDisplay(branches)
     local classSpells = ClassSpells(spells, harmful)
 
@@ -474,7 +474,7 @@ local function SkinButton(owner, button, options, branch)
         button.nuiCooldown = cooldown
         options.skin(button, branch)
     else
-        Private:SkinAuraButton(owner, options, button)
+        Core:SkinAuraButton(owner, options, button)
     end
     FinishDummy(button)
 end
@@ -510,7 +510,7 @@ local function ApplyDispel(button, entry)
                 end
             else
                 -- An untyped aura takes the map's None entry, which the palette carries for exactly that case.
-                -- Alpha is dropped when the palette is built (Private:LoadCustomColors), so these are RGB only.
+                -- Alpha is dropped when the palette is built (Core:LoadCustomColors), so these are RGB only.
                 local color = options.customDispelColorMap[entry.dispel or 'None']
                 if color then
                     texture:SetVertexColor(color:GetRGB())
@@ -541,7 +541,7 @@ local function StartAura(button, entry, now)
     if button.nuiName then button.nuiName:SetText(entry.name) end
     if button.nuiCaster then
         local options = button.nuiCasterOptions or {}
-        button.nuiCaster:SetText(Private:FormatCasterName(options.useClassColors, options.showRealmName))
+        button.nuiCaster:SetText(Core:FormatCasterName(options.useClassColors, options.showRealmName))
     end
     if button.nuiCooldown then button.nuiCooldown:SetCooldown(start, entry.duration) end
     if button.nuiCount then
@@ -572,7 +572,7 @@ local function Layout(state)
     local config = state.config
     local width = config.width or config.size or 24
     local height = config.height or config.size or 24
-    local frameWidth, frameHeight, perLine = Private:GetAuraGridSize(config, state.count)
+    local frameWidth, frameHeight, perLine = Core:GetAuraGridSize(config, state.count)
     -- a vertical flow fills columns first, so its element spacing runs down and its line spacing across
     local byColumn = config.layoutAxis == AnchorUtil.FlowLayoutAxis.Vertical
     local xGap, yGap = config.elementSpacing or 0, config.lineSpacing or 0
@@ -691,7 +691,7 @@ local function GetState(container)
     local state = container.nuiPreview
     if not state then
         -- owner stands in for the container in the skin call, which resolves everything from the
-        -- config anyway (see the Opt fallbacks in Private:SkinAuraButton).
+        -- config anyway (see the Opt fallbacks in Core:SkinAuraButton).
         state = { entries = {}, owner = {}, redraw = Refresh }
         container.nuiPreview = state
     end

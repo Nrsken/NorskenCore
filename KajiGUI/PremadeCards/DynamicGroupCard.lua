@@ -20,12 +20,12 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 
 
-local L = Private.L
+local L = Core.L
 local ipairs = ipairs
 
 -- Grow directions whose cross-axis is horizontal (align uses LEFT/CENTER/RIGHT).

@@ -4,7 +4,7 @@ local Core = _G.NorskenCore
 local SpellList = {}
 Core.GUISpellList = SpellList
 local L = Core.L
-local rowH = Core.KajiGUI.DEFAULT_THEME.rowHeight
+local rowH = Core.Kaji.DEFAULT_THEME.rowHeight
 local Premade = Core.AuraFiltersPremade
 
 local ipairs, pairs, tonumber, tostring, next = ipairs, pairs, tonumber, tostring, next

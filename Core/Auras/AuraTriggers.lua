@@ -1,9 +1,9 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class AuraTriggers
 local AuraTriggers = {}
-Private.AuraTriggers = AuraTriggers
-local L = Private.L
+Core.AuraTriggers = AuraTriggers
+local L = Core.L
 
 local CopyTable = CopyTable
 local pairs = pairs
@@ -35,7 +35,7 @@ Old 'SpellIDs'/'Preset' saves still compile; the trigger editor converts them to
 Every type compiles to the same branch list through AuraFilters:Compile, so a container never learns
 which type produced it.
 
-API: Private:GetTriggerBranches(trigger)
+API: Core:GetTriggerBranches(trigger)
 
 --]]
 
@@ -47,7 +47,7 @@ AuraTriggers.Types = {
 
 local Types = AuraTriggers.Types
 
-Private:OnLanguageSet(function()
+Core:OnLanguageSet(function()
     AuraTriggers.UnitOptions = {
         { value = 'player', text = L['Player'] },
         { value = 'target', text = L['Target'] },
@@ -84,7 +84,7 @@ end
 
 --[[
 
-API: Private:GetTriggerBranches(trigger)
+API: Core:GetTriggerBranches(trigger)
 
 Compile a trigger into the { filterString, candidateFilters } branches an aura container consumes,
 one aura group per branch. Always at least one, so a binding never ends up with no groups.
@@ -94,8 +94,8 @@ one aura group per branch. Always at least one, so a binding never ends up with 
 --]]
 ---@param trigger table?
 ---@return table[] branches
-function Private:GetTriggerBranches(trigger)
-    local Filters = Private.AuraFilters
+function Core:GetTriggerBranches(trigger)
+    local Filters = Core.AuraFilters
 
     -- A bare filter string is accepted as a one-branch trigger, which is what the displays running a
     -- hardcoded HELPFUL/HARMFUL group (PlayerAuras) and their previews pass.
@@ -143,7 +143,7 @@ end
 ---@param trigger table
 ---@return table[]? branches nil for an unknown preset
 function AuraTriggers:GetPresetBranches(trigger)
-    local preset = Private.AuraFiltersPremade:Get(trigger.Preset)
+    local preset = Core.AuraFiltersPremade:Get(trigger.Preset)
     if not preset then return nil end
     if not (preset.spells and (trigger.Added or trigger.Removed)) then return preset.branches end
 
@@ -195,7 +195,7 @@ function AuraTriggers:ToAuraFilter(trigger)
 
     local branches
     if trigger.Type == Types.Preset then
-        local preset = Private.AuraFiltersPremade:Get(trigger.Preset)
+        local preset = Core.AuraFiltersPremade:Get(trigger.Preset)
         branches = CopyTable(preset and preset.branches or { {} })
         if preset and preset.spells then
             branches[1].candidates[preset.spellField] = nil
@@ -230,14 +230,6 @@ function AuraTriggers:GetShippedLists(trigger)
         end
     end
     return lists
-end
-
----How many groups a trigger will build, one per branch. maxFrameCount is a per-group cap, so callers
----sizing a display's worst case have to multiply by this.
----@param trigger table?
----@return number
-function Private:GetTriggerBranchCount(trigger)
-    return #Private:GetTriggerBranches(trigger)
 end
 
 -- Consumers that want telling when any trigger changed, keyed by consumer table. A page can affect

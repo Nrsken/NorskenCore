@@ -17,14 +17,14 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
-local L = Private.L
+local pixel = Core.Pixel
+local L = Core.L
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin
@@ -42,7 +42,7 @@ local CHOICE_GAP = 2
 local APEX_SHARE = 1.25 -- of a cell: the apex talents are one node's entries, drawn as a row of large icons
 local APEX_GAP = 8
 local TREE_GAP = 1.5 -- cells between trees side by side
-local WHITE = "Interface\\Buttons\\WHITE8X8"
+local WHITE = Core.WhiteTexture
 local RED = { 0.95, 0.25, 0.25, 1 }
 
 local function Snap(value) return pixel.ToPixelGrid(value) end

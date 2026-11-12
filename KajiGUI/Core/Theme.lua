@@ -18,14 +18,14 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 ---@field theme KajiTheme
 local InstanceMixin = Kaji.InstanceMixin
-local LSM = Private.Libs.LSM
-local L = Private.L
+local LSM = Core.Libs.LSM
+local L = Core.L
 
 local type = type
 local pairs = pairs
@@ -38,7 +38,7 @@ local CreateFrame = CreateFrame
 local FALLBACK_FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
 -- Class mode fills its non-class keys from this preset; DEFAULT_THEME's colours mirror it for palettes with gaps.
 local BASELINE_PRESET = "NUI Neon"
-local MEDIA = Private.Media.GUITextures
+local MEDIA = Core.Media.GUITextures
 
 ---Theme table.
 ---@class KajiTheme

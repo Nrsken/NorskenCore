@@ -7,10 +7,11 @@
 ---@field Anchors NRSKNUI.Anchors this addon's handle on the shared anchor system
 ---@field PreviewManager NRSKNUI.PreviewManager
 ---@field launcherDB table? the minimap button's saved table, once RegisterLauncher ran
-local Private = select(2, ...)
-local L = Private.L
+local Core = select(2, ...)
+local L = Core.L
 
 local LibStub = LibStub
+local setmetatable = setmetatable
 local InCombatLockdown = InCombatLockdown
 local UnitGUID = UnitGUID
 local format = string.format
@@ -37,11 +38,11 @@ local SHARED_OPTIONS = 'NorskenCore_Options'
 -- Setup --
 
 -- the saved half of a Kaji theme, copied into each addon's own store
-Private.ThemeDefaults = {
+Core.ThemeDefaults = {
     mode           = "preset",
     selectedPreset = "NUI Neon",
     customColors   = {},
-    fontFace       = Private.Media.Fonts.Expressway,
+    fontFace       = Core.Media.Fonts.Expressway,
     fontSizeNormal = 12,
     fontSizeSmall  = 12,
     fontSizeLarge  = 16,
@@ -52,10 +53,18 @@ Private.ThemeDefaults = {
     surfaceTint    = 1, -- how much of the base hue the surfaces carry, 0-3
 }
 
----@param object table the addon object, already through AceAddon
+---An addon object reading Core through `__index`; what it stores itself stays its own.
+---@param object table usually the addon's private table
 ---@param name string
----@param themeStore (fun(): table?)?
-function Private.SetupAddon(object, name, themeStore)
+---@param themeStore (fun(): table?)? the addon's saved theme, nil until its db exists; none keeps Kaji's defaults
+---@param ... string AceAddon mixins
+---@return table object
+function Core:NewAddon(object, name, themeStore, ...)
+    setmetatable(object, { __index = Core }) -- AceAddon copies an existing metatable, this one survives
+    -- AceAddon's own annotation misses the form that takes an object
+    ---@diagnostic disable-next-line: type-mismatch
+    LibStub('AceAddon-3.0'):NewAddon(object, name, ...)
+
     object.shortName = name:match('^Norsken(.+)$') -- NorskenUI -> UI, the grey half of the title
 
     object.Version = GetAddOnMetadata(name, 'Version')
@@ -63,25 +72,26 @@ function Private.SetupAddon(object, name, themeStore)
         object.Version = DEV_VERSION
     end
 
-    object.GUI = Private.Kaji:New({
+    object.GUI = Core.Kaji:New({
         store = themeStore,
         classColorProvider = function() return object:GetClassColor(object.MyClass) end,
     })
     object.Theme = object.GUI:GetTheme()
-    object.Anchors = Private:NewAnchors(object)
-    object.PreviewManager = Private:NewPreviewManager(object)
+    object.Anchors = Core:NewAnchors(object)
+    object.PreviewManager = Core:NewPreviewManager(object)
+    return object
 end
 
 -- Identity --
 
 ---The addon's title as the TOC shows it, `Norsken` in the theme colour and the rest grey.
 ---@return string
-function Private:GetTitle()
-    return self:ColorTextByTheme('Norsken') .. '|cffb3b3b3' .. self.shortName .. '|r'
+function Core:GetTitle()
+    return self.GUI:ColorText('Norsken') .. '|cffb3b3b3' .. self.shortName .. '|r'
 end
 
 ---@return string
-function Private:GetVersionText()
+function Core:GetVersionText()
     if self.Version == DEV_VERSION then
         return L['Development Version']
     end
@@ -89,8 +99,8 @@ function Private:GetVersionText()
 end
 
 ---@param msg string
-function Private:Print(msg)
-    print(self:ColorTextByTheme('Norsken') .. self.shortName .. ':|r ' .. msg)
+function Core:Print(msg)
+    print(self.GUI:ColorText('Norsken') .. self.shortName .. ':|r ' .. msg)
 end
 
 -- Options --
@@ -135,7 +145,7 @@ end
 ---Open the settings window, on a page when given one.
 ---@param pageId string?
 ---@param context table? { tabId, itemKey } inside that page
-function Private:OpenOptions(pageId, context)
+function Core:OpenOptions(pageId, context)
     -- loading builds the whole window, which waits until combat is over
     if InCombatLockdown() then
         self:Print(L['Options will open after combat ends.'])
@@ -155,7 +165,7 @@ function Private:OpenOptions(pageId, context)
     end
 end
 
-function Private:ToggleOptions()
+function Core:ToggleOptions()
     local window = self.GUIFrame
     if window and window:IsShown() then
         window:Hide()
@@ -165,7 +175,7 @@ function Private:ToggleOptions()
 end
 
 ---Wipe the saved window position and size and snap the open window back to its defaults.
-function Private:ResetGUIState()
+function Core:ResetGUIState()
     -- rebuilt rather than nil'd, AceDB only refills defaults on load
     self.db.global.GUIState = { frame = {} }
     if self.GUIFrame then
@@ -186,7 +196,7 @@ local COMMANDS = {
 ---The addon's slash commands with the shared words, plus any of its own.
 ---@param slashes string[] e.g. { '/nui', '/norskenui' }
 ---@param own table<string, fun(addon: table)>? extra words, lowercase
-function Private:RegisterCommands(slashes, own)
+function Core:RegisterCommands(slashes, own)
     local addon = self
     local key = self.name:upper()
     self.slashCommand = slashes[1]
@@ -210,7 +220,7 @@ end
 ---Minimap button and broker launcher, with the TOC's icon tinted in the theme accent. Called again with
 ---another table (a profile switch), it moves the button onto that one.
 ---@param db table where the button keeps its position and hidden state
-function Private:RegisterLauncher(db)
+function Core:RegisterLauncher(db)
     if self.launcherDB then
         self.launcherDB = db
         LDBIcon:Refresh(self.name, db)
@@ -251,7 +261,7 @@ function Private:RegisterLauncher(db)
 end
 
 ---@param hidden boolean
-function Private:SetLauncherHidden(hidden)
+function Core:SetLauncherHidden(hidden)
     -- LibDBIcon's Show and Hide only touch the button, the saved flag is ours to set
     self.launcherDB.hide = hidden
     if hidden then

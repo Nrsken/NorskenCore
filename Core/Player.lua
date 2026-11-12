@@ -1,5 +1,5 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
 local UnitClass = UnitClass
 local UnitFullName = UnitFullName
@@ -8,11 +8,11 @@ local GetNumGroupMembers = GetNumGroupMembers
 local IsInRaid = IsInRaid
 local select = select
 
-Private.MyClassLocale, Private.MyClass, Private.MyClassID = UnitClass('player')
-Private.MyName, Private.MyRealm = UnitFullName('player')
-Private.MyGUID = UnitGUID('player') --[[@as string]] -- the player always has one
+Core.MyClassLocale, Core.MyClass, Core.MyClassID = UnitClass('player')
+Core.MyName, Core.MyRealm = UnitFullName('player')
+Core.MyGUID = UnitGUID('player') --[[@as string]] -- the player always has one
 
-Private.MySpec = {
+Core.MySpec = {
     id = nil,
     role = nil,
     position = nil,
@@ -20,22 +20,22 @@ Private.MySpec = {
 }
 
 local function UpdateSpec()
-    local spec = Private.MySpec
+    local spec = Core.MySpec
     ---@diagnostic disable-next-line: field-type-mismatch
-    spec.id, spec.role, spec.position, spec.talents = Private.Libs.LS.MySpecialization()
+    spec.id, spec.role, spec.position, spec.talents = Core.Libs.LS.MySpecialization()
 end
 
 -- Core enables first, so an addon's own OnEnable can read the spec
-function Private:OnEnable()
+function Core.Ace:OnEnable()
     UpdateSpec()
-    self:CheckAddonVersions() -- every addon that needs Core has loaded by now
+    Core:CheckAddonVersions() -- every addon that needs Core has loaded by now
 end
 
-Private.Libs.LS.RegisterPlayerSpecChange(Private, UpdateSpec)
+Core.Libs.LS.RegisterPlayerSpecChange(Core, UpdateSpec)
 
 ---The group's unit tokens: raid1..N in a raid, which include the player, party1..N-1 in a party, which don't.
 ---@return fun(): string? iterator
-function Private:IterateGroupUnits()
+function Core:IterateGroupUnits()
     local inRaid = IsInRaid()
     local prefix = inRaid and 'raid' or 'party'
     local count = inRaid and GetNumGroupMembers() or GetNumGroupMembers() - 1
@@ -51,11 +51,11 @@ end
 ---Check if a specific class is present in the current group, the player included (solo too).
 ---@param classFilenameToCheck 'WARRIOR'|'HUNTER'|'ROGUE'|'MAGE'|'PRIEST'|'WARLOCK'|'DRUID'|'SHAMAN'|'PALADIN'|'DEATHKNIGHT'|'MONK'|'DEMONHUNTER'
 ---@return boolean
-function Private:IsClassInGroup(classFilenameToCheck)
+function Core:IsClassInGroup(classFilenameToCheck)
     -- a raid's units include the player but a party's don't, so the player is checked first for both
-    if Private.MyClass == classFilenameToCheck then return true end
+    if Core.MyClass == classFilenameToCheck then return true end
 
-    for unit in Private:IterateGroupUnits() do
+    for unit in Core:IterateGroupUnits() do
         local classFilename = select(2, UnitClass(unit))
         ---@diagnostic disable-next-line: secret-comparison
         if classFilename == classFilenameToCheck then

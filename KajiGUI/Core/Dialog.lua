@@ -63,12 +63,12 @@ GUI:CopyDialog('Export', exportString, 'CTRL-C to copy')
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local L = Private.L
+local L = Core.L
 
 local CreateFrame = CreateFrame
 local UIFrameFadeIn = UIFrameFadeIn
@@ -79,7 +79,7 @@ local max = math.max
 
 local After = C_Timer.After
 
-local WHITE = 'Interface\\Buttons\\WHITE8X8'
+local WHITE = Core.WhiteTexture
 
 local BUTTON_WIDTH = 100
 local BUTTON_HEIGHT = 26

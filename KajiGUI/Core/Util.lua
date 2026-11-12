@@ -10,13 +10,13 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local LSM = Private.Libs.LSM
-local L = Private.L
+local LSM = Core.Libs.LSM
+local L = Core.L
 
 local format = string.format
 local geterrorhandler = geterrorhandler
@@ -25,7 +25,7 @@ local type = type
 local ipairs = ipairs
 local tostring = tostring
 
-local WHITE = "Interface\\Buttons\\WHITE8X8"
+local WHITE = Core.WhiteTexture
 
 ---Runs a consumer-supplied callback through the game's error handler so a broken handler surfaces an error but never breaks library layout.
 ---@param func? function
@@ -33,12 +33,6 @@ local WHITE = "Interface\\Buttons\\WHITE8X8"
 function Kaji.safecall(func, ...)
     if not func then return end
     return xpcall(func, function(err) return geterrorhandler()(err) end, ...)
-end
-
----Returns the best pixel size for the current resolution. See Pixel.lua for the math.
----@return number
-function InstanceMixin:GetBestPixelSize()
-    return Private.Pixel.GetBestPixelSize()
 end
 
 ---Resolves an LSM media name to its path; a real path passes through unchanged.
@@ -439,7 +433,7 @@ function Kaji.AddSurfaceTexture(frame, gui, kind)
     local function Retile()
         local w, h = frame:GetSize()
         if not w or w <= 0 or not h or h <= 0 then return end
-        local pixelsPerUnit = frame:GetEffectiveScale() / Private.Pixel.GetPerfectPixel()
+        local pixelsPerUnit = frame:GetEffectiveScale() / Core.Pixel.GetPerfectPixel()
         tex:SetTexCoord(0, w * pixelsPerUnit / SURFACE_TEXTURE_SIZE, 0, h * pixelsPerUnit / SURFACE_TEXTURE_SIZE)
     end
     frame:HookScript("OnSizeChanged", Retile)
@@ -547,7 +541,7 @@ function Kaji.CreatePanelChrome(panel, gui)
 
     -- one texel per physical pixel so the dots stay crisp, never taller than the texture
     local function LayoutHalftone()
-        local perUnit = panel:GetEffectiveScale() / Private.Pixel.GetPerfectPixel()
+        local perUnit = panel:GetEffectiveScale() / Core.Pixel.GetPerfectPixel()
         local w = (panel:GetWidth() - edge * 2) * perUnit
         local h = math.min((panel:GetHeight() - edge * 2) * perUnit, HALFTONE_ROWS)
         if w <= 0 or h <= 0 then return end
@@ -795,8 +789,8 @@ function Kaji.CreateTickBox(gui, parent, size)
         cross:SetAlpha(negated and p or 0)
         Kaji.SetFrameGlow(glow, gui, enabled and p or 0, color)
     end
-    local animate, sync = Private.Animations:CreateColorAnimator(box, Paint, { 0, 0, 0, 0 }, gui.theme.animDuration)
-    local animateEdge, syncEdge = Private.Animations:CreateHoverColorAnimator(box,
+    local animate, sync = Core.Animations:CreateColorAnimator(box, Paint, { 0, 0, 0, 0 }, gui.theme.animDuration)
+    local animateEdge, syncEdge = Core.Animations:CreateHoverColorAnimator(box,
         function(r, g, b) box:SetBackdropBorderColor(r, g, b, 1) end,
         gui.theme.widgetBorder, gui.theme.accent, gui.theme.animDuration)
 

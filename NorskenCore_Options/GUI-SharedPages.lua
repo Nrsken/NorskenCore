@@ -4,8 +4,8 @@ local Core = _G.NorskenCore
 local Shared = {}
 Core.GUISharedPages = Shared
 local L = Core.L
-local KajiGUI = Core.KajiGUI
-local Theme = KajiGUI.DEFAULT_THEME
+local Kaji = Core.Kaji
+local Theme = Kaji.DEFAULT_THEME
 local rowH = Theme.rowHeight
 local rowHL = Theme.rowHeightLast
 
@@ -30,7 +30,7 @@ local QUICK_ACTION_HEIGHT = 32
 ---@param lines string[]? shown under the version
 ---@return table card for the addon's own rows, QuickActions closes it
 function Shared:WelcomeCard(page, addon, title, lines)
-    local text = { L['Version: '] .. addon:ColorTextByTheme(addon:GetVersionText()) }
+    local text = { L['Version: '] .. addon.GUI:ColorText(addon:GetVersionText()) }
     for _, line in ipairs(lines or {}) do
         text[#text + 1] = line
     end
@@ -113,7 +113,7 @@ function Shared:AddSupportFooter(window, addon)
             tooltip = site.text,
             tooltipText = Title(site.text), -- the prompt's title, uncoloured
             onClick = function()
-                addon:CreatePrompt({
+                addon.GUI:Prompt({
                     title = Title(color:WrapTextInColorCode(site.text)),
                     text = link,
                     editBox = true,
@@ -130,10 +130,10 @@ end
 ---@param page table
 ---@param addon table
 function Shared:SupportCard(page, addon)
-    local discord, github = addon:ColorTextByTheme(L['Discord']), addon:ColorTextByTheme(L['GitHub'])
-    page:Card(L['Support']):Row(SUPPORT_HEIGHT):Text(addon:ColorTextByTheme(L['Found a bug or have a suggestion?']), {
+    local discord, github = addon.GUI:ColorText(L['Discord']), addon.GUI:ColorText(L['GitHub'])
+    page:Card(L['Support']):Row(SUPPORT_HEIGHT):Text(addon.GUI:ColorText(L['Found a bug or have a suggestion?']), {
         width = 1,
-        text = addon:ColorTextByTheme('• ') .. L['Join the '] .. discord .. L[' or open an issue on '] .. github .. '.',
+        text = addon.GUI:ColorText('• ') .. L['Join the '] .. discord .. L[' or open an issue on '] .. github .. '.',
         height = SUPPORT_HEIGHT,
         bgMode = 'hide',
     })
@@ -340,7 +340,7 @@ function PreviewMixin:Refresh()
     self.spark:SetPoint('CENTER', self.bar:GetStatusBarTexture(), 'RIGHT', 0, 0)
 end
 
-KajiGUI:RegisterWidgetType(PREVIEW_TYPE, function()
+Kaji:RegisterWidgetType(PREVIEW_TYPE, function()
     local frame = Mixin(CreateFrame('Frame'), PreviewMixin)
 
     -- Checkerboard so a translucent backdrop doesn't vanish into the card's dark fill.
@@ -354,7 +354,7 @@ KajiGUI:RegisterWidgetType(PREVIEW_TYPE, function()
     holder:NCSetHeight(PREVIEW_BAR_HEIGHT)
     holder:NCSetPoint('LEFT', frame, 'LEFT', PREVIEW_PAD, 0)
     holder:NCSetPoint('RIGHT', frame, 'RIGHT', -PREVIEW_PAD, 0)
-    holder:NCCreateBackdrop(true)
+    holder:NCCreateBackdrop()
     frame.holder = holder
 
     local bar = CreateFrame('StatusBar', nil, holder)

@@ -32,13 +32,13 @@ API: chooser:IsActive()
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local pixel = Private.Pixel
-local L = Private.L
+local pixel = Core.Pixel
+local L = Core.L
 
 local _G = _G
 local format = string.format
@@ -53,7 +53,7 @@ local WorldFrame = WorldFrame
 local setmetatable = setmetatable
 local ipairs = ipairs
 
-local WHITE = 'Interface\\Buttons\\WHITE8X8'
+local WHITE = Core.WhiteTexture
 
 local BORDER_SIZE = 2
 local FILL_ALPHA = 0.2

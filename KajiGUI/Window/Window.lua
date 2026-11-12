@@ -10,14 +10,13 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local Animations = Private.Animations
+local Animations = Core.Animations
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin
@@ -32,7 +31,7 @@ local C_Timer = C_Timer
 local GameTooltip = GameTooltip
 local UIParent = UIParent
 
-local WHITE = "Interface\\Buttons\\WHITE8X8"
+local WHITE = Core.WhiteTexture
 local HEADER_SLOT = 24 -- a header button's height and its icon's default size
 local HEADER_GAP = 8 -- between the drawn shapes of neighbouring header buttons
 local SOCIAL_ICON = 21 -- a footer button's height and its icon's default size
@@ -63,6 +62,16 @@ local function ParseAnchor(spec, container, layerTex)
         return spec[1], layerTex[spec[2]], spec[3], spec[4], spec[5]
     end
     return spec[1], container, spec[2], spec[3], spec[4]
+end
+
+-- a drag or resize leaves the window off the grid, re-anchor it by its top-left
+local function SnapEdges(frame)
+    local left, top = frame:GetLeft(), frame:GetTop()
+    if not left then return end
+
+    frame:NCSetSize(frame:GetSize())
+    frame:ClearAllPoints()
+    frame:NCSetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
 end
 
 -- Header / Footer builders --
@@ -124,7 +133,7 @@ local function BuildHeader(window, logoCfg)
     header:SetScript("OnDragStart", function() parent:StartMoving() end)
     header:SetScript("OnDragStop", function()
         parent:StopMovingOrSizing()
-        pixel.SnapFrameEdges(parent)
+        SnapEdges(parent)
         window:SavePosition()
     end)
 
@@ -172,7 +181,7 @@ local function BuildFooter(window)
         if button == "LeftButton" then
             HandleColor(false)
             parent:StopMovingOrSizing()
-            pixel.SnapFrameEdges(parent)
+            SnapEdges(parent)
             if window.content then C_Timer.After(0.05, window.content.UpdateScrollbar) end
             window:SavePosition()
         end
@@ -185,7 +194,7 @@ local function BuildFooter(window)
     footer:SetScript("OnDragStart", function() parent:StartMoving() end)
     footer:SetScript("OnDragStop", function()
         parent:StopMovingOrSizing()
-        pixel.SnapFrameEdges(parent)
+        SnapEdges(parent)
         window:SavePosition()
     end)
 

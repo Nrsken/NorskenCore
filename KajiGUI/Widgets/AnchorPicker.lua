@@ -17,13 +17,13 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local L = Private.L
+local L = Core.L
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin
@@ -198,7 +198,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
 
         local tex = button:CreateTexture(nil, "ARTWORK")
         tex:SetAllPoints()
-        tex:SetTexture("Interface\\Buttons\\WHITE8X8")
+        tex:SetTexture(Core.WhiteTexture)
         tex:NCDisablePixelSnap()
         button.tex = tex
         button.value = direction

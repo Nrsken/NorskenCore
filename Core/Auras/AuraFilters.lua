@@ -1,8 +1,8 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class AuraFilters
 local AuraFilters = {}
-Private.AuraFilters = AuraFilters
+Core.AuraFilters = AuraFilters
 
 local tinsert = table.insert
 local ipairs, pairs = ipairs, pairs
@@ -95,7 +95,7 @@ end
 ---@return table map
 local function ShippedSpells(shipped)
     local map = {}
-    for id in pairs(Private.AuraFiltersPremade:GetShippedSpells(shipped.list) or {}) do map[id] = true end
+    for id in pairs(Core.AuraFiltersPremade:GetShippedSpells(shipped.list) or {}) do map[id] = true end
     for id in pairs(shipped.Added or {}) do map[id] = true end
     for id in pairs(shipped.Removed or {}) do map[id] = nil end
     return map

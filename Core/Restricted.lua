@@ -1,9 +1,8 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class RestrictedModule
-local Restricted = Private:GetModule('Restricted')
+local Restricted = Core.Ace:NewModule('Restricted', 'AceEvent-3.0')
 
-local scrub = scrub
 local type = type
 local pcall = pcall
 local pairs = pairs
@@ -16,17 +15,12 @@ local UnitIsDND = UnitIsDND
 local UnitIsAFK = UnitIsAFK
 local UnitExists = UnitExists
 local issecretvalue = issecretvalue
-local issecrettable = issecrettable
 local canaccessvalue = canaccessvalue
 local InCombatLockdown = InCombatLockdown
-local scrubsecretvalues = scrubsecretvalues
-local securecallfunction = securecallfunction
 local UnitAffectingCombat = UnitAffectingCombat
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 
 local GetAddOnRestrictionState = C_RestrictedActions.GetAddOnRestrictionState
-local ShouldUnitIdentityBeSecret = C_Secrets.ShouldUnitIdentityBeSecret
-local CanCompareUnitTokens = C_Secrets.CanCompareUnitTokens
 local GetSpellAuraSecrecy = C_Secrets.GetSpellAuraSecrecy
 local ShouldAurasBeSecret = C_Secrets.ShouldAurasBeSecret
 local ShouldCooldownsBeSecret = C_Secrets.ShouldCooldownsBeSecret
@@ -49,114 +43,42 @@ if RestrictionType then
     end
 end
 
--- Secret Wrappers --
-
----Is this value a secret?
----@secret-guard value is-secret
----@param value any
----@return boolean
-function Private:IsSecretValue(value)
-    return issecretvalue and issecretvalue(value) or false
-end
-
----Is this value NOT a secret?
----@secret-guard value accessible
----@param value any
----@return boolean
-function Private:NotSecretValue(value)
-    return not Private:IsSecretValue(value)
-end
+-- Secrets --
 
 ---Value exists and is not a secret, i.e. safe to read/compare.
 ---@secret-guard value accessible
 ---@param value any
 ---@return boolean
-function Private:IsSafeValue(value)
-    if Private:IsSecretValue(value) then return false end
+function Core:IsSafeValue(value)
+    if issecretvalue(value) then return false end
     return type(value) ~= 'nil'
-end
-
----Is this table secret or flagged so that indexing it produces secrets?
----@param object any
----@return boolean
-function Private:IsSecretTable(object)
-    return issecrettable and issecrettable(object) or false
-end
-
----Can the current (possibly tainted) call context operate on this value?
----@secret-guard value accessible
----@param value any
----@return boolean
-function Private:CanAccessValue(value)
-    return not canaccessvalue or canaccessvalue(value)
-end
-
----Does this frame/object currently hold any secret aspect?
----@param object any
----@return boolean
-function Private:HasSecretValues(object)
-    return object and object.HasSecretValues and object:HasSecretValues() or false
 end
 
 ---May the current (possibly tainted) context touch this frame? Forbidden or access-restricted ones (aura buttons while auras are secret) say no.
 ---@param object table
 ---@return boolean
-function Private:CanAccessObject(object)
+function Core:CanAccessObject(object)
     local access = object:CanBeAccessedInContext()
     return not issecretvalue(access) and access == true
-end
-
----Strip secrets (and non-primitives) from a vararg list before format/concat/print.
----@return ... scrubbed
-function Private:Scrub(...)
-    return scrub(...)
-end
-
----Strip only the secrets from a vararg list, leaving other values intact.
----@return ... scrubbed
-function Private:ScrubSecrets(...)
-    return scrubsecretvalues(...)
-end
-
----Run fn behind a secure barrier so taint/errors from touching a maybe-secret table do not propagate to the caller.
----@param fn function
----@return ... results
-function Private:SecureCall(fn, ...)
-    return securecallfunction(fn, ...)
-end
-
----Pre-flight, will querying this unit's identity (name/GUID) return a secret?
----@param unit string
----@return boolean
-function Private:IsSecretUnit(unit)
-    return ShouldUnitIdentityBeSecret(unit) or false
-end
-
----Pre-flight, is comparing these two unit tokens permitted (guard before UnitIsUnit)?
----@param unit1 string
----@param unit2 string
----@return boolean
-function Private:CanCompareUnits(unit1, unit2)
-    return CanCompareUnitTokens(unit1, unit2)
 end
 
 ---Pre-flight, can this spell hand back secrets when queried as an aura?
 ---@param spellID number
 ---@return boolean
-function Private:IsSpellAuraSecret(spellID)
+function Core:IsSpellAuraSecret(spellID)
     return GetSpellAuraSecrecy(spellID) ~= NeverSecret
 end
 
 ---Do aura queries hand back secrets in the current context? A secret answer counts as yes.
 ---@return boolean
-function Private:AreAurasSecret()
+function Core:AreAurasSecret()
     local secret = ShouldAurasBeSecret()
     return issecretvalue(secret) or secret == true
 end
 
 ---Do cooldown queries hand back secrets in the current context? A secret answer counts as yes.
 ---@return boolean
-function Private:AreCooldownsSecret()
+function Core:AreCooldownsSecret()
     local secret = ShouldCooldownsBeSecret()
     return issecretvalue(secret) or secret == true
 end
@@ -164,8 +86,8 @@ end
 ---Safely get a value if it is not secret and can be accessed, otherwise return nil.
 ---@param value any
 ---@return any|nil
-function Private:SafeValue(value)
-    if Private:CanAccessValue(value) then
+function Core:SafeValue(value)
+    if canaccessvalue(value) then
         return value
     end
     return nil
@@ -173,27 +95,27 @@ end
 
 ---@param unit string
 ---@return boolean|nil
-function Private:UnitIsAFK(unit)
+function Core:UnitIsAFK(unit)
     local isAFK = UnitIsAFK(unit)
 
-    return Private:NotSecretValue(isAFK) and isAFK or nil
+    return not issecretvalue(isAFK) and isAFK or nil
 end
 
 ---@param unit string
 ---@return boolean|nil
-function Private:UnitIsDND(unit)
+function Core:UnitIsDND(unit)
     local isDND = UnitIsDND(unit)
 
-    return Private:NotSecretValue(isDND) and isDND or nil
+    return not issecretvalue(isDND) and isDND or nil
 end
 
 ---@param unit string
 ---@return string|nil
-function Private:GetSafeRole(unit)
+function Core:GetSafeRole(unit)
     if not unit or not UnitExists(unit) then return nil end
     local role = UnitGroupRolesAssigned(unit)
 
-    return Private:NotSecretValue(role) and role or nil
+    return not issecretvalue(role) and role or nil
 end
 
 -- Unit Token Validation --
@@ -205,7 +127,7 @@ local validTokens = {}
 ---Is this a unit token the event system recognises?
 ---@param unit string?
 ---@return boolean
-function Private:IsValidUnitToken(unit)
+function Core:IsValidUnitToken(unit)
     if type(unit) ~= 'string' then return false end
 
     local cached = validTokens[unit]
@@ -233,7 +155,7 @@ local lockdown = false
 ---Run fn now if out of combat lockdown, otherwise defer to PLAYER_REGEN_ENABLED.
 ---Used for any protected function call.
 ---@param fn function
-function Private:RunWhenSafe(fn)
+function Core:RunWhenSafe(fn)
     if not fn then return end
     if lockdown or InCombatLockdown() then
         if queuedFns[fn] then return end -- the same function queued twice would only redo the same work
@@ -252,13 +174,13 @@ local pending = {}
 
 ---Check combat state, including the active.Combat flag which is set by PLAYER_REGEN_DISABLED/ENABLED events.
 ---@return boolean
-function Private:InCombat()
+function Core:InCombat()
     return active.Combat or InCombatLockdown()
 end
 
 ---Whether any restriction is on. Read live: a handler for the same event can run before ours sets the flags.
 ---@return boolean
-function Private:IsRestricted()
+function Core:IsRestricted()
     for i, name in pairs(typeName) do
         -- Chat only limits addon messages, it's no restriction on what we show
         if name ~= 'Chat' and GetAddOnRestrictionState(i) ~= RestrictionInactive then return true end
@@ -268,20 +190,20 @@ end
 
 ---Current restriction state (0 none, 1 partial, 2 full).
 ---@return integer
-function Private:GetRestrictionState()
+function Core:GetRestrictionState()
     return restrictionState
 end
 
 ---Fully restricted i.e combat, encounter, M+, or PvP?
 ---@return boolean
-function Private:IsFullyRestricted()
+function Core:IsFullyRestricted()
     return restrictionState == 2
 end
 
 ---Defer fn until the restriction state is at or below targetState (0 none, 1 partial, 2 full).
 ---@param targetState integer
 ---@param fn function
-function Private:DeferUntilUnrestricted(targetState, fn)
+function Core:DeferUntilUnrestricted(targetState, fn)
     if not fn then return end
     if restrictionState <= targetState then
         fn()

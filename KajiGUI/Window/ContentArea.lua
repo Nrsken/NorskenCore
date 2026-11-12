@@ -45,13 +45,13 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local pixel = Private.Pixel
+local pixel = Core.Pixel
 
 local CreateFrame = CreateFrame
 local ipairs = ipairs
@@ -429,7 +429,7 @@ function InstanceMixin:CreateContentHost(parent, opts)
     local frame = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     frame:SetAllPoints(parent)
     if opts.showBackground ~= false then
-        frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
+        frame:SetBackdrop({ bgFile = Core.WhiteTexture })
         -- Also covers the item list column, which sits inside this frame on a translucent fill.
         Kaji.AddSurfaceTexture(frame, gui)
         Kaji.AddSurfaceTexture(frame, gui, "page")

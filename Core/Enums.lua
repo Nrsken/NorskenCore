@@ -1,7 +1,7 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 
-Private.Enum = {}
+Core.Enum = {}
 
 ---@enum NRSKNUI.DispelType
 local DispelType = {
@@ -14,4 +14,4 @@ local DispelType = {
     Enrage = 9,
     Bleed = 11,
 }
-Private.Enum.DispelType = DispelType
+Core.Enum.DispelType = DispelType

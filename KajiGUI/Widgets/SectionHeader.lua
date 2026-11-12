@@ -17,13 +17,13 @@ API: card:SubSection('Anchors', { key = 'anchors', summary = "Anchored to frame'
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
-local L = Private.L
+local L = Core.L
 
 local CreateFrame = CreateFrame
 local format = string.format
@@ -278,7 +278,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     header.hoverBg = hoverBg
 
     -- only the tween's alpha channel is used
-    local fadeHover, syncHover = Private.Animations:CreateColorAnimator(header, function(_, _, _, alpha)
+    local fadeHover, syncHover = Core.Animations:CreateColorAnimator(header, function(_, _, _, alpha)
         hoverBg:SetAlpha(alpha)
     end, { 0, 0, 0, 0 }, gui.theme.animDuration)
     header._syncHover = syncHover

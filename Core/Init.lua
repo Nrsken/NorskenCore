@@ -1,21 +1,24 @@
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
+_G.NorskenCore = Core
 
 local LibStub = LibStub
 
-LibStub('AceAddon-3.0'):NewAddon(Private, 'NorskenCore', 'AceEvent-3.0')
+-- off the addon table: addons would inherit Core's OnInitialize/OnEnable via __index
+Core.Ace = LibStub('AceAddon-3.0'):NewAddon('NorskenCore', 'AceEvent-3.0')
 
-Private.Libs = {
+Core.Libs = {
     LSM = LibStub('LibSharedMedia-3.0'),
     LS = LibStub('LibSpecialization'),
 } --[[@as NRSKNUI.Libraries]]
 
 -- KajiGUI's shared state: Core files hand it things before KajiGUI loads (Anchors, LoadConditions)
 ---@type Kaji
-Private.Kaji = {}
+Core.Kaji = {}
 
-Private.ClearTexture = 0
-Private.WhiteTexture = 'Interface\\Buttons\\WHITE8X8'
-Private.GlobalZoom = 0.3
+-- every widget's NC methods: Pixel.lua and Frames/ fill it, InjectAPI.lua injects it
+Core.FrameMethods = {}
 
-Private.Restricted = Private:NewModule('Restricted', 'AceEvent-3.0')
+Core.ClearTexture = 0
+Core.WhiteTexture = 'Interface\\Buttons\\WHITE8X8'
+Core.GlobalZoom = 0.3

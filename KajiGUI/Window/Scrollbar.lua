@@ -7,27 +7,27 @@
 --]]
 
 ---@class NRSKNUI
-local Private = select(2, ...)
+local Core = select(2, ...)
 ---@class Kaji
-local Kaji = Private.Kaji
+local Kaji = Core.Kaji
 ---@class KajiGUIInstanceMixin
 local InstanceMixin = Kaji.InstanceMixin
-local pixel = Private.Pixel
+local pixel = Core.Pixel
 
 local CreateFrame = CreateFrame
 local Mixin = Mixin
 local math_abs, math_max, math_min = math.abs, math.max, math.min
 
 local SCROLLBAR_BACKDROP = {
-    bgFile = "Interface\\Buttons\\WHITE8X8",
-    edgeFile = "Interface\\Buttons\\WHITE8X8",
+    bgFile = Core.WhiteTexture,
+    edgeFile = Core.WhiteTexture,
     edgeSize = 1,
 }
 local THUMB_REST_ALPHA = 0.6 -- the slider thumb's grey
 local THUMB_HOVER_ALPHA = 0.5 -- accent, full while dragged
 
 local BORDER_ONLY_BACKDROP = {
-    edgeFile = "Interface\\Buttons\\WHITE8X8",
+    edgeFile = Core.WhiteTexture,
     edgeSize = 1,
 }
 
@@ -87,7 +87,7 @@ function InstanceMixin:CreateScrollbar(scrollFrame, options)
     scrollbar:SetValue(0)
     scrollbar:Hide()
 
-    scrollbar:SetThumbTexture("Interface\\Buttons\\WHITE8X8")
+    scrollbar:SetThumbTexture(Core.WhiteTexture)
     local thumb = scrollbar:GetThumbTexture()
     thumb:SetSize(width, thumbHeight)
     scrollbar.thumb = thumb
