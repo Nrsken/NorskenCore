@@ -33,7 +33,7 @@ local tonumber = tonumber
 local CreateFrame = CreateFrame
 local Mixin = Mixin
 local GetTime = GetTime
-local ipairs = ipairs
+local ipairs, pairs = ipairs, pairs
 local type = type
 local rad = math.rad
 local floor, max, min = math.floor, math.max, math.min
@@ -51,6 +51,30 @@ local THROTTLE_DELAY = 0.1
 ---@return string
 local function DescribeValue(value)
     return value and tostring(floor(value * 100 + 0.5) / 100) or ""
+end
+
+-- Drag --
+
+local held -- the slider whose thumb is down
+local afterDrag = {}
+
+--[[
+# Kaji.AfterSliderDrag
+
+Runs `fn` now, or once the slider being dragged is let go: for work that only
+needs a drag's last value, like a rebuild.
+
+## Example
+
+    Kaji.AfterSliderDrag(DrawTree)
+--]]
+---@param fn fun() the same function each time, so it runs once however often it's asked
+function Kaji.AfterSliderDrag(fn)
+    if not held then
+        fn()
+        return
+    end
+    afterDrag[fn] = true
 end
 
 ---@class KajiGUISliderMixin : Frame
@@ -128,6 +152,19 @@ end
 function SliderMixin:FireCallback(val)
     if self._suppressCallback then return end
     safecall(self._callback, val)
+end
+
+---Hiding and releasing end it too: a slider gone mid-drag may never see OnMouseUp.
+function SliderMixin:EndDrag()
+    self._dragging = false
+    if held ~= self then return end
+
+    held = nil
+    local queued = afterDrag
+    afterDrag = {}
+    for fn in pairs(queued) do
+        safecall(fn)
+    end
 end
 
 ---@param val number
@@ -282,7 +319,7 @@ end
 
 function SliderMixin:OnRelease()
     self._callback = nil
-    self._dragging = false
+    self:EndDrag()
     self._thumbHovered = false
     self._paintThumbGlow()
     self._valueHovered = false
@@ -495,14 +532,20 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         thumbFrame:SetBackdropColor(accent[1], accent[2], accent[3], 1)
         row._syncThumb(accent[1], accent[2], accent[3], 1)
         row._dragging = true
+        held = row
         PaintThumbGlow()
     end)
     slider:SetScript("OnMouseUp", function(sliderFrame, button)
         if button ~= "LeftButton" then return end
-        row._dragging = false
+        row:EndDrag()
         PaintThumbGlow()
-        if row._callbackOnRelease then row:FireCallback(sliderFrame:GetValue()) end
+        if row._callbackOnRelease then
+            row:FireCallback(sliderFrame:GetValue())
+        end
         row:AnimateThumbColor(sliderFrame:IsMouseOver(), false)
+    end)
+    slider:SetScript("OnHide", function()
+        row:EndDrag()
     end)
     slider:SetScript("OnEnter", function()
         row._thumbHovered = true
