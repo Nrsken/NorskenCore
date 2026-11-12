@@ -777,15 +777,13 @@ function Shared:RegisterGlobalPage(gui, addon, open, extra)
     })
 end
 
--- Sized to look alike rather than measure alike: solid shapes (home, fill) a little smaller, thin or round
--- ones (cross, anchor, cog, eye) a little larger. width is each drawn shape's, xOffset centres the anchor's art.
-local HEADER_BUTTONS = {
-    close = { icon = 'NorskenCustomCrossv3', size = 22, width = 16, rotation = 45, tooltip = L['Close Settings'] },
-    home = { icon = 'HomeButtonv2', size = 16, tooltip = L['Open Home Page'] },
-    global = { icon = 'cogwheel', size = 19, width = 18, tooltip = L['Open Global Settings'] },
-    anchors = { icon = 'anchor', size = 20, width = 18, xOffset = 1, tooltip = L['Open Anchors'] },
-    theme = { icon = 'fill', size = 17, tooltip = L['Open Theme Settings'] },
-    preview = { icon = 'eye', size = 23, width = 20, tooltip = L['Preview Every Display'] },
+local HEADER_TOOLTIPS = {
+    close = L['Close Settings'],
+    home = L['Open Home Page'],
+    global = L['Open Global Settings'],
+    anchors = L['Open Anchors'],
+    theme = L['Open Theme Settings'],
+    preview = L['Preview Every Display'],
 }
 
 ---A window header button both addons have, for AddHeaderButton.
@@ -793,15 +791,8 @@ local HEADER_BUTTONS = {
 ---@param onClick fun(button: any) the header button, SetActive marks a toggle on
 ---@return table
 function Shared:HeaderButton(name, onClick)
-    local def = HEADER_BUTTONS[name]
-    return {
-        icon = Core.Media.GUITextures .. def.icon .. '.png',
-        glow = Core.Media.GUITextures .. def.icon .. '_glow.png',
-        size = def.size,
-        width = def.width,
-        xOffset = def.xOffset,
-        rotation = def.rotation,
-        tooltip = def.tooltip,
-        onClick = onClick,
-    }
+    local config = Kaji.HeaderIcon(name)
+    config.tooltip = HEADER_TOOLTIPS[name]
+    config.onClick = onClick
+    return config
 end

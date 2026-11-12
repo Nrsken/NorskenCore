@@ -219,31 +219,6 @@ local function CreateDialogHeader(gui, dialog, title)
     return header
 end
 
-local function CreateCloseButton(gui, header, onClose)
-    local theme = gui.theme
-    local closeBtn = CreateFrame('Button', nil, header)
-    closeBtn:SetSize(17, 17)
-    closeBtn:SetPoint('RIGHT', header, 'RIGHT', -6, 0)
-
-    local closeTex = closeBtn:CreateTexture(nil, 'ARTWORK')
-    closeTex:SetAllPoints()
-    closeTex:SetTexture(theme.crossTexture)
-    closeTex:SetVertexColor(theme.textSecondary[1], theme.textSecondary[2], theme.textSecondary[3], 1)
-    closeBtn:SetNormalTexture(closeTex)
-    closeTex:SetTexelSnappingBias(0)
-    closeTex:SetSnapToPixelGrid(false)
-
-    closeBtn:SetScript('OnEnter', function()
-        closeTex:SetVertexColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
-    end)
-    closeBtn:SetScript('OnLeave', function()
-        closeTex:SetVertexColor(theme.textSecondary[1], theme.textSecondary[2], theme.textSecondary[3], 1)
-    end)
-    closeBtn:SetScript('OnClick', onClose)
-
-    return closeBtn
-end
-
 local function CreateHeaderTexture(gui, header, opts)
     if not opts.texture then return end
     local tex = opts.texture
@@ -331,10 +306,16 @@ function InstanceMixin:Prompt(opts)
         end
     end
 
-    CreateCloseButton(self, header, function()
-        if opts.onCancel then opts.onCancel() end
+    -- the window's close, as a dialog is a small window
+    local close = Kaji.HeaderIcon('close')
+    close.onClick = function()
+        if opts.onCancel then
+            opts.onCancel()
+        end
         CloseDialog()
-    end)
+    end
+    -- a prompt is built fresh each time, so its button lets the theme go with it
+    dialog:SetScript('OnHide', Kaji.CreateHeaderButton(self, header, close).unsubscribeTheme)
 
     CreateHeaderTexture(self, header, opts)
 

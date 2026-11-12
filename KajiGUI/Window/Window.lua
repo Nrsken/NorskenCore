@@ -32,11 +32,23 @@ local GameTooltip = GameTooltip
 local UIParent = UIParent
 
 local WHITE = Core.WhiteTexture
+local MEDIA = Core.Media.GUITextures
 local HEADER_SLOT = 24 -- a header button's height and its icon's default size
 local HEADER_GAP = 8 -- between the drawn shapes of neighbouring header buttons
 local SOCIAL_ICON = 21 -- a footer button's height and its icon's default size
 local SOCIAL_LIFT = 2 -- how far a hovered footer icon rises
 local ICON_HOVER = 0.5 -- an accent icon lightens half as far as a label, a small shift on the bright colour
+
+-- sized to look alike: solid shapes a little smaller, thin or round ones a little larger
+-- width is the drawn shape's, xOffset centres the anchor's art
+local HEADER_ICONS = {
+    close = { icon = 'NorskenCustomCrossv3', size = 22, width = 16, rotation = 45 },
+    home = { icon = 'HomeButtonv2', size = 16 },
+    global = { icon = 'cogwheel', size = 19, width = 18 },
+    anchors = { icon = 'anchor', size = 20, width = 18, xOffset = 1 },
+    theme = { icon = 'fill', size = 17 },
+    preview = { icon = 'eye', size = 23, width = 20 },
+}
 
 -- every window any addon made, so something that clears the screen (anchors, the frame chooser) puts them all away
 Kaji.windows = {}
@@ -211,27 +223,67 @@ end
 
 -- Public window methods --
 
----Adds a header button, auto-packed from the right edge in add order. Its slot is as wide as the icon's drawn
----shape and the shapes sit a fixed gap apart, so the spacing reads even whatever padding each icon's art has.
+--[[
+# Kaji.HeaderIcon
+
+The look of a header button both windows and dialogs have, for `CreateHeaderButton`.
+
+## Example
+
+    local config = Kaji.HeaderIcon('close')
+    config.onClick = function() dialog:Hide() end
+--]]
+---@param name 'close'|'home'|'global'|'anchors'|'theme'|'preview'
+---@return table config a new table, the caller adds onClick and tooltip
+function Kaji.HeaderIcon(name)
+    local def = HEADER_ICONS[name]
+    return {
+        icon = MEDIA .. def.icon .. '.png',
+        glow = MEDIA .. def.icon .. '_glow.png',
+        size = def.size,
+        width = def.width,
+        xOffset = def.xOffset,
+        rotation = def.rotation,
+    }
+end
+
+--[[
+# Kaji.CreateHeaderButton
+
+An accent icon button with its glow, lightened on hover, at the header's right edge. Its slot
+is as wide as the icon's drawn shape, so callers can pack them a fixed gap apart.
+
+## Example
+
+    Kaji.CreateHeaderButton(gui, header, Kaji.HeaderIcon('close'))
+--]]
+---@param gui KajiGUIInstance
+---@param header Frame
 ---@param config table { icon, glow?, size?, width?, xOffset?, onClick?, tooltip?, rotation?, strata?, yOffset? } width: the drawn shape's, xOffset centres off-centre art
----@return Button
-function WindowMixin:AddHeaderButton(config)
-    local gui, theme, header = self.gui, self.gui.theme, self.header
+---@param x number? offset from the right edge, negative moves it inward
+---@return KajiHeaderButton
+function Kaji.CreateHeaderButton(gui, header, config, x)
+    local theme = gui.theme
     local size = config.size or HEADER_SLOT
     local width = config.width or size
 
+    ---@class KajiHeaderButton : Button
+    ---@field unsubscribeTheme fun() for a header that is thrown away
     local btn = CreateFrame("Button", nil, header)
     btn:NCSetSize(width, HEADER_SLOT)
-    btn:NCSetPoint("RIGHT", header, "RIGHT", self._headerCursor, config.yOffset or 0)
-    self._headerCursor = self._headerCursor - width - HEADER_GAP
-    if config.strata then btn:SetFrameStrata(config.strata) end
+    btn:NCSetPoint("RIGHT", header, "RIGHT", (x or 0) - theme.paddingMedium - 2, config.yOffset or 0)
+    if config.strata then
+        btn:SetFrameStrata(config.strata)
+    end
 
     local tex = btn:CreateTexture(nil, "ARTWORK")
     tex:NCSetSize(size, size)
     tex:NCSetPoint("CENTER", btn, "CENTER", config.xOffset or 0, 0)
     tex:SetTexture(config.icon)
     tex:NCDisablePixelSnap()
-    if config.rotation then tex:SetRotation(rad(config.rotation)) end
+    if config.rotation then
+        tex:SetRotation(rad(config.rotation))
+    end
     btn:SetNormalTexture(tex)
     local paintGlow = Kaji.AddIconGlow(btn, tex, size, size, config.glow, gui, config.rotation and rad(config.rotation))
 
@@ -254,7 +306,7 @@ function WindowMixin:AddHeaderButton(config)
         animateHover(IdleHover(), 0, 0, 0)
     end
 
-    gui:OnThemeChanged(function() Paint(IdleHover()) end)
+    btn.unsubscribeTheme = gui:OnThemeChanged(function() Paint(IdleHover()) end)
 
     btn:SetScript("OnEnter", function()
         animateHover(1, 0, 0, 0)
@@ -272,6 +324,15 @@ function WindowMixin:AddHeaderButton(config)
         btn:SetScript("OnClick", function() safecall(config.onClick, btn) end)
     end
 
+    return btn
+end
+
+---Packed from the right in add order, a fixed gap between the drawn shapes.
+---@param config table as Kaji.CreateHeaderButton takes it
+---@return KajiHeaderButton
+function WindowMixin:AddHeaderButton(config)
+    local btn = Kaji.CreateHeaderButton(self.gui, self.header, config, self._headerCursor)
+    self._headerCursor = self._headerCursor - btn:GetWidth() - HEADER_GAP
     return btn
 end
 
@@ -653,7 +714,7 @@ function InstanceMixin:CreateGUIWindow(opts)
     window._currentId = opts.defaultPage
     window._minW, window._minH = minW, minH
     window._defW, window._defH = w, h
-    window._headerCursor = -(theme.paddingMedium + 2) -- running right edge for header buttons
+    window._headerCursor = 0 -- running right edge for header buttons
     window._footerCursor = theme.paddingMedium       -- running left edge for footer socials
     window.inCombat = InCombatLockdown() and true or false
 
