@@ -124,7 +124,16 @@ function Kaji:New(opts)
         frameChooser = opts.frameChooser,
         registerSearchable = opts.registerSearchable,
     }
-    instance.overlay            = opts.overlay
+    -- open dropdowns move here, made now: anchors uses them without the window ever opening
+    local overlay = opts.overlay
+    if not overlay then
+        overlay = CreateFrame("Frame", nil, UIParent)
+        overlay:SetAllPoints(UIParent)
+        overlay:SetFrameStrata("FULLSCREEN_DIALOG") -- below TOOLTIP so item tooltips draw over the list
+        overlay:SetFrameLevel(200) -- above prompts at level 100
+        overlay:EnableMouse(false)
+    end
+    instance.overlay            = overlay
 
     -- Theme engine wiring.
     instance.presets            = opts.presets or Kaji.THEME_PRESETS

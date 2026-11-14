@@ -394,6 +394,7 @@ end
 ---@class KajiGUIDropdownMixin : Frame
 ---@field gui KajiGUIInstance
 ---@field label FontString
+---@field _dropdownButton Button the field, see GetField
 ---@field dropdown Button
 ---@field _mediaType? string
 ---@field _searchable boolean
@@ -497,6 +498,12 @@ DropdownMixin.SetSelected = DropdownMixin.SetValue
 
 function DropdownMixin:GetValue()
     return self._currentValue
+end
+
+---The clickable field under the label, for lining other widgets up with it.
+---@return Button
+function DropdownMixin:GetField()
+    return self._dropdownButton
 end
 
 DropdownMixin.GetSelected = DropdownMixin.GetValue
@@ -1162,7 +1169,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         end
 
         dropdownList._logicalParent = dropdownList:GetParent()
-        dropdownList:SetParent(gui.overlay or UIParent)
+        dropdownList:SetParent(gui.overlay)
         dropdownList:SetFrameStrata("FULLSCREEN_DIALOG")
         dropdownList:ClearAllPoints()
         dropdownList:NCSetPoint("TOPLEFT", dropdownButton, "BOTTOMLEFT", 0, -2)

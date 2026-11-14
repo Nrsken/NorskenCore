@@ -155,6 +155,12 @@ function SlimCheckboxMixin:GetValue()
     return self._state
 end
 
+---The box, the gap and the label, for placing it outside a row.
+---@return number
+function SlimCheckboxMixin:GetFitWidth()
+    return BOX_SIZE + LABEL_GAP + self.label:GetStringWidth()
+end
+
 ---@param value boolean?
 function SlimCheckboxMixin:SetValue(value)
     if self._tristate then

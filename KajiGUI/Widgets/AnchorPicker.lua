@@ -35,6 +35,19 @@ local ANCHOR_DIRECTIONS = {
     "BOTTOMLEFT", "BOTTOM", "BOTTOMRIGHT",
 }
 
+-- locale keys, looked up when shown: the language isn't applied while Core loads
+local DIRECTION_NAMES = {
+    TOPLEFT = "Top Left",
+    TOP = "Top",
+    TOPRIGHT = "Top Right",
+    LEFT = "Left",
+    CENTER = "Center",
+    RIGHT = "Right",
+    BOTTOMLEFT = "Bottom Left",
+    BOTTOM = "Bottom",
+    BOTTOMRIGHT = "Bottom Right",
+}
+
 local WIDGET_TYPE = "AnchorPicker"
 local BUTTON_SIZE, FRAME_WIDTH, FRAME_HEIGHT, TITLE_HEIGHT, SPACING = 10, 100, 52, 18, 2
 
@@ -175,19 +188,8 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
 
     Mixin(container, AnchorPickerMixin)
 
-    local directionNames = {
-        TOPLEFT = L["Top Left"],
-        TOP = L["Top"],
-        TOPRIGHT = L["Top Right"],
-        LEFT = L["Left"],
-        CENTER = L["Center"],
-        RIGHT = L["Right"],
-        BOTTOMLEFT = L["Bottom Left"],
-        BOTTOM = L["Bottom"],
-        BOTTOMRIGHT = L["Bottom Right"],
-    }
     container._describeValue = function(value)
-        return directionNames[value] or value or L["None"]
+        return DIRECTION_NAMES[value] and L[DIRECTION_NAMES[value]] or value or L["None"]
     end
 
     local buttons = {}
@@ -210,7 +212,7 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         end)
         -- Each dot names its own anchor point, so the tooltip is set once here rather
         -- than rebuilt on every hover.
-        Kaji.SetTooltip(button, gui, directionNames[direction] or direction, nil,
+        Kaji.SetTooltip(button, gui, container._describeValue(direction), nil,
             { anchor = "ANCHOR_RIGHT", x = 0, y = 4 })
 
         button:SetScript("OnEnter", function(self)

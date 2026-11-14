@@ -46,8 +46,10 @@ local HEADER_ICONS = {
     home = { icon = 'HomeButtonv2', size = 16 },
     global = { icon = 'cogwheel', size = 19, width = 18 },
     anchors = { icon = 'anchor', size = 20, width = 18, xOffset = 1 },
+    grid = { icon = 'layout-grid', size = 18 },
     theme = { icon = 'fill', size = 17 },
     preview = { icon = 'eye', size = 23, width = 20 },
+    help = { icon = 'circle-question-mark', size = 18 },
 }
 
 -- every window any addon made, so something that clears the screen (anchors, the frame chooser) puts them all away
@@ -233,7 +235,7 @@ The look of a header button both windows and dialogs have, for `CreateHeaderButt
     local config = Kaji.HeaderIcon('close')
     config.onClick = function() dialog:Hide() end
 --]]
----@param name 'close'|'home'|'global'|'anchors'|'theme'|'preview'
+---@param name 'close'|'home'|'global'|'anchors'|'grid'|'theme'|'preview'|'help'
 ---@return table config a new table, the caller adds onClick and tooltip
 function Kaji.HeaderIcon(name)
     local def = HEADER_ICONS[name]
@@ -664,16 +666,6 @@ function InstanceMixin:CreateGUIWindow(opts)
     opts = opts or {}
     local gui = self
     local theme = self.theme
-
-    -- The high-strata reparent target for open dropdowns (folds in the old GUIOverlay).
-    if not self.overlay then
-        local overlay = CreateFrame("Frame", nil, UIParent)
-        overlay:SetAllPoints(UIParent)
-        overlay:SetFrameStrata("FULLSCREEN_DIALOG") -- below TOOLTIP so item tooltips draw over the list
-        overlay:SetFrameLevel(200) -- above prompts at level 100
-        overlay:EnableMouse(false)
-        self.overlay = overlay
-    end
 
     local w = (opts.size and opts.size[1]) or 950
     local h = (opts.size and opts.size[2]) or 700
