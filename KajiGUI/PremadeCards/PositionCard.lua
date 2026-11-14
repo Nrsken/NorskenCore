@@ -12,6 +12,8 @@
         onChangeCallback = Apply
     })
 
+Pass `frame` when the frame has a scale of its own, so the offset arrows step its pixel.
+
 --]]
 
 ---@class NRSKNUI
@@ -22,7 +24,8 @@ local Kaji = Core.Kaji
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
 local L = Core.L
-
+local ToTenths = Core.Pixel.ToTenths
+local PixelStepper = Core.Pixel.PixelStepper
 
 local ipairs, pairs = ipairs, pairs
 local tinsert = table.insert
@@ -47,6 +50,8 @@ Kaji.premadeCards.PositionCard = {
         local contextOptions = config.contextOptions
         local splitToggleKey = config.splitToggleKey
         local disableAnchorFrom = config.disableAnchorFrom == true
+        -- the arrows move one physical pixel of the frame, as a nudge does
+        local stepper = PixelStepper(config.frame)
 
         local keys = {
             anchorFrameType = dbKeys.anchorFrameType or "anchorFrameType",
@@ -220,20 +225,22 @@ Kaji.premadeCards.PositionCard = {
             width = 0.5,
             min = sliderRange[1],
             max = sliderRange[2],
-            step = 1,
+            step = 0.1,
+            stepper = stepper,
             value = getValue(keys.xOffset, defaults.xOffset or 0),
             labelWidth = 55,
-            callback = function(val) setValue(keys.xOffset, val) end,
+            callback = function(val) setValue(keys.xOffset, ToTenths(val)) end,
         })
 
         ySlider = row4:Slider(L["Y Offset"], {
             width = 0.5,
             min = sliderRange[1],
             max = sliderRange[2],
-            step = 1,
+            step = 0.1,
+            stepper = stepper,
             value = getValue(keys.yOffset, defaults.yOffset or 0),
             labelWidth = 55,
-            callback = function(val) setValue(keys.yOffset, val) end,
+            callback = function(val) setValue(keys.yOffset, ToTenths(val)) end,
         })
 
         if showStrata then

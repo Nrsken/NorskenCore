@@ -16,6 +16,9 @@
         end,
     })
 
+`stepper` decides where an arrow click goes when it isn't `step`: a position in tenths whose
+arrows move one physical pixel, `stepper = Pixel.PixelStepper(frame)`.
+
 --]]
 
 ---@class NRSKNUI
@@ -92,6 +95,9 @@ end
 ---@field valueContainer Frame|BackdropTemplate
 ---@field valueEdit EditBox
 ---@field _step number
+---@field _stepper? fun(value: number, direction: number): number see the config's stepper
+---@field _showMixedValue? boolean
+---@field _shownText? string what UpdateFill last put in the box
 ---@field _callback? fun(value: number)
 ---@field _callbackOnRelease? boolean
 ---@field _dragging boolean
@@ -129,8 +135,13 @@ function SliderMixin:UpdateFill()
 
     if not self._updating then
         self._updating = true
-        -- mixed has no one value to show, as WA leaves it blank
-        self.valueEdit:SetText(self._mixed and "" or tostring(floor(val * 100 + 0.5) / 100))
+        local text = tostring(floor(val * 100 + 0.5) / 100)
+        -- mixed has no one value to show, its tooltip lists them
+        if self._mixed and not self._showMixedValue then
+            text = ""
+        end
+        self._shownText = text
+        self.valueEdit:SetText(text)
         self._updating = false
     end
 end
@@ -212,8 +223,8 @@ end
 
 ---Parses the value box, clamping and wobbling on anything out of range or unparseable.
 function SliderMixin:CommitText()
-    -- clicking in and out of a mixed slider's empty box changes nothing
-    if self._mixed and self.valueEdit:GetText() == "" then return end
+    -- clicking in and out of a mixed slider's box changes nothing, blank or showing its rest
+    if self._mixed and self.valueEdit:GetText() == self._shownText then return end
 
     local num = tonumber(self.valueEdit:GetText())
     if not num then
@@ -228,6 +239,8 @@ function SliderMixin:CommitText()
     self._updating = true
     self.slider:SetValue(clamped)
     self._updating = false
+    -- the box shows what the step made of it, not what was typed
+    self:UpdateFill()
 end
 
 function SliderMixin:UpdateColors()
@@ -276,6 +289,8 @@ function SliderMixin:OnAcquire(parent, labelText, config)
 
     self.label:SetText(labelText or "")
     self._step = step
+    self._stepper = config.stepper
+    self._showMixedValue = config.showMixedValue
     self._callbackOnRelease = config.callbackOnRelease
     self._dragging = false
     self._updating = false
@@ -290,7 +305,8 @@ function SliderMixin:OnAcquire(parent, labelText, config)
     self.fillBar:SetMinMaxValues(sliderMin, sliderMax)
     self.slider:SetMinMaxValues(sliderMin, sliderMax)
     self.slider:SetValueStep(step)
-    self.slider:SetValue(not config.mixed and config.value or sliderMin) -- mixed rests at the start, unfilled
+    -- mixed rests at 0, so an arrow sets every pick one step from it, not from the minimum
+    self.slider:SetValue(not config.mixed and config.value or max(sliderMin, min(sliderMax, 0)))
     self._suppressCallback = false
     self._callback = config.callback
 
@@ -336,13 +352,15 @@ end
 ---@field min? number
 ---@field max? number
 ---@field step? number
+---@field stepper? fun(value: number, direction: number): number the value an arrow click moves to, `value ± step` by default
 ---@field value? number
 ---@field callback? fun(value: number)
 ---@field callbackOnRelease? boolean fire callback only when the drag is released
 ---@field tooltip? any
 ---@field cvartooltip? boolean
 ---@field notice? KajiGUINotice a marker after the label, see Kaji.SetNotice
----@field mixed? KajiGUIMixedEntry[] the things it edits disagree: blank and unfilled, see Kaji.SetMixed
+---@field mixed? KajiGUIMixedEntry[] the things it edits disagree: blank, resting at 0, see Kaji.SetMixed
+---@field showMixedValue? boolean a mixed box shows its resting 0 instead of a blank (offsets)
 
 Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local theme = gui.theme
@@ -469,17 +487,22 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         function(r, g, b, a) valueContainer:SetBackdropBorderColor(r, g, b, a) end,
         theme.widgetBorder, theme.accent, theme.animDuration)
 
-    leftStepper:SetScript("OnClick", function()
-        local minVal = slider:GetMinMaxValues()
-        slider:SetValue(max(minVal, slider:GetValue() - row._step))
-    end)
+    local function Step(direction)
+        local minVal, maxVal = slider:GetMinMaxValues()
+        local value = slider:GetValue()
+        if row._stepper then
+            value = row._stepper(value, direction)
+        else
+            value = value + direction * row._step
+        end
+        slider:SetValue(max(minVal, min(maxVal, value)))
+    end
+
+    leftStepper:SetScript("OnClick", function() Step(-1) end)
     leftStepper:SetScript("OnEnter", function() row._animateLeftStepper(true); Kaji.ShowTooltip(row) end)
     leftStepper:SetScript("OnLeave", function() row._animateLeftStepper(false); Kaji.HideTooltip() end)
 
-    rightStepper:SetScript("OnClick", function()
-        local _, maxVal = slider:GetMinMaxValues()
-        slider:SetValue(min(maxVal, slider:GetValue() + row._step))
-    end)
+    rightStepper:SetScript("OnClick", function() Step(1) end)
     rightStepper:SetScript("OnEnter", function() row._animateRightStepper(true); Kaji.ShowTooltip(row) end)
     rightStepper:SetScript("OnLeave", function() row._animateRightStepper(false); Kaji.HideTooltip() end)
 
