@@ -19,7 +19,8 @@ local function ApplyPosition(self, Config, setParent, extraX, extraY)
     end
 
     self:ClearAllPoints()
-    self:NCSetPoint(position.AnchorFrom or 'CENTER', parent, position.AnchorTo or 'CENTER', (position.XOffset or 0) + (extraX or 0), (position.YOffset or 0) + (extraY or 0))
+    -- an odd size centred on a point lands on half pixels
+    self:NCSetGridPoint(position.AnchorFrom or 'CENTER', parent, position.AnchorTo or 'CENTER', (position.XOffset or 0) + (extraX or 0), (position.YOffset or 0) + (extraY or 0))
     self:SetFrameStrata(Config.Strata or 'MEDIUM')
 end
 

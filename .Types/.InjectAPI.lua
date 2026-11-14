@@ -75,6 +75,7 @@ function EditBox:SetFontJustify(source, parent, offsetX, offsetY, skip, bound, f
 ---@field NCSetPoint fun(self: Frame, point: string, arg2?: any, arg3?: any, arg4?: any, arg5?: any, ...) SetPoint with numeric offsets snapped to the pixel grid
 ---@field NCSetInside fun(self: Frame, anchor?: table, xOffset?: number, yOffset?: number, anchor2?: table) Anchor inset to a frame's corners (defaults 1px)
 ---@field NCSetGridPoint fun(self: Frame, point: string, relativeTo?: Frame|string, relativePoint?: string, offsetX?: number, offsetY?: number) SetPoint but snaps the resulting edges onto the pixel grid (for anchoring to off-grid frames)
+---@field NCRefreshGridPoint fun(self: Frame) places it again where its last NCSetGridPoint put it, for after it resized
 ---@field NCDisablePixelSnap fun(self: Frame) Disable Blizzard's grid snapping / texel bias on this object
 ---@field NCAddBorders fun(self: Frame, inset: number?, keepPixelSnap: boolean?) Four 1px OVERLAY edges, inset from the frame's edges (default 0); does nothing on a frame that has them
 ---@field SetBorderLayer fun(self: Frame, layer: string, sublevel?: number) Set the draw layer of all 4 edges (e.g. 'ARTWORK', 'OVERLAY')
@@ -171,6 +172,7 @@ function Frame:NCStyleChildFontStrings(source, getSize, outline, shadow, skip, s
 ---@field NCSetPoint fun(self: Button, point: string, arg2?: any, arg3?: any, arg4?: any, arg5?: any, ...) SetPoint with numeric offsets snapped to the pixel grid
 ---@field NCSetInside fun(self: Button, anchor?: table, xOffset?: number, yOffset?: number, anchor2?: table) Anchor inset to a frame's corners (defaults 1px)
 ---@field NCSetGridPoint fun(self: Button, point: string, relativeTo?: Frame|string, relativePoint?: string, offsetX?: number, offsetY?: number) SetPoint but snaps the resulting edges onto the pixel grid (for anchoring to off-grid frames)
+---@field NCRefreshGridPoint fun(self: Button) places it again where its last NCSetGridPoint put it, for after it resized
 ---@field NCDisablePixelSnap fun(self: Button) Disable Blizzard's grid snapping / texel bias on this object
 ---@field NCStyleButton fun(self: Button, noHover?: boolean, noPushed?: boolean, noChecked?: boolean) Swap Blizzard highlight/pushed/checked art for flat additive overlays
 ---@field NCAddBorders fun(self: Button, inset: number?, keepPixelSnap: boolean?) Four 1px OVERLAY edges, inset from the frame's edges (default 0); does nothing on a frame that has them
@@ -230,6 +232,7 @@ function Button:NCApplyPosition(Config, setParent, extraX, extraY) end
 ---@field NCSetPoint fun(self: StatusBar, point: string, arg2?: any, arg3?: any, arg4?: any, arg5?: any, ...) SetPoint with numeric offsets snapped to the pixel grid
 ---@field NCSetInside fun(self: StatusBar, anchor?: table, xOffset?: number, yOffset?: number, anchor2?: table) Anchor inset to a frame's corners (defaults 1px)
 ---@field NCSetGridPoint fun(self: StatusBar, point: string, relativeTo?: Frame|string, relativePoint?: string, offsetX?: number, offsetY?: number) SetPoint but snaps the resulting edges onto the pixel grid (for anchoring to off-grid frames)
+---@field NCRefreshGridPoint fun(self: StatusBar) places it again where its last NCSetGridPoint put it, for after it resized
 ---@field NCDisablePixelSnap fun(self: StatusBar) Disable Blizzard's grid snapping / texel bias on this object
 ---@field NCAddBorders fun(self: StatusBar, inset: number?, keepPixelSnap: boolean?) Four 1px OVERLAY edges, inset from the frame's edges (default 0); does nothing on a frame that has them
 ---@field SetBorderLayer fun(self: StatusBar, layer: string, sublevel?: number) Set the draw layer of all 4 edges (e.g. 'ARTWORK', 'OVERLAY')
@@ -282,6 +285,7 @@ function StatusBar:NCApplyPosition(Config, setParent, extraX, extraY) end
 ---@field NCSetPoint fun(self: Texture, point: string, arg2?: any, arg3?: any, arg4?: any, arg5?: any, ...) SetPoint with numeric offsets snapped to the pixel grid
 ---@field NCSetInside fun(self: Texture, anchor?: table, xOffset?: number, yOffset?: number, anchor2?: table) Anchor inset to a frame's corners (defaults 1px)
 ---@field NCSetGridPoint fun(self: Texture, point: string, relativeTo?: Frame|string, relativePoint?: string, offsetX?: number, offsetY?: number) SetPoint but snaps the resulting edges onto the pixel grid (for anchoring to off-grid frames)
+---@field NCRefreshGridPoint fun(self: Texture) places it again where its last NCSetGridPoint put it, for after it resized
 ---@field NCDisablePixelSnap fun(self: Texture) Disable Blizzard's grid snapping / texel bias on this texture
 ---@field NCSetZoom fun(self: Texture, zoom?: number) Apply a zoom crop via SetTexCoord (uses NRSKNUI.GlobalZoom when omitted)
 ---@field NCStripTextures fun(self: Texture, mode?: string, arg?: string|string[]) Strip this texture (clear, or per `mode`). Same modes as the frame version.
@@ -308,6 +312,7 @@ function Texture:NCSetZoom(zoom) end
 ---@field NCSetPoint fun(self: MaskTexture, point: string, arg2?: any, arg3?: any, arg4?: any, arg5?: any, ...) SetPoint with numeric offsets snapped to the pixel grid
 ---@field NCSetInside fun(self: MaskTexture, anchor?: table, xOffset?: number, yOffset?: number, anchor2?: table) Anchor inset to a frame's corners (defaults 1px)
 ---@field NCSetGridPoint fun(self: MaskTexture, point: string, relativeTo?: Frame|string, relativePoint?: string, offsetX?: number, offsetY?: number) SetPoint but snaps the resulting edges onto the pixel grid (for anchoring to off-grid frames)
+---@field NCRefreshGridPoint fun(self: MaskTexture) places it again where its last NCSetGridPoint put it, for after it resized
 ---@field NCDisablePixelSnap fun(self: MaskTexture) Disable Blizzard's grid snapping / texel bias on this mask
 local MaskTexture
 
@@ -323,6 +328,7 @@ local Line
 ---@field NCSetPoint fun(self: FontString, point: string, arg2?: any, arg3?: any, arg4?: any, arg5?: any, ...) SetPoint with numeric offsets snapped to the pixel grid
 ---@field NCSetInside fun(self: FontString, anchor?: table, xOffset?: number, yOffset?: number, anchor2?: table) Anchor inset to a frame's corners (defaults 1px)
 ---@field NCSetGridPoint fun(self: FontString, point: string, relativeTo?: Frame|string, relativePoint?: string, offsetX?: number, offsetY?: number) SetPoint but snaps the resulting edges onto the pixel grid (for anchoring to off-grid frames)
+---@field NCRefreshGridPoint fun(self: FontString) places it again where its last NCSetGridPoint put it, for after it resized
 ---@field NCDisablePixelSnap fun(self: FontString) Disable Blizzard's grid snapping / texel bias on this object
 local FontString
 

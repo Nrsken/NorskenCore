@@ -14,6 +14,7 @@ local floor = math.floor
 local abs = math.abs
 local type = type
 local pcall = pcall
+local pairs, setmetatable = pairs, setmetatable
 
 local UIParent = UIParent
 
@@ -75,12 +76,62 @@ end
 ---Snaps a coordinate to the nearest physical pixel. At mult 1 the grid is whole units, so
 ---measured values (GetWidth after a drag) still need rounding, never early-out on mult == 1.
 ---@param value number
+---@param step number? a region's own pixel (GetStep), UIParent's by default
 ---@return number
-local function ToPixelGrid(value)
+local function ToPixelGrid(value, step)
     if value == 0 then
         return value
     end
-    return floor(value / mult + 0.5) * mult
+    step = step or mult
+    return floor(value / step + 0.5) * step
+end
+
+---Positions are stored in tenths: whole units skip pixels at most UI scales.
+---@param value number
+---@return number
+local function ToTenths(value)
+    return floor(value * 10 + 0.5) / 10
+end
+
+---@param scale number? an effective scale, nil while unreadable
+---@return number
+local function StepFor(scale)
+    if not (scale and scale > 0) then
+        return mult
+    end
+    local step = perfectPixel / scale
+    -- an unscaled region can be a float step off UIParent's scale
+    if abs(step / mult - 1) < 0.0001 then
+        return mult
+    end
+    return step
+end
+
+---One physical pixel in a region's own units: mult unless it has a scale of its own.
+---@param region Region|Frame
+---@return number
+local function GetStep(region)
+    return StepFor(Core:SafeValue(region:GetEffectiveScale()))
+end
+
+---Moves an offset by whole physical pixels, from the pixel it sits on, in tenths.
+---@param value number
+---@param pixels number
+---@param step number? the frame's pixel (GetStep), UIParent's by default
+---@return number
+local function StepOffset(value, pixels, step)
+    step = step or mult
+    -- from the tenths a slider shows, so its arrows and a nudge start on the same pixel
+    return ToTenths((floor(ToTenths(value) / step + 0.5) + pixels) * step)
+end
+
+---A slider's arrows stepping an offset one physical pixel of region, as a nudge does.
+---@param region (Region|Frame)? UIParent's pixel when nil
+---@return fun(value: number, direction: number): number
+local function PixelStepper(region)
+    return function(value, direction)
+        return StepOffset(value, direction, region and GetStep(region))
+    end
 end
 
 ---Turn off Blizzard's own grid snapping / texel bias so our pixel math is authoritative.
@@ -198,7 +249,71 @@ local POINT_FRACTION = {
     BOTTOMRIGHT = { 1, 0 },
 }
 
----Sets the point of a frame to the nearest pixel grid, snapping the resulting edges onto the pixel grid.
+-- what NCSetGridPoint placed against each region and what each one hangs from
+local WEAK_KEYS = { __mode = 'k' }
+local children = setmetatable({}, WEAK_KEYS)
+local parentOf = setmetatable({}, WEAK_KEYS)
+
+---Whether a remembered region still hangs where NCSetGridPoint put it and may move now.
+---@return boolean movable
+---@return boolean? moved placed some other way since, so it's no longer ours to move
+local function StillPlaced(object, parent, spot)
+    -- hung off secret geometry it reads back secret, this answer too
+    local secret = object:IsAnchoringSecret()
+    if not canaccessvalue(secret) or secret then return false end
+
+    local point, relativeTo, _, x, y = object:GetPoint(1)
+    if relativeTo ~= parent or point ~= spot.point then
+        return false, true
+    end
+    -- same point on the same parent but other offsets: set by hand since
+    if spot.setX and (abs(x - spot.setX) > 0.01 or abs(y - spot.setY) > 0.01) then
+        return false, true
+    end
+    if InCombatLockdown() then
+        local protected = object:IsProtected()
+        return canaccessvalue(protected) and not protected or false
+    end
+    return true
+end
+
+---Where an anchor puts a region's bottom left before its offset; nil if unreadable.
+---@param object Frame|Texture|FontString|MaskTexture
+---@param point string
+---@param relativeTo Region|Frame
+---@param relativePoint string
+---@return number? left in the object's own units
+---@return number? bottom
+---@return number? gridLeft the same spot snapped to a pixel
+---@return number? gridBottom
+---@return number? step the object's pixel, see GetStep
+local function GetAnchorBase(object, point, relativeTo, relativePoint)
+    local objF = POINT_FRACTION[point]
+    local relF = POINT_FRACTION[relativePoint]
+    local relLeft = objF and relF and Core:SafeValue(relativeTo:GetLeft())
+    local relBottom = relLeft and Core:SafeValue(relativeTo:GetBottom())
+    local relW = relBottom and Core:SafeValue(relativeTo:GetWidth())
+    local relH = relW and Core:SafeValue(relativeTo:GetHeight())
+    -- a text sized to its bounds reads secret while its text is
+    local width = relH and Core:SafeValue(object:GetWidth())
+    local height = width and Core:SafeValue(object:GetHeight())
+    if not height then return end
+
+    -- the relative frame measures in its own scale's units
+    local scale = Core:SafeValue(object:GetEffectiveScale())
+    local relScale = Core:SafeValue(relativeTo:GetEffectiveScale())
+    local convert = 1
+    if scale and relScale and scale > 0 and abs(relScale / scale - 1) >= 0.0001 then
+        convert = relScale / scale
+    end
+    local left = (relLeft + relF[1] * relW) * convert - objF[1] * width
+    local bottom = (relBottom + relF[2] * relH) * convert - objF[2] * height
+    local step = StepFor(scale)
+    -- ties go up: an odd size centred lands on .5 and size readback noise would pick the side
+    return left, bottom, floor(left / step + 0.51) * step, floor(bottom / step + 0.51) * step, step
+end
+
+---Sets the point of a frame so its edges land on the pixel grid.
 ---@param object Frame|Texture|FontString|MaskTexture
 ---@param point string
 ---@param relativeTo Frame|Texture|FontString|MaskTexture|string? Anchor frame or its global name. Defaults to the object's parent.
@@ -206,34 +321,72 @@ local POINT_FRACTION = {
 ---@param offsetX number? Defaults to 0.
 ---@param offsetY number? Defaults to 0.
 local function SetGridPoint(object, point, relativeTo, relativePoint, offsetX, offsetY)
-    if type(relativeTo) == 'string' then relativeTo = _G[relativeTo] end
+    if type(relativeTo) == 'string' then
+        relativeTo = _G[relativeTo]
+    end
     relativeTo = relativeTo or object:GetParent()
     relativePoint = relativePoint or point
     offsetX = offsetX or 0
     offsetY = offsetY or 0
 
-    local objF = POINT_FRACTION[point]
-    local relF = POINT_FRACTION[relativePoint]
+    -- remembered, so moving the parent later places this again
+    local previous = parentOf[object]
+    if previous and previous ~= relativeTo and children[previous] then
+        children[previous][object] = nil
+    end
+    parentOf[object] = relativeTo
+    local siblings = children[relativeTo] or setmetatable({}, WEAK_KEYS)
+    children[relativeTo] = siblings
+    local spot = siblings[object] or {}
+    siblings[object] = spot
+    spot.point, spot.relativePoint, spot.x, spot.y = point, relativePoint, offsetX, offsetY
+    spot.width, spot.height = Core:SafeValue(object:GetWidth()), Core:SafeValue(object:GetHeight())
 
-    local relLeft = objF and relF and Core:SafeValue(relativeTo:GetLeft())
-    local relBottom = relLeft and Core:SafeValue(relativeTo:GetBottom())
-    local relW = relBottom and Core:SafeValue(relativeTo:GetWidth())
-    local relH = relW and Core:SafeValue(relativeTo:GetHeight())
-
-    -- Unknown point or secret/unlaid-out geometry, fall back to a plain offset-rounded placement.
-    if not relH then
+    -- unknown point or secret or unlaid-out geometry: only the offsets get rounded
+    local baseLeft, baseBottom, gridLeft, gridBottom, step = GetAnchorBase(object, point, relativeTo, relativePoint)
+    if baseLeft and baseBottom and gridLeft and gridBottom then
+        -- snapped apart: in the sum an offset's float noise picks which way a .5 rounds
+        local x = gridLeft - baseLeft + ToPixelGrid(offsetX, step)
+        local y = gridBottom - baseBottom + ToPixelGrid(offsetY, step)
+        object:SetPoint(point, relativeTo, relativePoint, x, y)
+        spot.setX, spot.setY = x, y
+    else
         SetPixelPoint(object, point, relativeTo, relativePoint, offsetX, offsetY)
-        return
+        spot.setX, spot.setY = nil, nil
     end
 
-    -- Where the object's bottom-left lands with this anchor, derived from the relative frame's geometry.
-    local objLeft = relLeft + relF[1] * relW - objF[1] * object:GetWidth() + offsetX
-    local objBottom = relBottom + relF[2] * relH - objF[2] * object:GetHeight() + offsetY
+    -- each child's snap was worked out against where this was
+    local own = children[object]
+    if not own then return end
 
-    -- Correction pulling that edge onto the nearest grid line.
-    local dx = floor(objLeft / mult + 0.5) * mult - objLeft
-    local dy = floor(objBottom / mult + 0.5) * mult - objBottom
-    object:SetPoint(point, relativeTo, relativePoint, offsetX + dx, offsetY + dy)
+    for child, childSpot in pairs(own) do
+        local movable, moved = StillPlaced(child, object, childSpot)
+        if moved then
+            own[child] = nil
+        elseif movable then
+            SetGridPoint(child, childSpot.point, object, childSpot.relativePoint, childSpot.x, childSpot.y)
+        end
+    end
+end
+
+---Places a region again where its last NCSetGridPoint put it, for after it resized.
+---Does nothing while its size is the one it was placed at.
+---@param object Frame|Texture|FontString|MaskTexture
+local function RefreshGridPoint(object)
+    local parent = parentOf[object]
+    local spot = parent and children[parent] and children[parent][object]
+    if not spot then return end
+
+    local width, height = Core:SafeValue(object:GetWidth()), Core:SafeValue(object:GetHeight())
+    if width and width == spot.width and height == spot.height then return end
+
+    local movable, moved = StillPlaced(object, parent, spot)
+    if moved then
+        children[parent][object] = nil
+    end
+    if not movable then return end
+
+    SetGridPoint(object, spot.point, parent, spot.relativePoint, spot.x, spot.y)
 end
 
 -- what InjectAPI puts on every region as the NC methods
@@ -245,9 +398,16 @@ methods.NCSetHeight = SetPixelHeight
 methods.NCSetPoint = SetPixelPoint
 methods.NCSetInside = SetPixelInside
 methods.NCSetGridPoint = SetGridPoint
+methods.NCRefreshGridPoint = RefreshGridPoint
 
 -- the grid values and number maths; placing a region goes through the NC methods
 Pixel.ToPixelGrid = ToPixelGrid
+Pixel.GetStep = GetStep
+Pixel.ToTenths = ToTenths
+Pixel.StepOffset = StepOffset
+Pixel.PixelStepper = PixelStepper
 Pixel.GetMult = GetMult
 Pixel.GetPerfectPixel = GetPerfectPixel
 Pixel.GetBestPixelSize = GetBestPixelSize
+Pixel.POINT_FRACTION = POINT_FRACTION
+Pixel.GetAnchorBase = GetAnchorBase

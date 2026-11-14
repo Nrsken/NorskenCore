@@ -274,6 +274,8 @@ local function PositionChildren(group)
     end
 
     group:NCSetSize(max(width, Default(config.MinWidth, 1)), max(height, Default(config.MinHeight, 1)))
+    -- the grid snap was worked out for the old size
+    group:NCRefreshGridPoint()
 end
 
 ---Run a full layout pass and sort active children, compute positions and apply them.
@@ -642,9 +644,9 @@ function GroupMixin:UpdateGroupPosition(source, grow, extraX, extraY)
     parent = parent or UIParent
 
     local point = posConfig.SelfPoint or self:GetResolvedAnchor(grow or source.Grow)
-
+    local x, y = (posConfig.XOffset or 0) + (extraX or 0), (posConfig.YOffset or 0) + (extraY or 0)
     self:ClearAllPoints()
-    self:NCSetPoint(point, parent, posConfig.AnchorTo or 'CENTER', (posConfig.XOffset or 0) + (extraX or 0), (posConfig.YOffset or 0) + (extraY or 0))
+    self:NCSetGridPoint(point, parent, posConfig.AnchorTo or 'CENTER', x, y)
     self:SetFrameStrata(source.Strata or 'MEDIUM')
 end
 
