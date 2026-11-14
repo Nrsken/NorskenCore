@@ -177,48 +177,6 @@ local function CalculateDialogSize(opts, textHeight)
     return width, height
 end
 
-local function CreateDialogBase(theme, opts, textHeight)
-    local width, height = CalculateDialogSize(opts, textHeight)
-    local dialog = CreateFrame('Frame', nil, UIParent, 'BackdropTemplate')
-    dialog:SetSize(width, height)
-    dialog:SetPoint('CENTER', UIParent, 'CENTER', 0, 350)
-    dialog:SetFrameStrata('FULLSCREEN_DIALOG') -- below TOOLTIP so its own button tooltips draw on top
-    dialog:SetFrameLevel(100)
-    dialog:EnableMouse(true)
-    dialog:SetMovable(true)
-    dialog:RegisterForDrag('LeftButton')
-    dialog:SetScript('OnDragStart', dialog.StartMoving)
-    dialog:SetScript('OnDragStop', dialog.StopMovingOrSizing)
-    dialog:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
-    dialog:SetBackdropColor(theme.bgLight[1], theme.bgLight[2], theme.bgLight[3], theme.bgLight[4] or 1)
-    dialog:SetBackdropBorderColor(theme.border[1], theme.border[2], theme.border[3], 1)
-    return dialog
-end
-
-local function CreateDialogHeader(gui, dialog, title)
-    local theme = gui.theme
-    local header = CreateFrame('Frame', nil, dialog, 'BackdropTemplate')
-    header:SetHeight(HEADER_HEIGHT)
-    header:SetPoint('TOPLEFT', dialog, 'TOPLEFT', 1, -1)
-    header:SetPoint('TOPRIGHT', dialog, 'TOPRIGHT', -1, -1)
-    header:SetBackdrop({ bgFile = WHITE })
-    header:SetBackdropColor(theme.bgMedium[1], theme.bgMedium[2], theme.bgMedium[3], 1)
-
-    local bottomBorder = header:CreateTexture(nil, 'BORDER')
-    bottomBorder:SetHeight(theme.borderSize or 1)
-    bottomBorder:SetPoint('BOTTOMLEFT', header, 'BOTTOMLEFT', 0, 0)
-    bottomBorder:SetPoint('BOTTOMRIGHT', header, 'BOTTOMRIGHT', 0, 0)
-    bottomBorder:SetColorTexture(theme.border[1], theme.border[2], theme.border[3], theme.border[4] or 1)
-
-    local titleLabel = header:CreateFontString(nil, 'OVERLAY')
-    titleLabel:SetPoint('CENTER', header, 'CENTER', 0, 0)
-    gui:ApplyFont(titleLabel, 'large')
-    titleLabel:SetText(title or L['Confirm'])
-    titleLabel:SetTextColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
-
-    return header
-end
-
 local function CreateHeaderTexture(gui, header, opts)
     if not opts.texture then return end
     local tex = opts.texture
@@ -293,14 +251,45 @@ function InstanceMixin:Prompt(opts)
         textHeight = MeasureTextHeight(self, opts.text, textWidth, 'normal')
     end
 
-    local dialog = CreateDialogBase(theme, opts, textHeight)
-    -- Built fresh per prompt, so the popup edge and shadow are painted once rather than subscribed.
+    local width, height = CalculateDialogSize(opts, textHeight)
+    local dialog = CreateFrame('Frame', nil, UIParent, 'BackdropTemplate')
+    dialog:NCSetSize(width, height)
+    dialog:NCSetGridPoint('CENTER', UIParent, 'CENTER', 0, 350)
+    dialog:SetFrameStrata('FULLSCREEN_DIALOG') -- below TOOLTIP so its own button tooltips draw on top
+    dialog:SetFrameLevel(100)
+    dialog:EnableMouse(true)
+    dialog:SetMovable(true)
+    dialog:RegisterForDrag('LeftButton')
+    dialog:SetScript('OnDragStart', dialog.StartMoving)
+    dialog:SetScript('OnDragStop', dialog.StopMovingOrSizing)
+    dialog:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+    dialog:SetBackdropColor(theme.bgLight[1], theme.bgLight[2], theme.bgLight[3], theme.bgLight[4] or 1)
+    dialog:SetBackdropBorderColor(theme.border[1], theme.border[2], theme.border[3], 1)
+    -- built fresh per prompt, so the edge and shadow are painted once, not subscribed
     Kaji.StylePopup(dialog, self)()
-    local header = CreateDialogHeader(self, dialog, opts.title)
+
+    local header = CreateFrame('Frame', nil, dialog, 'BackdropTemplate')
+    header:NCSetHeight(HEADER_HEIGHT)
+    header:SetPoint('TOPLEFT', dialog, 'TOPLEFT', 1, -1)
+    header:SetPoint('TOPRIGHT', dialog, 'TOPRIGHT', -1, -1)
+    header:SetBackdrop({ bgFile = WHITE })
+    header:SetBackdropColor(theme.bgMedium[1], theme.bgMedium[2], theme.bgMedium[3], 1)
+
+    local bottomBorder = header:CreateTexture(nil, 'BORDER')
+    bottomBorder:SetHeight(theme.borderSize or 1)
+    bottomBorder:SetPoint('BOTTOMLEFT', header, 'BOTTOMLEFT', 0, 0)
+    bottomBorder:SetPoint('BOTTOMRIGHT', header, 'BOTTOMRIGHT', 0, 0)
+    bottomBorder:SetColorTexture(theme.border[1], theme.border[2], theme.border[3], theme.border[4] or 1)
+
+    local titleLabel = header:CreateFontString(nil, 'OVERLAY')
+    titleLabel:SetPoint('CENTER', header, 'CENTER', 0, 0)
+    self:ApplyFont(titleLabel, 'large')
+    titleLabel:SetText(opts.title or L['Confirm'])
+    titleLabel:SetTextColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
 
     local function CloseDialog()
         dialog:Hide()
-        -- onAccept may have opened the next prompt already, and that one is still open
+        -- onAccept may already have opened the next prompt
         if self._activePrompt == dialog then
             self._activePrompt = nil
         end
