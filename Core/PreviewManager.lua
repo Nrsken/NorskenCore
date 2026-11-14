@@ -55,12 +55,27 @@ local function ResolvePage(addon, pageId, into)
     end
 end
 
----Fill `into` with every module that can preview.
+---Whether a module has an anchor listed under an anchors Show group.
+---@param addon table
+---@param module table
+---@param group string
+---@return boolean
+local function InShowGroup(addon, module, group)
+    for _, entry in pairs(Core.Anchors.registry) do
+        if entry.addon == addon and entry.module == module and entry.groups and entry.groups[group] then
+            return true
+        end
+    end
+    return false
+end
+
+---Fill `into` with every module that can preview; with a Show group only those it lists.
 ---@param addon table
 ---@param into table module -> true
-local function ResolveAll(addon, into)
+---@param group string?
+local function ResolveAll(addon, into, group)
     for _, module in addon:IterateModules() do
-        if IsPreviewable(module) then
+        if IsPreviewable(module) and (not group or InShowGroup(addon, module, group)) then
             into[module] = true
         end
     end
@@ -76,10 +91,11 @@ end
 ---only changed page from one that also changed between the everything view and a single page.
 ---@param scope string|boolean|nil the page it previews for or true for the everything view alone
 ---@param showAll boolean
+---@param group string? the anchors Show group
 ---@return string?
-local function ScopeKey(scope, showAll)
+local function ScopeKey(scope, showAll, group)
     if scope == nil then return nil end
-    return (showAll and 'all:' or 'page:') .. tostring(scope)
+    return (showAll and 'all:' or 'page:') .. tostring(scope) .. ':' .. (group or '')
 end
 
 ---Bring the previews in line with the current state: stop what is leaving, start what is arriving and
@@ -88,21 +104,34 @@ function PreviewManager:Refresh()
     local wanted = {}
     local whole = {} -- module -> true, previewing as in the everything view on its own
     local showAll = false
+    -- the Show group anchors mode is narrowed to, nil while it shows everything
+    local group
+    if self.anchorsActive and not self.anchorsModule then
+        group = Core:GetAnchorsSettings().Show[self.addon.shortName]
+        if group == 'all' then
+            group = nil
+        end
+    end
 
     if (self.guiOpen or self.anchorsActive) and not self.hidden then
         showAll = self:ShouldShowAll()
 
         -- The everything view is a superset rather than a replacement: the open page still hands its
         -- module the page id, so a module that shows extra for its own page keeps showing it.
-        if showAll then ResolveAll(self.addon, wanted) end
-        ResolvePage(self.addon, self.currentPage, wanted)
+        if showAll then
+            ResolveAll(self.addon, wanted, group)
+        end
+        -- the window put away behind a Show group's anchors doesn't add its page's module
+        if not group then
+            ResolvePage(self.addon, self.currentPage, wanted)
+        end
 
         -- a module pinned from its header or opened in the anchors view previews whole, as in the
         -- everything view, while keeping its page so it still shows what that page adds
         for module, on in pairs(self.overrides) do
             if not on then
                 wanted[module] = nil
-            elseif IsPreviewable(module) then
+            elseif IsPreviewable(module) and (not group or InShowGroup(self.addon, module, group)) then
                 wanted[module] = wanted[module] or true
                 whole[module] = true
             end
@@ -121,12 +150,12 @@ function PreviewManager:Refresh()
     -- place when it has one; without, it's dropped and told again below to preview the right part of itself.
     for module, key in pairs(active) do
         local scope = wanted[module]
-        local newKey = ScopeKey(scope, showAll or whole[module] == true)
+        local newKey = ScopeKey(scope, showAll or whole[module] == true, group)
         if newKey ~= key then
             if scope ~= nil and not module.previewScoped then
                 active[module] = newKey
             elseif scope ~= nil and module.UpdatePreviewScope then
-                module:UpdatePreviewScope(scope ~= true and scope or nil, showAll or whole[module] == true)
+                module:UpdatePreviewScope(scope ~= true and scope or nil, showAll or whole[module] == true, group)
                 active[module] = newKey
             else
                 module:HidePreview()
@@ -138,8 +167,8 @@ function PreviewManager:Refresh()
     for module, scope in pairs(wanted) do
         if active[module] == nil then
             local all = showAll or whole[module] == true
-            module:ShowPreview(scope ~= true and scope or nil, all)
-            active[module] = ScopeKey(scope, all)
+            module:ShowPreview(scope ~= true and scope or nil, all, group)
+            active[module] = ScopeKey(scope, all, group)
         end
     end
 

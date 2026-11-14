@@ -207,6 +207,7 @@ L['Discord'] = true
 L['GitHub'] = true
 L['Close Settings'] = true
 L['Open Anchors'] = true
+L['Toggle Grid'] = true
 L['Preview Every Display'] = true
 L['Toggle Anchors'] = true
 L['Join My %s'] = true

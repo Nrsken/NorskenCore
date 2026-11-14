@@ -128,8 +128,21 @@ local defaults = {
     },
 }
 
-local sharedDB
+local sharedDB, anchorsDB
 local hadSavedValues
+
+-- own namespace, never exported with the shared settings
+local anchorsDefaults = {
+    global = {
+        Grid = false,
+        Snap = true,
+        ArrowKeys = true,     -- anchors mode
+        BoxArrowKeys = false, -- the box, up as long as its window
+        Help = false,         -- the panel's keys card
+        Show = {},   -- the Show group picked, per addon
+        Panels = {}, -- where each addon's panel was left
+    },
+}
 
 -- what's built from the settings, rebuilt whenever they change under it
 local function Rebuild()
@@ -143,12 +156,18 @@ function Core.Ace:OnInitialize()
     local saved = _G.NorskenCoreDB
     hadSavedValues = saved ~= nil and saved.global ~= nil and next(saved.global) ~= nil
     sharedDB = LibStub('AceDB-3.0'):New('NorskenCoreDB', defaults, true)
+    anchorsDB = sharedDB:RegisterNamespace('Anchors', anchorsDefaults)
     Rebuild()
 end
 
 ---@return NRSKNUI.SharedSettings shared
 function Core:GetSharedSettings()
     return sharedDB.global
+end
+
+---@return table
+function Core:GetAnchorsSettings()
+    return anchorsDB.global
 end
 
 -- a drag in the shared pages calls in many times a second, re-applying every addon on each one drops frames

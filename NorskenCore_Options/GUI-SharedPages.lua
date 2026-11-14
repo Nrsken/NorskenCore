@@ -56,18 +56,21 @@ function Shared:WelcomeCard(page, addon, title, lines)
     return card
 end
 
----Toggle Anchors and Reload UI, the welcome card's last row.
+---Toggle Anchors (when it has them) and Reload UI, the welcome card's last row.
 ---@param card table
 ---@param addon table
 function Shared:QuickActions(card, addon)
     card:Separator()
     local row = card:Row(QUICK_ACTION_HEIGHT)
-    row:Button(L['Toggle Anchors'], {
-        width = 0.5,
-        height = QUICK_ACTION_HEIGHT,
-        callback = function() addon.Anchors:Toggle() end,
-    })
-    row:Button(L['Reload UI'], { width = 0.5, height = QUICK_ACTION_HEIGHT, callback = ReloadUI })
+    local hasAnchors = not addon.Anchors.boxOnly
+    if hasAnchors then
+        row:Button(L['Toggle Anchors'], {
+            width = 0.5,
+            height = QUICK_ACTION_HEIGHT,
+            callback = function() addon.Anchors:Toggle() end,
+        })
+    end
+    row:Button(L['Reload UI'], { width = hasAnchors and 0.5 or 1, height = QUICK_ACTION_HEIGHT, callback = ReloadUI })
 end
 
 -- Support links --
@@ -782,12 +785,13 @@ local HEADER_TOOLTIPS = {
     home = L['Open Home Page'],
     global = L['Open Global Settings'],
     anchors = L['Open Anchors'],
+    grid = L['Toggle Grid'],
     theme = L['Open Theme Settings'],
     preview = L['Preview Every Display'],
 }
 
 ---A window header button both addons have, for AddHeaderButton.
----@param name 'close'|'home'|'global'|'anchors'|'theme'|'preview'
+---@param name 'close'|'home'|'global'|'anchors'|'grid'|'theme'|'preview'
 ---@param onClick fun(button: any) the header button, SetActive marks a toggle on
 ---@return table
 function Shared:HeaderButton(name, onClick)

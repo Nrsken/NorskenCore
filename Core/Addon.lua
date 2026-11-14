@@ -189,7 +189,14 @@ end
 
 -- what every addon's slash command answers to; anything else, nothing included, toggles the window
 local COMMANDS = {
-    anchors = function(addon) addon.Anchors:Toggle() end,
+    anchors = function(addon)
+        -- moved in its own window
+        if addon.Anchors.boxOnly then
+            addon:ToggleOptions()
+        else
+            addon.Anchors:Toggle()
+        end
+    end,
     reset = function(addon) addon:ResetGUIState() end,
 }
 
@@ -242,7 +249,7 @@ function Core:RegisterLauncher(db)
         OnClick = function(_, button)
             if button == 'LeftButton' then
                 addon:ToggleOptions()
-            elseif button == 'RightButton' then
+            elseif button == 'RightButton' and not addon.Anchors.boxOnly then
                 addon.Anchors:Toggle()
             elseif button == 'MiddleButton' then
                 addon:ResetGUIState()
@@ -251,7 +258,9 @@ function Core:RegisterLauncher(db)
         OnTooltipShow = function(tooltip)
             tooltip:AddLine(addon:GetTitle())
             tooltip:AddLine(L['Left-Click to open options'], 0.70, 0.70, 0.70)
-            tooltip:AddLine(L['Right-Click to toggle anchors'], 0.70, 0.70, 0.70)
+            if not addon.Anchors.boxOnly then
+                tooltip:AddLine(L['Right-Click to toggle anchors'], 0.70, 0.70, 0.70)
+            end
             tooltip:AddLine(L['Middle-Click to reset the options window position'], 0.70, 0.70, 0.70)
         end,
     }
