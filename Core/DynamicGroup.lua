@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 
 local tinsert, tremove, tsort = table.insert, table.remove, table.sort
@@ -12,11 +12,11 @@ local error = error
 local Mixin = Mixin
 local wipe = wipe
 
----@class NRSKNUI.DynamicGroup
----@field onLayout fun(group: NRSKNUI.DynamicGroup)? runs after every layout pass
+---@class NorskenCore.DynamicGroup
+---@field onLayout fun(group: NorskenCore.DynamicGroup)? runs after every layout pass
 local GroupMixin = {}
 
----@type table<string, NRSKNUI.DynamicGroupGrower>
+---@type table<string, NorskenCore.DynamicGroupGrower>
 local growers = {}
 
 local GROW_POINTS = {
@@ -50,7 +50,7 @@ end
 
 ---Resolve the anchor point for a grow type and config.
 ---@param grow string
----@return fun(config: NRSKNUI.DynamicGroupConfig): string
+---@return fun(config: NorskenCore.DynamicGroupConfig): string
 local function ResolveAlignPoint(grow)
     return function(config)
         local points = GROW_POINTS[grow]
@@ -60,7 +60,7 @@ end
 
 ---Returns a closure that computes positions for a linear grow direction.
 ---@param dir { horizontal: boolean, sign: number }
----@return fun(config: NRSKNUI.DynamicGroupConfig): fun(positions: table, active: table, numVisible: number): (number, number)
+---@return fun(config: NorskenCore.DynamicGroupConfig): fun(positions: table, active: table, numVisible: number): (number, number)
 local function LinearFactory(dir)
     return function(config)
         local spacing = Default(config.Spacing, 1)
@@ -87,7 +87,7 @@ end
 
 ---Returns a closure that computes positions for a centered grow direction.
 ---@param horizontal boolean
----@return fun(config: NRSKNUI.DynamicGroupConfig): fun(positions: table, active: table, numVisible: number): (number, number)
+---@return fun(config: NorskenCore.DynamicGroupConfig): fun(positions: table, active: table, numVisible: number): (number, number)
 local function CenteredFactory(horizontal)
     return function(config)
         local spacing = Default(config.Spacing, 1)
@@ -137,7 +137,7 @@ function Core:ParseGridType(gridType)
 end
 
 ---Returns a closure that computes positions for a grid layout.
----@param config NRSKNUI.DynamicGroupConfig
+---@param config NorskenCore.DynamicGroupConfig
 ---@return fun(positions: table, active: table, numVisible: number): (number, number)
 local function GridFactory(config)
     local spacing = Default(config.Spacing, 1)
@@ -209,16 +209,23 @@ growers.GRID = {
 
 ---Register a custom grow type entry.
 ---@param growType string
----@param entry NRSKNUI.DynamicGroupGrower
+---@param entry NorskenCore.DynamicGroupGrower
 function Core:RegisterDynamicGroupGrower(growType, entry)
     growers[growType] = entry
+end
+
+---Whether a grow type has a grower, built in or registered
+---@param growType any a saved value, so maybe not a string
+---@return boolean
+function Core:HasDynamicGroupGrower(growType)
+    return growType ~= nil and growers[growType] ~= nil
 end
 
 -- Sorting --
 
 ---Sort by order, then attach index.
----@param a NRSKNUI.DynamicGroupChildRecord
----@param b NRSKNUI.DynamicGroupChildRecord
+---@param a NorskenCore.DynamicGroupChildRecord
+---@param b NorskenCore.DynamicGroupChildRecord
 ---@return boolean
 local function DefaultCompare(a, b)
     if a.order ~= b.order then
@@ -228,8 +235,8 @@ local function DefaultCompare(a, b)
 end
 
 ---Wrap a user-provided comparator to ensure deterministic results.
----@param fn fun(a: NRSKNUI.DynamicGroupChildRecord, b: NRSKNUI.DynamicGroupChildRecord): boolean?
----@return fun(a: NRSKNUI.DynamicGroupChildRecord, b: NRSKNUI.DynamicGroupChildRecord): boolean
+---@param fn fun(a: NorskenCore.DynamicGroupChildRecord, b: NorskenCore.DynamicGroupChildRecord): boolean?
+---@return fun(a: NorskenCore.DynamicGroupChildRecord, b: NorskenCore.DynamicGroupChildRecord): boolean
 local function WrapComparator(fn)
     return function(a, b)
         if fn(a, b) then
@@ -245,7 +252,7 @@ end
 -- Layout pipeline --
 
 ---Position all active children according to the current grow closure and config.
----@param group NRSKNUI.DynamicGroup
+---@param group NorskenCore.DynamicGroup
 local function PositionChildren(group)
     local config = group._config
     local numVisible = #group._active
@@ -279,7 +286,7 @@ local function PositionChildren(group)
 end
 
 ---Run a full layout pass and sort active children, compute positions and apply them.
----@param group NRSKNUI.DynamicGroup
+---@param group NorskenCore.DynamicGroup
 local function RunLayout(group)
     if group._needSort then
         tsort(group._active, group._comparator or DefaultCompare)
@@ -291,7 +298,7 @@ local function RunLayout(group)
 end
 
 ---Request a layout pass, either immediately or via the scheduled update if available.
----@param group NRSKNUI.DynamicGroup
+---@param group NorskenCore.DynamicGroup
 local function RequestLayout(group)
     if group.NCScheduleUpdate then
         group:NCScheduleUpdate()
@@ -301,7 +308,7 @@ local function RequestLayout(group)
 end
 
 ---Mark the group as needing layout.
----@param group NRSKNUI.DynamicGroup
+---@param group NorskenCore.DynamicGroup
 ---@param needSort boolean?
 local function MarkDirty(group, needSort)
     -- If the group is already marked as needing layout, we don't need to do anything.
@@ -319,9 +326,9 @@ local function MarkDirty(group, needSort)
 end
 
 ---Resolve a child record by child frame or keyed handle.
----@param group NRSKNUI.DynamicGroup
+---@param group NorskenCore.DynamicGroup
 ---@param childOrKey Frame|string
----@return NRSKNUI.DynamicGroupChildRecord?
+---@return NorskenCore.DynamicGroupChildRecord?
 local function ResolveRecord(group, childOrKey)
     if type(childOrKey) == 'table' then
         return group._byChild[childOrKey]
@@ -497,14 +504,14 @@ function GroupMixin:NotifyChildResized(childOrKey, w, h)
 end
 
 ---Set a custom comparator function for sorting active children.
----@param fn? fun(a: NRSKNUI.DynamicGroupChildRecord, b: NRSKNUI.DynamicGroupChildRecord): boolean?
+---@param fn? fun(a: NorskenCore.DynamicGroupChildRecord, b: NorskenCore.DynamicGroupChildRecord): boolean?
 function GroupMixin:SetSortComparator(fn)
     self._comparator = fn and WrapComparator(fn) or nil
     MarkDirty(self, true)
 end
 
 ---Set the layout configuration for the group.
----@param config NRSKNUI.DynamicGroupConfig
+---@param config NorskenCore.DynamicGroupConfig
 function GroupMixin:SetConfig(config)
     config = config or {}
     self._config = config
@@ -557,7 +564,7 @@ function GroupMixin:Resume()
 end
 
 ---Iterate all active children in attach order: i, child, record.
----@return fun(): number?, Frame?, NRSKNUI.DynamicGroupChildRecord?
+---@return fun(): number?, Frame?, NorskenCore.DynamicGroupChildRecord?
 function GroupMixin:IterateActive()
     local i = 0
     return function()
@@ -570,7 +577,7 @@ function GroupMixin:IterateActive()
 end
 
 ---Iterate all attached children in attach order: i, child, record.
----@return fun(): number?, Frame?, NRSKNUI.DynamicGroupChildRecord?
+---@return fun(): number?, Frame?, NorskenCore.DynamicGroupChildRecord?
 function GroupMixin:IterateChildren()
     local i = 0
     return function()
@@ -655,10 +662,10 @@ end
 ---Create a new DynamicGroup frame with optional name, parent and configuration.
 ---@param name? string global frame name
 ---@param parent? Frame defaults to UIParent
----@param config? NRSKNUI.DynamicGroupConfig
----@return NRSKNUI.DynamicGroup
+---@param config? NorskenCore.DynamicGroupConfig
+---@return NorskenCore.DynamicGroup
 function Core:CreateDynamicGroup(name, parent, config)
-    ---@class NRSKNUI.DynamicGroup
+    ---@class NorskenCore.DynamicGroup
     local group = CreateFrame('Frame', name, parent or UIParent)
     Mixin(group, GroupMixin)
 
