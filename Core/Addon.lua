@@ -1,11 +1,11 @@
----@class NRSKNUI
+---@class NorskenCore
 ---@field name string the addon's folder name, set by AceAddon
 ---@field GUI KajiGUIInstance
 ---@field Theme KajiTheme
 ---@field shortName string what follows Norsken in the addon's name, `UI` for NorskenUI
 ---@field Version string the TOC version, Development Version for a dev checkout
----@field Anchors NRSKNUI.Anchors this addon's handle on the shared anchor system
----@field PreviewManager NRSKNUI.PreviewManager
+---@field Anchors NorskenCore.Anchors this addon's handle on the shared anchor system
+---@field PreviewManager NorskenCore.PreviewManager
 ---@field launcherDB table? the minimap button's saved table, once RegisterLauncher ran
 local Core = select(2, ...)
 local L = Core.L
@@ -16,7 +16,7 @@ local InCombatLockdown = InCombatLockdown
 local UnitGUID = UnitGUID
 local format = string.format
 local tostring = tostring
-local ipairs = ipairs
+local ipairs, pairs = ipairs, pairs
 local print = print
 local strtrim, strlower = strtrim, strlower
 local SlashCmdList = SlashCmdList
@@ -222,9 +222,24 @@ function Core:RegisterCommands(slashes, own)
     end
 end
 
+---The addon's section in the game's Keybindings list, titled as the addon list titles it.
+---Its Bindings.xml names the section with category="BINDING_HEADER_<ADDON NAME>".
+---@param labels table<string, string> binding name -> the locale key of what the list calls it
+function Core:RegisterBindings(labels)
+    -- the list reads these on our ADDON_LOADED, which can come before the language is set
+    _G['BINDING_HEADER_' .. self.name:upper()] = GetAddOnMetadata(self.name, 'Title')
+    local function Name()
+        for name, key in pairs(labels) do
+            _G['BINDING_NAME_' .. name] = L[key]
+        end
+    end
+    Name()
+    self:OnLanguageSet(Name)
+end
+
 -- Launcher --
 
----Minimap button and broker launcher, with the TOC's icon tinted in the theme accent. Called again with
+---Minimap button and broker launcher: the Norsken mark in the accent. Called again with
 ---another table (a profile switch), it moves the button onto that one.
 ---@param db table where the button keeps its position and hidden state
 function Core:RegisterLauncher(db)
@@ -242,7 +257,7 @@ function Core:RegisterLauncher(db)
     local data = {
         type = 'launcher',
         text = self.name,
-        icon = GetAddOnMetadata(self.name, 'IconTexture') --[[@as string]], -- every Norsken TOC has one
+        icon = Core.Media.Logo,
         iconR = accent[1],
         iconG = accent[2],
         iconB = accent[3],
@@ -267,6 +282,11 @@ function Core:RegisterLauncher(db)
     local launcher = LibStub('LibDataBroker-1.1'):NewDataObject(self.name, data)
     ---@cast db LibDBIcon.button.DB
     LDBIcon:Register(self.name, launcher, db)
+
+    -- each field set recolours the button
+    self.GUI:OnThemeChanged(function(theme)
+        launcher.iconR, launcher.iconG, launcher.iconB = theme.accent[1], theme.accent[2], theme.accent[3]
+    end)
 end
 
 ---@param hidden boolean

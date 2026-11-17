@@ -1,6 +1,7 @@
 -- English enUS and enGB localization file.
 local L = select(2, ...):NewLocale('enUS')
 
+L['Back'] = true
 L['Class Color'] = true
 L['Custom Color'] = true
 L['Theme Color'] = true
@@ -423,6 +424,8 @@ L['%s is version %s but %s is %s, update both.'] = true
 L['GUI position and size reset to defaults.'] = true
 L['Options will open after combat ends.'] = true
 L['Left-Click to open options'] = true
+L['Toggle Options'] = true
+L['Toggle Anchors'] = true
 L['Middle-Click to reset the options window position'] = true
 L['Right-Click to toggle anchors'] = true
 L['Development Version'] = true
