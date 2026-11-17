@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class RestrictedModule
 local Restricted = Core.Ace:NewModule('Restricted', 'AceEvent-3.0')

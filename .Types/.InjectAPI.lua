@@ -98,6 +98,8 @@ local Frame
 ---@field AddSlot fun(self: NUIAuraContainer, filter: string, options: table?): table?, string, number
 ---@field SetSlotShown fun(self: NUIAuraContainer, index: number, shown: boolean)
 ---@field SetSlotCandidates fun(self: NUIAuraContainer, index: number, candidateFilters: table?)
+---@field SetSlotFilterString fun(self: NUIAuraContainer, index: number, filter: string)
+---@field StopUnitGate fun(self: NUIAuraContainer)
 ---@field AddFilteredGroup fun(self: NUIAuraContainer, trigger: table?, options: table?): string[]
 ---@field ReapplyFilters fun(self: NUIAuraContainer)
 ---@field RebindFilteredGroups fun(self: NUIAuraContainer, trigger: table?)

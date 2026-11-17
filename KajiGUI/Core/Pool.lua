@@ -41,7 +41,7 @@ recycled it. Capture a generation guard instead:
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji

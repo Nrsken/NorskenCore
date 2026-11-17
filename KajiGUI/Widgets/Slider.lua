@@ -21,7 +21,7 @@ arrows move one physical pixel, `stepper = Pixel.PixelStepper(frame)`.
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji

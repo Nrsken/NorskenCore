@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = _G.NorskenCore
 local Shared = Core.GUISharedPages
 local L = Core.L

@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 
 Core.MELEE_RANGE_ABILITIES = {
@@ -136,7 +136,7 @@ Core.PET_CLASSES = {
 
 -- Character Panel Constants
 
----@class NRSKNUI.ItemSlotInfo
+---@class NorskenCore.ItemSlotInfo
 ---@field slot number
 ---@field frame Frame & { NUITrackOverlay: Frame? }
 ---@field rightColumn boolean? Paperdoll button sits in the right column
@@ -144,7 +144,7 @@ Core.PET_CLASSES = {
 ---@field enchants string[]? Tooltip keywords that target this slot
 
 -- Table with all item slots, their paperdoll frame and any enchant keywords that target them.
----@type NRSKNUI.ItemSlotInfo[]
+---@type NorskenCore.ItemSlotInfo[]
 Core.ITEM_SLOTS = {
     { slot = INVSLOT_HEAD,     frame = _G['CharacterHeadSlot'],          enchants = { 'helm', 'head' },                socketable = true, },
     { slot = INVSLOT_NECK,     frame = _G['CharacterNeckSlot'],          enchants = { 'neck' },                        socketable = true, },
@@ -221,13 +221,13 @@ Core.GEM_SOCKET_TYPES = {
 do
     local ipairs, tinsert, sort = ipairs, table.insert, table.sort
 
-    ---@type table<number, NRSKNUI.ItemSlotInfo>
+    ---@type table<number, NorskenCore.ItemSlotInfo>
     Core.ITEM_SLOT_INFO = {}
     ---@type number[]
     Core.SOCKETABLE_SLOTS = {}
     ---@type { keyword: string, slots: number[] }[]
     Core.ENCHANT_SLOT_KEYWORDS = {}
-    ---@type table<string, NRSKNUI.ItemSlotInfo|table>
+    ---@type table<string, NorskenCore.ItemSlotInfo|table>
     Core.ITEM_TRACK_INFO = {}
 
     local byKeyword = {}

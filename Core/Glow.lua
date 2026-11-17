@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 
 local LCG = LibStub('LibCustomGlow-1.0')

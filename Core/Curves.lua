@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 
 local CreateColor = CreateColor
@@ -74,7 +74,7 @@ local function BuildAuraDurationColorCurve()
     return curve
 end
 
----@class NRSKNUI.Curves
+---@class NorskenCore.Curves
 ---@field DurationDecimals CurveObject
 ---@field PercentDecimals CurveObject
 ---@field ActionDesaturation CurveObject

@@ -16,7 +16,7 @@ Pass `frame` when the frame has a scale of its own, so the offset arrows step it
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji

@@ -1,0 +1,124 @@
+---@meta
+
+-- What Core's aura look and triggers read, for NorskenAuras and NorskenUI's aura groups
+-- Each shape follows its template in Core/Auras (Look.lua, Triggers.lua)
+
+-- Placing --
+
+---@class NorskenCore.Position
+---@field AnchorFrom string 'AUTO' on a text picks the side from AnchorTo
+---@field AnchorTo string
+---@field XOffset number in tenths of a unit, see Pixel.ToTenths
+---@field YOffset number
+---@field SelfPoint string? a dynamic group's own anchor, over its grow anchor
+
+-- Triggers --
+
+---@class NorskenCore.AuraTriggerBranch
+---@field type string? this branch's base, 'HELPFUL' or 'HARMFUL'
+---@field tokens table<string, boolean>? filter string tokens, false negates
+---@field candidates table? candidate filters, see AuraFilters
+---@field shipped string? the preset whose list a spell condition follows
+
+---@class NorskenCore.AuraTrigger
+---@field Type string 'AuraFilter' or 'Preset', 'SpellIDs' on old saves
+---@field Unit string? 'player' or 'target', standalone displays only
+---@field Base string? 'HELPFUL' or 'HARMFUL', for every branch
+---@field Preset string? a preset key, Type 'Preset'
+---@field Added table<number, string>? spells added to the preset's list, by group
+---@field Removed table<number, true>? shipped spells switched off
+---@field SpellIDs number[]? old saves only
+---@field OnlyMine boolean?
+---@field branches NorskenCore.AuraTriggerBranch[]?
+
+-- Look --
+
+---@class NorskenCore.TimerText
+---@field UseGlobalFont boolean
+---@field FontFace string
+---@field FontSize number
+---@field FontOutline string
+---@field Color number[]
+---@field AnchorTo string
+---@field XOffset number
+---@field YOffset number
+
+---@class NorskenCore.IconStyle
+---@field Width number
+---@field Height number
+---@field KeepAspectRatio boolean
+---@field Zoom number?
+---@field Color number[]
+---@field Desaturate boolean
+---@field IconSource string
+---@field IconShow boolean
+---@field Tooltip boolean
+---@field TooltipHideInCombat boolean?
+---@field Alpha number
+---@field DrawSwipe boolean
+---@field Reverse boolean
+---@field DrawEdge boolean
+---@field SwipeColor number[]
+---@field ShowGCD boolean
+---@field HideCountdown boolean
+---@field DispelIcon boolean
+---@field DispelIconSize number
+---@field DispelIconPosition NorskenCore.Position? nil is the top right corner
+---@field TimerText NorskenCore.TimerText
+
+---@class NorskenCore.FontShadow
+---@field Enabled boolean
+---@field Color number[]
+---@field OffsetX number
+---@field OffsetY number
+
+-- One class for every kind, as an alias read through a library path turns into a plain table
+---@class NorskenCore.SubElement
+---@field type 'text'|'border'|'auratype'|'tick'|'tint'|'glow'
+---@field Enabled boolean
+---@field Color number[]
+---@field EachPip boolean? text and border, copied onto every pip of a split bar
+---@field Text string? text
+---@field UseGlobalFont boolean? text
+---@field FontFace string? text
+---@field FontOutline string? text
+---@field FontShadow NorskenCore.FontShadow? text
+---@field FontSize number? text
+---@field GlobalTimeColor boolean? text, the shared Duration Text colors for %p and %t
+---@field TimeFormat string? text
+---@field PrecisionBelow number? text
+---@field Precision number? text
+---@field NumberFormat string? text
+---@field Decimals number? text
+---@field HideZero boolean? text
+---@field NameFormat string? text
+---@field NameColor string? text
+---@field CasterClassColor boolean? text
+---@field CasterRealm boolean? text
+---@field Rotation string? text
+---@field Justify string? text
+---@field WidthMode string? text
+---@field FixedWidth number? text
+---@field WordWrap boolean? text
+---@field Position NorskenCore.Position? text
+---@field Size number? border
+---@field Offset number? border
+---@field DispelColor boolean? border, the dispel highlight's
+---@field DispelAlpha number? border
+---@field ShowHelpful boolean? auratype
+---@field ShowHarmful boolean? auratype
+---@field DispelUntyped boolean? auratype and tint
+---@field Alpha number? auratype
+---@field Placement string? tick
+---@field Placements string? tick
+---@field Thickness number? tick and glow
+---@field AutoLength boolean? tick
+---@field Length number? tick and glow
+---@field Texture string? tint, empty for a flat color
+---@field Solid boolean? tint
+---@field ColorMode string? tint and glow
+---@field Type string? glow
+---@field Lines number? glow
+---@field Frequency number? glow
+---@field Border boolean? glow
+---@field StartAnim boolean? glow

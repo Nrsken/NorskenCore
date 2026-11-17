@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 
 -- Our own locale registry instead of AceLocale: AceLocale drops every locale but the client's while

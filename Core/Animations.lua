@@ -40,7 +40,7 @@ local animWobble = Animations:Wobble(frame)
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class NorskenAnimations
 local Animations = {}

@@ -1,11 +1,11 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 
 local ipairs = ipairs
 local Mixin = Mixin
 local CreateFrame = CreateFrame
 
--- not frame:CreateTexture, aura preview dummies replace theirs with a pool (AuraPreview.lua)
+-- not frame:CreateTexture, aura preview dummies replace theirs with a pool (Core/Auras/Preview.lua)
 local CreateTexture = CreateFrame('Frame').CreateTexture
 
 -- Mixins --

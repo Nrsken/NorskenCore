@@ -62,7 +62,7 @@ GUI:CopyDialog('Export', exportString, 'CTRL-C to copy')
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji

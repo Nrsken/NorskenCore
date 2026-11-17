@@ -40,7 +40,7 @@ For comment styling I am using Better Comments extension for VSCode, with a cust
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 ---@field windows KajiGUIWindowMixin[] every settings window, see Window.lua
