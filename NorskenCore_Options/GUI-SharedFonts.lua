@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = _G.NorskenCore
 local Shared = Core.GUISharedPages
 local L = Core.L
@@ -19,7 +19,7 @@ function Shared:BuildFonts(page)
         msgText = L['Global Font'],
         callback = function(checked)
             fontDB.Enabled = checked
-            Core:SharedSettingsChanged()
+            Core:SharedSettingsChanged(Core.Enum.Apply.Text)
             Core:RefreshFontStyles()
             page:Refresh()
         end,
@@ -32,7 +32,7 @@ function Shared:BuildFonts(page)
         conditions = { 'globFontON' },
         callback = function(key)
             fontDB.FontFace = key
-            Core:SharedSettingsChanged(true)
+            Core:SharedSettingsChanged(Core.Enum.Apply.Text)
             Core:RefreshFontStyles()
         end,
     })

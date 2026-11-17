@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 
 local pairs = pairs
@@ -11,7 +11,7 @@ local wipe = wipe
 
 local HOME_PAGE = 'homePage'
 
----@class NRSKNUI.PreviewManager
+---@class NorskenCore.PreviewManager
 local PreviewManager = {}
 
 ---Does this module claim the page itself, for the few that have no anchor to resolve through?
@@ -250,6 +250,15 @@ function PreviewManager:IsForceAll()
     return self.forceAll
 end
 
+---Stop one module's preview; the next Refresh shows it again if it's still wanted.
+---@param module table
+function PreviewManager:StopPreview(module)
+    if not self.active[module] then return end
+
+    module:HidePreview()
+    self.active[module] = nil
+end
+
 ---Drop every preview on the screen without changing what the state says should be showing, so a caller
 ---that is about to rebuild things can put them back with :Refresh.
 function PreviewManager:StopAllPreviews()
@@ -266,7 +275,7 @@ end
 
 ---An addon's own previews. Its window and modules are its own, only anchors bring them together.
 ---@param addon table
----@return NRSKNUI.PreviewManager
+---@return NorskenCore.PreviewManager
 function Core:NewPreviewManager(addon)
     return setmetatable({
         addon = addon,

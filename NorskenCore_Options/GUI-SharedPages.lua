@@ -1,6 +1,6 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = _G.NorskenCore
----@class NRSKNUI.GUISharedPages
+---@class NorskenCore.GUISharedPages
 local Shared = {}
 Core.GUISharedPages = Shared
 local L = Core.L
@@ -15,6 +15,8 @@ local ceil, floor = math.ceil, math.floor
 local unpack = unpack
 local ipairs, pairs = ipairs, pairs
 local CopyTable = CopyTable
+
+local Apply = Core.Enum.Apply
 local _G = _G
 
 -- Home page --
@@ -234,11 +236,11 @@ local formatOptions = {
     { key = '%dd',                          text = L['Days (3d)'] },
 }
 
--- Aura buttons are built once by the game, so formatter edits only show after a reload.
+-- rebuilt before the change goes out, so every addon redraws with the new ones
 local function RefreshFormatter()
+    Core:RefreshCurves()
     Core:RefreshAuraDurationFormatter()
-    Core:SharedSettingsChanged()
-    Core:RequestReload(L['Duration text changes show on auras after a reload.'])
+    Core:SharedSettingsChanged(Apply.Text)
 end
 
 -- key indexes the shared Colors.
@@ -255,7 +257,7 @@ local ColorCategories = {
 
 local function RefreshColors()
     Core:LoadCustomColors()
-    Core:SharedSettingsChanged()
+    Core:SharedSettingsChanged(Apply.Color)
 end
 
 local function BuildColorsPage(page, db, category)
@@ -385,8 +387,9 @@ local function BuildTexturesPage(page, db)
     local preview
 
     -- The preview is one bar, so it follows every tick; the modules wait for the input to settle.
-    local function Apply()
-        Core:SharedSettingsChanged()
+    ---@param part NorskenCore.Apply
+    local function Update(part)
+        Core:SharedSettingsChanged(part)
         preview:Refresh()
     end
 
@@ -406,7 +409,7 @@ local function BuildTexturesPage(page, db)
             tooltip = L['Used by every module set to follow the global texture.'],
             callback = function(key)
                 bar.statusBar = key
-                Apply()
+                Update(Apply.Look)
             end,
         })
         barRow:Dropdown(L['Background'], {
@@ -418,7 +421,7 @@ local function BuildTexturesPage(page, db)
             tooltip = L['Texture for the empty part of the bar, tinted by the backdrop color. Flat keeps a plain fill.'],
             callback = function(key)
                 bar.backgroundTexture = key ~= FLAT_BACKGROUND and key or nil
-                Apply()
+                Update(Apply.Look)
             end,
         })
 
@@ -432,7 +435,7 @@ local function BuildTexturesPage(page, db)
             tooltip = L['Used by every castbar set to follow the global spark.'],
             callback = function(key)
                 spark.sparkTexture = key
-                Apply()
+                Update(Apply.Look)
                 if (key == 'Solid') ~= isSolid then c:Rebuild() end
             end,
         })
@@ -441,7 +444,7 @@ local function BuildTexturesPage(page, db)
             value = spark.color,
             callback = function(r, g, b, a)
                 spark.color = { r, g, b, a }
-                Apply()
+                Update(Apply.Color)
             end,
         })
 
@@ -455,7 +458,7 @@ local function BuildTexturesPage(page, db)
             tooltip = L['Scales the spark against the bar height. Art sparks keep their own proportions.'],
             callback = function(val)
                 spark.Scale = val
-                Apply()
+                Update(Apply.Look)
             end,
             callbackOnRelease = true,
         })
@@ -468,7 +471,7 @@ local function BuildTexturesPage(page, db)
                 value = spark.Width,
                 callback = function(val)
                     spark.Width = val
-                    Apply()
+                    Update(Apply.Look)
                 end,
             })
         end
@@ -481,7 +484,7 @@ local function BuildTexturesPage(page, db)
             tooltip = L['Used by every module set to follow the global border.'],
             callback = function(r, g, b, a)
                 borders.BorderColor = { r, g, b, a }
-                Apply()
+                Update(Apply.Color)
             end,
         })
         colorRow:ColorPicker(L['Backdrop Color'], {
@@ -490,7 +493,7 @@ local function BuildTexturesPage(page, db)
             tooltip = L['Used by every module set to follow the global backdrop.'],
             callback = function(r, g, b, a)
                 borders.BackdropColor = { r, g, b, a }
-                Apply()
+                Update(Apply.Color)
             end,
         })
     end)
@@ -546,12 +549,6 @@ local function BuildDurationTextPage(page, db)
 
     page:SetCondition('never', function() return false end)
 
-    local function GetDurationColorMode()
-        if db.durationSingleColor then return 'single' end
-        if db.durationBreakpointColors then return 'breakpoint' end
-        return 'curve'
-    end
-
     -- The formatter forces point one to start at 0.
     local function StartOf(i)
         return i == 1 and 0 or points[POINTS[i].key].threshold
@@ -584,7 +581,7 @@ local function BuildDurationTextPage(page, db)
     end
 
     modeCard:Rebuild(function(c)
-        local mode = GetDurationColorMode()
+        local mode = Core:GetSharedDurationMode()
         local previous
         for i, info in ipairs(COLOR_MODES) do
             local selected = mode == info.id
@@ -720,9 +717,24 @@ end
 
 local GLOBAL_PAGE = 'globalSettings'
 local THEME_ITEM = 'themePage'
-local GLOBAL_LIST_WIDTH = 140 -- its labels are short, and beside the Auras tree the colour grids need the room
+local GLOBAL_LIST_WIDTH = 140 -- short labels; beside the Auras tree the colour grids need the room
 Shared.GLOBAL_PAGE = GLOBAL_PAGE
 Shared.THEME_ITEM = THEME_ITEM
+Shared.DURATION_TEXT_ITEM = 'globalDurationText'
+
+local globalOpeners = {} ---@type table<table, fun(itemKey: string?)> each window's GUI -> how it opens its page
+
+---A link to one item of this window's Global Settings, for a setting that follows it.
+---@param gui table the window's KajiGUI instance
+---@param itemKey string
+---@param tooltip string
+---@return KajiGUILink
+function Shared:GlobalLink(gui, itemKey, tooltip)
+    return {
+        tooltip = tooltip,
+        onClick = function() globalOpeners[gui](itemKey) end,
+    }
+end
 
 ---Registers the Global Settings page on an addon's GUI: the shared settings and the GUI theme in a page list.
 ---@param gui table the addon's KajiGUI instance
@@ -730,17 +742,18 @@ Shared.THEME_ITEM = THEME_ITEM
 ---@param open fun(itemKey: string?) shows the page, on that item when given
 ---@param extra table[]? the addon's own items { key, text, build = fun(page) }, listed before Theme
 function Shared:RegisterGlobalPage(gui, addon, open, extra)
+    globalOpeners[gui] = open
     local items = {
         { type = 'label', key = 'general', text = L['General'] },
         { key = 'globalFonts', text = L['Fonts'] },
         { key = 'globalTextures', text = L['Textures'] },
-        { key = 'globalDurationText', text = L['Duration Text'] },
+        { key = Shared.DURATION_TEXT_ITEM, text = L['Duration Text'] },
         { key = 'globalLanguage', text = L['Language'] },
     }
     local builds = {
         globalFonts = function(page) Shared:BuildFonts(page) end,
         globalTextures = function(page) Shared:BuildTextures(page) end,
-        globalDurationText = function(page) Shared:BuildDurationText(page) end,
+        [Shared.DURATION_TEXT_ITEM] = function(page) Shared:BuildDurationText(page) end,
         globalLanguage = function(page) Shared:BuildLanguage(page, addon) end,
         [THEME_ITEM] = function(page) Shared:BuildTheme(page, function() open(THEME_ITEM) end) end,
     }

@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 
 local LibStub = LibStub
@@ -160,7 +160,7 @@ function Core.Ace:OnInitialize()
     Rebuild()
 end
 
----@return NRSKNUI.SharedSettings shared
+---@return NorskenCore.SharedSettings shared
 function Core:GetSharedSettings()
     return sharedDB.global
 end
@@ -172,21 +172,38 @@ end
 
 -- a drag in the shared pages calls in many times a second, re-applying every addon on each one drops frames
 local SETTLE_DELAY = 0.15
-local settleTimer
 
----A shared setting changed, whichever addon's window did it: every addon applies it in its own way,
----once the edits settle.
----@param font boolean? the global font was the one to change
-function Core:SharedSettingsChanged(font)
-    if font then
+-- counts every change, so a look drawn from these (Core:LookStamp) knows it's stale
+Core.SharedVersion = 0
+local settleTimer
+-- every part changed while the edits settle, each sent once
+local settling = {}
+
+---A shared setting changed in any addon's window; once the edits settle, each applies it.
+---@param part NorskenCore.Apply Text: fonts, duration text; Look: textures; Color; All: an import
+function Core:SharedSettingsChanged(part)
+    local Apply = Core.Enum.Apply
+    Core.SharedVersion = Core.SharedVersion + 1
+    -- the Blizzard fonts follow at once; they skip a pass that changes nothing
+    if part == Apply.Text or part == Apply.All then
         Core.Ace:SendMessage('NRSKNUI_PROFILE_FONT_CHANGED')
     end
+
+    settling[part] = true
     if settleTimer then
         settleTimer:Cancel()
     end
     settleTimer = C_Timer.NewTimer(SETTLE_DELAY, function()
         settleTimer = nil
-        Core.Ace:SendMessage('NRSKNUI_SHARED_SETTINGS_CHANGED')
+        local parts = settling
+        settling = {}
+        if parts[Apply.All] then
+            Core.Ace:SendMessage('NRSKNUI_SHARED_SETTINGS_CHANGED', Apply.All)
+            return
+        end
+        for changed in pairs(parts) do
+            Core.Ace:SendMessage('NRSKNUI_SHARED_SETTINGS_CHANGED', changed)
+        end
     end)
 end
 
@@ -323,6 +340,7 @@ end
 ---so everything goes back to the defaults first or the result would be half theirs and half ours.
 ---@param block table
 function Core:ApplySharedSettings(block)
+    Core.SharedVersion = Core.SharedVersion + 1
     local shared = Core:GetSharedSettings()
     for _, section in ipairs({ 'globalMedia', 'Colors' }) do
         Restore(shared[section], defaults.global[section])
@@ -333,6 +351,6 @@ function Core:ApplySharedSettings(block)
     Rebuild()
 
     -- every addon re-applies, not only the one importing; the font may have changed too
-    Core:SharedSettingsChanged(true)
+    Core:SharedSettingsChanged(Core.Enum.Apply.All)
     Core:DeferUntilUnrestricted(0, function() Core:RefreshFontStyles() end)
 end

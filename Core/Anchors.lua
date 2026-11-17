@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 local L = Core.L
 local Animations = Core.Animations
@@ -6,7 +6,7 @@ local Pixel = Core.Pixel
 local Kaji = Core.Kaji
 local ToPixelGrid = Pixel.ToPixelGrid
 local ToTenths = Pixel.ToTenths
----@class NRSKNUI.Anchors
+---@class NorskenCore.Anchors
 ---@field addon table the addon this handle belongs to, see NewAnchors
 ---@field boxOnly boolean? its displays move in its window's box, it has no anchors mode
 ---@field snapshot table? key -> saved fields, what Undo All goes back to
@@ -47,11 +47,11 @@ local activeAddon -- the addon whose anchors or box show
 local Theme       -- its theme, only one addon's overlays exist on screen at a time
 local spareOverlays = {} -- named frames, so one per key is reused
 
----@class NRSKNUI.AnchorsWindow : Frame
+---@class NorskenCore.AnchorsWindow : Frame
 ---@field fader fun(alpha: number)
 ---@field [string] any its widgets
 
-local panel, popup ---@type NRSKNUI.AnchorsWindow?, NRSKNUI.AnchorsWindow? made on the first Enter
+local panel, popup ---@type NorskenCore.AnchorsWindow?, NorskenCore.AnchorsWindow? made on the first Enter
 local boxArrows ---@type table? the nudge arrows around a box, made on the first box
 
 local ARROW_TEXTURE = Core.Media.GUITextures .. 'collapse.tga'
@@ -273,6 +273,11 @@ function Anchors:GetOffsets(key)
     return ReadOffset(entry, entry.xKey), ReadOffset(entry, entry.yKey)
 end
 
+-- a drag or nudge only moved the frame
+local function ApplyPosition(aceModule)
+    aceModule:ApplySettings(Core.Enum.Apply.Position)
+end
+
 ---The module and every view of its position: box, popup and settings sliders.
 ---@param key string
 local function Reapply(key)
@@ -404,7 +409,7 @@ local function InView(entry)
 end
 
 ---Registers a frame as a draggable anchor.
----@param aceModule NRSKNUI.ModuleBase
+---@param aceModule NorskenCore.ModuleBase
 ---@param key string Unique anchor key.
 ---@param frame Frame? The frame to move; defaults to module.frame.
 ---@param guiPath string? Sidebar item id a right-click on its box opens.
@@ -444,7 +449,7 @@ function Anchors:Register(aceModule, key, frame, guiPath, opts)
             entry.groups[group] = true
         end
     end
-    entry.apply = opts.apply or 'ApplySettings'
+    entry.apply = opts.apply or ApplyPosition
     entry.displayName = opts.displayName or (key:gsub('(%l)(%u)', '%1 %2'))
     entry.guiPath = guiPath or opts.guiPath
     entry.guiContext = opts.guiContext
@@ -1128,7 +1133,7 @@ end
 
 ---Animates one overlay to the look like its current state calls for.
 ---@param key string
----@param overlay NRSKNUI.AnchorOverlay
+---@param overlay NorskenCore.AnchorOverlay
 local function ApplyOverlayState(key, overlay)
     local entry = overlay.entry
     local selected = (Anchors.selectedKey == key)
@@ -1691,9 +1696,9 @@ local function RevertKey(key)
 end
 
 ---A frame in the dialogs' look: their border, glow and shadow.
----@return NRSKNUI.AnchorsWindow
+---@return NorskenCore.AnchorsWindow
 local function NewStrip(gui)
-    local frame = CreateFrame('Frame', nil, UIParent, 'BackdropTemplate') --[[@as NRSKNUI.AnchorsWindow]]
+    local frame = CreateFrame('Frame', nil, UIParent, 'BackdropTemplate') --[[@as NorskenCore.AnchorsWindow]]
     frame:SetFrameStrata('FULLSCREEN_DIALOG')
     frame:SetFrameLevel(STRIP_LEVEL)
     frame:EnableMouse(true)
@@ -1751,7 +1756,7 @@ local function ArrowButton(gui, parent, arrow, size, imageSize)
 end
 
 ---Down the side of a box in the outer thirds, across everywhere else.
----@param popup NRSKNUI.AnchorsWindow
+---@param popup NorskenCore.AnchorsWindow
 ---@param vertical boolean
 local function LayoutStrip(popup, vertical)
     if popup.vertical == vertical then return end
@@ -1813,7 +1818,7 @@ local function LayoutStrip(popup, vertical)
 end
 
 ---The session's settings as a ribbon: groups of controls, each named by a caption under it.
----@return NRSKNUI.AnchorsWindow
+---@return NorskenCore.AnchorsWindow
 function Anchors:CreatePanel()
     if panel then
         return panel
@@ -2416,7 +2421,7 @@ end
 
 ---An addon's own handle on the anchor system. What it registers is its own and it opens on its own theme.
 ---@param addon table needs GUI, Theme, Print, OpenOptions and PreviewManager
----@return NRSKNUI.Anchors
+---@return NorskenCore.Anchors
 function Core:NewAnchors(addon)
     addons[#addons + 1] = addon
     return setmetatable({ addon = addon }, { __index = Anchors })
