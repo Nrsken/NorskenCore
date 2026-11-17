@@ -15,7 +15,7 @@
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji
@@ -221,6 +221,7 @@ function CheckboxMixin:OnAcquire(parent, labelText, config)
     end
     Kaji.SetTooltip(self, self.gui, labelText, spec)
     Kaji.SetNotice(self, self.gui, self.label, config.notice)
+    Kaji.SetLink(self, self.gui, self.label, config.link)
     Kaji.SetMixed(self, config.mixed, DescribeValue)
 
     self._animating = false
@@ -268,6 +269,7 @@ end
 ---@field tooltip? any
 ---@field cvartooltip? boolean show the default value in the tooltip
 ---@field notice? KajiGUINotice a marker after the label, see Kaji.SetNotice
+---@field link? KajiGUILink an arrow after the label opening where this is set, see Kaji.SetLink
 ---@field mixed? KajiGUIMixedEntry[] the things it edits disagree: neither on nor off, see Kaji.SetMixed
 
 Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)

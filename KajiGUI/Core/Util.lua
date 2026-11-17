@@ -9,7 +9,7 @@
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji
@@ -17,22 +17,28 @@ local Kaji = Core.Kaji
 local InstanceMixin = Kaji.InstanceMixin
 local LSM = Core.Libs.LSM
 local L = Core.L
-
-local format = string.format
-local geterrorhandler = geterrorhandler
-local xpcall = xpcall
-local type = type
-local ipairs = ipairs
-local tostring = tostring
-
 local WHITE = Core.WhiteTexture
+
+local geterrorhandler = geterrorhandler
+local min, max = math.min, math.max
+local CreateColor = CreateColor
+local CreateFrame = CreateFrame
+local format = string.format
+local tconcat = table.concat
+local tostring = tostring
+local xpcall = xpcall
+local ipairs = ipairs
+local type = type
 
 ---Runs a consumer-supplied callback through the game's error handler so a broken handler surfaces an error but never breaks library layout.
 ---@param func? function
 ---@return ... results of func
 function Kaji.safecall(func, ...)
     if not func then return end
-    return xpcall(func, function(err) return geterrorhandler()(err) end, ...)
+
+    return xpcall(func, function(err)
+        return geterrorhandler()(err)
+    end, ...)
 end
 
 ---Resolves an LSM media name to its path; a real path passes through unchanged.
@@ -40,10 +46,14 @@ end
 ---@param name? string
 ---@return string? path
 function InstanceMixin:ResolveMedia(mediaType, name)
-    if not name or name == "" then return name end
+    if not name or name == "" then
+        return name
+    end
+
     if LSM and LSM:IsValid(mediaType, name) then
         return LSM:Fetch(mediaType, name, true) -- noDefault: nil when unregistered
     end
+
     return name
 end
 
@@ -52,7 +62,10 @@ end
 ---@param label? string
 function InstanceMixin:RegisterSearchableWidget(widget, label)
     local register = self.services.registerSearchable
-    if register then register(widget, label) end
+
+    if register then
+        register(widget, label)
+    end
 end
 
 -- Backdrop --
@@ -62,7 +75,10 @@ end
 ---@param color? string|number[]
 ---@return number[]?
 local function ResolveColor(theme, color)
-    if type(color) == "string" then return theme[color] end
+    if type(color) == "string" then
+        return theme[color]
+    end
+
     return color
 end
 
@@ -100,7 +116,10 @@ function Kaji.SetBackdrop(frame, gui, spec)
     local theme = gui.theme
     local hasBorder = spec.border ~= nil
     local edgeSize = spec.edgeSize
-    if type(edgeSize) == "string" then edgeSize = theme[edgeSize] end
+
+    if type(edgeSize) == "string" then
+        edgeSize = theme[edgeSize]
+    end
 
     frame:SetBackdrop({
         bgFile = spec.bg ~= nil and WHITE or nil,
@@ -238,7 +257,7 @@ local function PlaceNotice(marker, label, before)
     end
 
     local width = label:GetStringWidth()
-    marker:NCSetPoint("LEFT", label, "LEFT", math.min(width, label:GetWidth()) + NOTICE_GAP, 0)
+    marker:NCSetPoint("LEFT", label, "LEFT", min(width, label:GetWidth()) + NOTICE_GAP, 0)
 
     -- a cold font measures 0 on a fresh login's first pass, so place it again once it has loaded
     if width == 0 and (label:GetText() or "") ~= "" then
@@ -286,7 +305,7 @@ local function NoticeText(text)
     for i, line in ipairs(text) do
         lines[i] = "• " .. line
     end
-    return table.concat(lines, "\n")
+    return tconcat(lines, "\n")
 end
 
 ---Two soft flashes, so a message that just appeared catches the eye; it sits still after.
@@ -361,6 +380,126 @@ function Kaji.SetNotice(owner, gui, label, notice, before)
     end
 end
 
+-- Link --
+
+local LINK_SIZE = 12
+Kaji.LINK_WIDTH = LINK_SIZE + NOTICE_GAP -- what a Text with a link keeps free at its right end
+
+---@class KajiGUILink
+---@field onClick fun() opens where the setting lives
+---@field tooltip string where that is, e.g. "Open Duration Text"
+
+---@param marker Button
+---@param hover number 0 at rest to 1 hovered
+local function PaintLinkAt(marker, hover)
+    local theme = marker._kajiGui.theme
+    local rest, accent = theme.textMuted, theme.accent
+    marker.icon:SetVertexColor(rest[1] + (accent[1] - rest[1]) * hover, rest[2] + (accent[2] - rest[2]) * hover,
+        rest[3] + (accent[3] - rest[3]) * hover, 1)
+    marker.paintGlow(hover)
+end
+
+---Repaints a link arrow from the current theme, as PaintNotice does a notice.
+---@param owner Frame
+function Kaji.PaintLink(owner)
+    local marker = owner._linkMarker
+    if marker and marker:IsShown() then
+        PaintLinkAt(marker, 0)
+    end
+end
+
+---An arrow that opens another page, muted until hovered; nil hides it. It follows the label,
+---or with `area` sits at that frame's right end and the whole frame clicks.
+---@param owner Frame the widget the arrow belongs to
+---@param gui KajiGUIInstance
+---@param label FontString? what the arrow follows; unused with `area`
+---@param link? KajiGUILink
+---@param area? Frame a note's own frame, all of it a link
+function Kaji.SetLink(owner, gui, label, link, area)
+    owner._link = link
+    local marker = owner._linkMarker
+    if area then
+        area:EnableMouse(link ~= nil)
+    end
+    if not link then
+        if marker then
+            if GameTooltip:IsOwned(marker) then
+                Kaji.HideTooltip()
+            end
+            marker:Hide()
+        end
+        return
+    end
+
+    if not marker then
+        marker = CreateFrame("Button", nil, owner)
+        marker:NCSetSize(LINK_SIZE, LINK_SIZE)
+        local icon = marker:CreateTexture(nil, "OVERLAY")
+        icon:SetAllPoints()
+        icon:NCDisablePixelSnap()
+        marker.icon = icon
+        marker._kajiGui = gui
+        marker.paintGlow = Kaji.AddIconGlow(marker, icon, LINK_SIZE, LINK_SIZE, gui.theme.linkGlowTexture, gui)
+        local animate = Core.Animations:CreateColorAnimator(marker, function(hover) PaintLinkAt(marker, hover) end,
+            { 0, 0, 0, 0 }, gui.theme.animDuration)
+
+        local function Enter()
+            animate(1, 0, 0, 0)
+            Kaji.ShowTooltip(marker)
+        end
+        local function Leave()
+            animate(0, 0, 0, 0)
+            Kaji.HideTooltip()
+        end
+        local function Open()
+            local open = owner._link and owner._link.onClick
+            if not open then return end
+            -- through the window it sits in, so the page it opens can lead back
+            for _, window in ipairs(Kaji.windows) do
+                local host = window.content
+                local parent = host and owner:GetParent()
+                while parent and parent ~= host.frame do
+                    parent = parent:GetParent()
+                end
+                if parent then
+                    return host:FollowLink(open, window)
+                end
+            end
+            Kaji.safecall(open)
+        end
+        marker:SetScript("OnEnter", Enter)
+        marker:SetScript("OnLeave", Leave)
+        marker:SetScript("OnClick", Open)
+        if area then
+            area:SetScript("OnEnter", Enter)
+            area:SetScript("OnLeave", Leave)
+            area:SetScript("OnMouseUp", function(_, button)
+                if button == "LeftButton" then
+                    Open()
+                end
+            end)
+        end
+        owner._linkMarker = marker
+    end
+
+    marker.icon:SetTexture(gui.theme.linkTexture)
+    Kaji.SetTooltip(marker, gui, link.tooltip, nil, { anchor = "ANCHOR_TOP", x = 0, y = 4 })
+    marker:SetFrameLevel(owner:GetFrameLevel() + 10)
+    marker:ClearAllPoints()
+
+    local notice = owner._noticeMarker
+    if area then
+        marker:NCSetPoint("RIGHT", area, "RIGHT", 0, 0)
+    elseif notice and notice:IsShown() then
+        marker:NCSetPoint("LEFT", notice, "RIGHT", NOTICE_GAP, 0)
+    else
+        PlaceNotice(marker, label)
+    end
+
+    PaintLinkAt(marker, 0)
+    marker:Show()
+end
+
 -- Mixed --
 
 ---@class KajiGUIMixedEntry
@@ -433,6 +572,7 @@ function Kaji.AddSurfaceTexture(frame, gui, kind)
     local function Retile()
         local w, h = frame:GetSize()
         if not w or w <= 0 or not h or h <= 0 then return end
+
         local pixelsPerUnit = frame:GetEffectiveScale() / Core.Pixel.GetPerfectPixel()
         tex:SetTexCoord(0, w * pixelsPerUnit / SURFACE_TEXTURE_SIZE, 0, h * pixelsPerUnit / SURFACE_TEXTURE_SIZE)
     end
@@ -452,8 +592,8 @@ function Kaji.AddTopSheen(frame, gui)
     local sheen = frame:CreateTexture(nil, "BACKGROUND", nil, 2)
     sheen:SetAllPoints()
     sheen:SetTexture(WHITE)
-    -- VERTICAL runs bottom (first color) to top (second color).
     sheen:SetGradient("VERTICAL", CreateColor(1, 1, 1, 0), CreateColor(1, 1, 1, gui.theme.sheenAlpha))
+
     return sheen
 end
 
@@ -464,12 +604,14 @@ end
 ---@return Texture
 function Kaji.AddTopHighlight(frame, gui, layer)
     local theme = gui.theme
+
     local line = frame:CreateTexture(nil, layer or "ARTWORK")
     line:NCSetHeight(theme.borderSize)
     line:NCSetPoint("TOPLEFT", frame, "TOPLEFT", theme.borderSize, -theme.borderSize)
     line:NCSetPoint("TOPRIGHT", frame, "TOPRIGHT", -theme.borderSize, -theme.borderSize)
     line:NCDisablePixelSnap()
     line:SetColorTexture(1, 1, 1, theme.highlightAlpha)
+
     return line
 end
 
@@ -508,7 +650,7 @@ end
 -- Panel chrome --
 
 local HALFTONE_COLUMNS = 128 -- the dots repeat across a panel every 128 texels
-local HALFTONE_ROWS = 1024 -- texels, drawn one per physical pixel
+local HALFTONE_ROWS = 1024   -- texels, drawn one per physical pixel
 
 --[[ # Panel chrome
 
@@ -543,7 +685,7 @@ function Kaji.CreatePanelChrome(panel, gui)
     local function LayoutHalftone()
         local perUnit = panel:GetEffectiveScale() / Core.Pixel.GetPerfectPixel()
         local w = (panel:GetWidth() - edge * 2) * perUnit
-        local h = math.min((panel:GetHeight() - edge * 2) * perUnit, HALFTONE_ROWS)
+        local h = min((panel:GetHeight() - edge * 2) * perUnit, HALFTONE_ROWS)
         if w <= 0 or h <= 0 then return end
 
         halftone:NCSetHeight(h / perUnit)
@@ -555,6 +697,7 @@ function Kaji.CreatePanelChrome(panel, gui)
     local function Restyle()
         Kaji.RefreshBackdrop(panel)
         Kaji.PaintCornerTicks(cornerTicks, theme)
+
         local muted = theme.textMuted
         halftone:SetVertexColor(muted[1], muted[2], muted[3], theme.halftoneAlpha)
         LayoutHalftone()
@@ -567,7 +710,7 @@ end
 -- Row selection --
 
 local SELECT_BAR = 2
-local SELECT_HOVER = 0.2 -- hover previews the selection at this strength, in white
+local SELECT_HOVER = 0.2      -- hover previews the selection at this strength, in white
 local SELECT_FADE = 0.15
 local SELECT_EDGE_ALPHA = 0.6 -- the lines above and below a list row's tint, where they leave the bar
 
@@ -650,6 +793,7 @@ local HOVER_LIGHTEN = 0.6 -- how far a fully hovered colour goes toward textPrim
 ---@return number b
 function Kaji.HoverColor(theme, rest, hover)
     local hi, k = theme.textPrimary, hover * HOVER_LIGHTEN
+
     return rest[1] + (hi[1] - rest[1]) * k, rest[2] + (hi[2] - rest[2]) * k, rest[3] + (hi[3] - rest[3]) * k
 end
 
@@ -658,9 +802,11 @@ local function PaintRowSelection(row, theme)
     local l, h = Kaji.RowSelectionProgress(row)
     local light = l + h * SELECT_HOVER
     local tinted = light > 0 and not s.none and not s.lineOnly
+
     for _, line in ipairs(s.edges or {}) do
         line:SetShown(tinted)
     end
+
     if light <= 0 or s.none then
         s.bar:Hide(); s.tint:Hide()
         return
@@ -671,6 +817,7 @@ local function PaintRowSelection(row, theme)
     local a, w = theme.accent, l / light
     local r, g, b = 1 + (a[1] - 1) * w, 1 + (a[2] - 1) * w, 1 + (a[3] - 1) * w
     local clear = CreateColor(r, g, b, 0)
+
     s.bar:SetVertexColor(r, g, b, light)
     s.tint:SetGradient(s.orientation, CreateColor(r, g, b, theme.selectionGlowAlpha * light), clear)
     for _, line in ipairs(s.edges or {}) do
@@ -699,9 +846,12 @@ function Kaji.StepRowSelection(row, theme, elapsed)
     local s = row.selection
     if s.lit == s.litTo and s.hover == s.hoverTo then return false end
     local step = elapsed / SELECT_FADE
-    s.lit = s.litTo > s.lit and math.min(s.lit + step, s.litTo) or math.max(s.lit - step, s.litTo)
-    s.hover = s.hoverTo > s.hover and math.min(s.hover + step, s.hoverTo) or math.max(s.hover - step, s.hoverTo)
+
+    s.lit = s.litTo > s.lit and min(s.lit + step, s.litTo) or max(s.lit - step, s.litTo)
+    s.hover = s.hoverTo > s.hover and min(s.hover + step, s.hoverTo) or max(s.hover - step, s.hoverTo)
+
     PaintRowSelection(row, theme)
+
     return true
 end
 
@@ -719,6 +869,7 @@ local LARGE_GLOW_MARGIN = 16 -- glow.png's
 function Kaji.CreateFrameGlow(frame, gui, reach, host)
     local small = reach <= SMALL_GLOW_MARGIN
     local margin = small and SMALL_GLOW_MARGIN or LARGE_GLOW_MARGIN
+
     local glow = (host or frame):CreateTexture(nil, "BACKGROUND", nil, -8)
     glow:SetTexture(small and gui.theme.glowSmallTexture or gui.theme.glowTexture)
     glow:SetTextureSliceMargins(margin, margin, margin, margin)
@@ -726,6 +877,7 @@ function Kaji.CreateFrameGlow(frame, gui, reach, host)
     glow:SetPoint("TOPLEFT", frame, "TOPLEFT", -margin, margin)
     glow:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", margin, -margin)
     glow:Hide()
+
     return glow
 end
 
@@ -773,7 +925,7 @@ function Kaji.CreateTickBox(gui, parent, size)
     check:NCDisablePixelSnap()
 
     local cross = box:CreateTexture(nil, "OVERLAY")
-    cross:NCSetSize(size - 6, size - 6)
+    cross:NCSetSize(size, size)
     cross:NCSetPoint("CENTER", box, "CENTER", 0, 0)
     cross:NCDisablePixelSnap()
     cross:SetVertexColor(0, 0, 0, 1)
@@ -790,9 +942,15 @@ function Kaji.CreateTickBox(gui, parent, size)
         Kaji.SetFrameGlow(glow, gui, enabled and p or 0, color)
     end
     local animate, sync = Core.Animations:CreateColorAnimator(box, Paint, { 0, 0, 0, 0 }, gui.theme.animDuration)
-    local animateEdge, syncEdge = Core.Animations:CreateHoverColorAnimator(box,
-        function(r, g, b) box:SetBackdropBorderColor(r, g, b, 1) end,
-        gui.theme.widgetBorder, gui.theme.accent, gui.theme.animDuration)
+    local animateEdge, syncEdge = Core.Animations:CreateHoverColorAnimator(
+        box,
+        function(r, g, b)
+            box:SetBackdropBorderColor(r, g, b, 1)
+        end,
+        gui.theme.widgetBorder,
+        gui.theme.accent,
+        gui.theme.animDuration
+    )
 
     function box:SetChecked(checked, instant)
         local target = checked and 1 or 0
@@ -846,11 +1004,17 @@ end
 ---@return fun() restyle call again on theme changes
 function Kaji.StylePopup(frame, gui, accentEdge)
     local shadow = Kaji.CreateFrameGlow(frame, gui, gui.theme.shadowSize)
+
     shadow:Show()
+
     return function()
         local theme = gui.theme
         local edge, alpha = theme.accent, theme.windowEdgeAlpha
-        if accentEdge == false then edge, alpha = theme.widgetBorder, 1 end
+
+        if accentEdge == false then
+            edge, alpha = theme.widgetBorder, 1
+        end
+
         frame:SetBackdropBorderColor(edge[1], edge[2], edge[3], alpha)
         shadow:SetVertexColor(0, 0, 0, theme.shadowAlpha)
     end
@@ -877,12 +1041,18 @@ local ICON_GLOW_CANVAS = 2 -- baked glow files are the icon's blurred shape on a
 function Kaji.AddIconGlow(owner, icon, width, height, glowPath, gui, rotation)
     if not glowPath then return function() end end
     local theme = gui.theme
+
     local glow = owner:CreateTexture(nil, "BACKGROUND", nil, -1)
     glow:SetTexture(glowPath)
+
     local dx, dy = width * (ICON_GLOW_CANVAS - 1) / 2, height * (ICON_GLOW_CANVAS - 1) / 2
     glow:SetPoint("TOPLEFT", icon, "TOPLEFT", -dx, dy)
     glow:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", dx, -dy)
-    if rotation then glow:SetRotation(rotation) end
+
+    if rotation then
+        glow:SetRotation(rotation)
+    end
+
     return function(alpha, color)
         local a = color or theme.accent
         glow:SetVertexColor(a[1], a[2], a[3], alpha * theme.iconGlowAlpha)

@@ -13,10 +13,11 @@
 API: card:Section('1. Big Defensives', { collapsed = false, onToggle = fn, onDelete = fn })
 API: GUI:CreateSectionHeader(parent, 'Conditions', { onToggle = fn })
 API: card:SubSection('Anchors', { key = 'anchors', summary = "Anchored to frame's Center" })
+API: card:Section('Text 2', { notice = { text = 'This text stays empty.' } }), so a closed section still shows it
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji
@@ -112,6 +113,7 @@ function SectionHeaderMixin:UpdateColors()
     Kaji.RefreshBackdrop(self)
     self.label:SetTextColor(theme.textPrimary[1], theme.textPrimary[2], theme.textPrimary[3], 1)
     self.arrow:SetVertexColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
+    Kaji.PaintNotice(self)
     for _, action in ipairs(ACTIONS) do
         if action.texture then
             SetIcon(self.actions[action.key].icon, action, theme)
@@ -140,7 +142,7 @@ end
 
 ---The title takes the width it needs and the summary what's left, so a long list of changes truncates before the name does.
 function SectionHeaderMixin:LayoutText()
-    local room = self:GetWidth() - self._textLeft + self._textRight
+    local room = self:GetWidth() - self._textLeft + self._textRight - Kaji.NoticeWidth(self)
     local fits = false
     self.label:SetText(self._title)
     if room > 0 then
@@ -213,8 +215,10 @@ function SectionHeaderMixin:OnAcquire(parent, labelText, config)
     self._textLeft, self._textRight = theme.paddingSmall + ARROW_SIZE + 6, x - theme.paddingSmall
     self.label:ClearAllPoints()
     self.label:NCSetPoint("LEFT", self, "LEFT", self._textLeft, 0)
+    -- right after the title, which LayoutText sizes to its text
+    Kaji.SetNotice(self, self.gui, self.label, config.notice)
     self.summary:ClearAllPoints()
-    self.summary:NCSetPoint("LEFT", self.label, "RIGHT", SUMMARY_GAP, 0)
+    self.summary:NCSetPoint("LEFT", self.label, "RIGHT", SUMMARY_GAP + Kaji.NoticeWidth(self), 0)
     self.summary:NCSetPoint("RIGHT", self, "RIGHT", self._textRight, 0)
 
     self:SetAlpha(1)
@@ -246,6 +250,7 @@ end
 
 function SectionHeaderMixin:OnRelease()
     self._onToggle, self._summary = nil, nil
+    Kaji.SetNotice(self, self.gui, nil, nil)
     self.label:SetText("")
     self.summary:SetText("")
     Kaji.ClearTooltip(self)
@@ -370,7 +375,7 @@ end)
 
 ---@param parent Frame
 ---@param labelText? string
----@param config? { collapsed?: boolean, summary?: string, onToggle?: fun(), onMoveUp?: fun(), onMoveDown?: fun(), onDuplicate?: fun(), onDelete?: fun() }
+---@param config? { collapsed?: boolean, summary?: string, notice?: KajiGUINotice, onToggle?: fun(), onMoveUp?: fun(), onMoveDown?: fun(), onDuplicate?: fun(), onDelete?: fun() }
 ---@return KajiGUISectionHeader
 function InstanceMixin:CreateSectionHeader(parent, labelText, config)
     return self:BuildWidget(WIDGET_TYPE, parent, labelText, config)

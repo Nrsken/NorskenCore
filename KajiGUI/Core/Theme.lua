@@ -17,7 +17,7 @@
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji
@@ -129,6 +129,9 @@ local DEFAULT_THEME = {
     colorSwatchTexture      = MEDIA .. "NUIcolorPickerBG.png",
     resizeHandleTexture     = MEDIA .. "NorskenCustomResizeHandle23px.png",
     noticeTexture           = MEDIA .. "warning.png", -- white, tinted per notice level
+    linkTexture             = MEDIA .. "external-link.png", -- white, muted until hovered
+    linkGlowTexture         = MEDIA .. "external-link_glow.png",
+    backTexture             = MEDIA .. "right-arrow.png", -- turned to point left
     -- Drag cursors: an Enum.Cursormode or built-in cursor name, never a path (addon textures draw black)
     dragCursor              = Enum.Cursormode and Enum.Cursormode.GrabbingHandCursor or "UI_MOVE_CURSOR",
     dragCursorHeld          = Enum.Cursormode and Enum.Cursormode.HoldingHandCursor or "UI_MOVE_CURSOR",
@@ -504,8 +507,11 @@ function InstanceMixin:_FireThemeChanged()
     end
 
     for widget in pairs(self._acquired) do
-        if widget.UpdateColors then widget:UpdateColors() end
+        if widget.UpdateColors then
+            widget:UpdateColors()
+        end
         Kaji.PaintNotice(widget)
+        Kaji.PaintLink(widget)
     end
 end
 

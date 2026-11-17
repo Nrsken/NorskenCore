@@ -44,7 +44,7 @@
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji
@@ -52,6 +52,7 @@ local Kaji = Core.Kaji
 local InstanceMixin = Kaji.InstanceMixin
 local safecall = Kaji.safecall
 local pixel = Core.Pixel
+local L = Core.L
 
 local CreateFrame = CreateFrame
 local ipairs = ipairs
@@ -538,8 +539,32 @@ function InstanceMixin:CreateContentHost(parent, opts)
 
     local ApplyTabsForItem -- defined once the strip helpers exist
 
+    ---@param value number
+    local function SetScroll(value)
+        if scrollbar:IsShown() then
+            scrollbar:SetValue(value)
+        else
+            scrollFrame:SetVerticalScroll(value)
+        end
+    end
+
     local function ResetScroll()
-        if scrollbar:IsShown() then scrollbar:SetValue(0) else scrollFrame:SetVerticalScroll(0) end
+        SetScroll(0)
+    end
+
+    ---Puts page `id` back at `offset` once rebuilt, as far as its new height allows.
+    ---@param id string
+    ---@param offset number
+    local function RestoreScroll(id, offset)
+        if offset <= 0 then return end
+        local function Place()
+            if host.currentId ~= id then return end
+            UpdateScrollbar()
+            SetScroll(mmin(offset, mmax(0, scrollChild:GetHeight() - scrollFrame:GetHeight())))
+        end
+        Place()
+        -- cards can settle their height a frame after the build
+        C_Timer.After(0, Place)
     end
 
     -- A page-level sidebar alongside tabs makes the sidebar the outer axis: the selected item
@@ -574,6 +599,27 @@ function InstanceMixin:CreateContentHost(parent, opts)
 
     -- Builds a fluent page into the (freshly cleared) scroll child. `tabId`, `itemKey` and `item`
     -- are nil when no tab strip / sidebar is active.
+    -- the way back from a followed link, shown on the view it opened until another view builds
+    local function GoBack()
+        local back = host._back
+        if not back then return end
+        host._back = nil
+        local target = { itemKey = back.itemKey, tabId = back.tabId }
+        if back.window then
+            back.window:ShowPage(back.id, target)
+        else
+            host:ShowPage(back.id, target)
+        end
+        RestoreScroll(back.id, back.scroll)
+    end
+
+    ---@param page table
+    local function ShowBackButton(page)
+        local first = page.cards[1]
+        if not first then return end
+        first:HeaderButton({ texture = gui.theme.backTexture, size = 18, rotation = math.pi, tooltip = L['Back'], onClick = GoBack })
+    end
+
     local function BuildPage(descriptor, tabId, itemKey, item)
         local page = gui:CreatePage(scrollChild, topOffset, {
             onLayout = function() UpdateScrollbar() end,
@@ -582,6 +628,35 @@ function InstanceMixin:CreateContentHost(parent, opts)
         page:Finish()
         host.page = page
         UpdateScrollbar()
+
+        local view = tostring(descriptor) .. "/" .. tostring(tabId) .. "/" .. tostring(itemKey)
+        if host._following then
+            host._landed = view
+        elseif host._back and host._backView == view then
+            ShowBackButton(page)
+        else
+            host._back = nil
+        end
+    end
+
+    ---Runs a link's `open`, so the view it lands on offers a way back here, scroll and all.
+    ---@param open fun()
+    ---@param window? table the window holding this host, which keeps its sidebar in step on the way back
+    function host:FollowLink(open, window)
+        local back = {
+            id = host.currentId,
+            itemKey = host._currentItem,
+            tabId = host._currentTab,
+            scroll = scrollFrame:GetVerticalScroll(),
+            window = window,
+        }
+        host._following, host._landed = true, nil
+        safecall(open)
+        host._following = nil
+        if host._landed and host.page then
+            host._back, host._backView = back, host._landed
+            ShowBackButton(host.page)
+        end
     end
 
     -- The mini sidebar runs from under the header to the host's foot; in tabs mode the strip is inset beside it.
@@ -863,14 +938,18 @@ function InstanceMixin:CreateContentHost(parent, opts)
     function host:ShowPage(id, target)
         local descriptor = gui._pages and gui._pages[id]
 
-        -- Lifecycle hooks for pages that drive something outside the window while they are open.
-        -- onLeave only fires on an actual page change; onEnter re-fires on a re-show of the same
-        -- page, so both are documented as idempotent.
+        -- onLeave only fires on an actual page change; onEnter re-fires on a re-show of the
+        -- same page, so both must be idempotent
         local previous = host._descriptor
         local previousId = host.currentId
         if previous and previous ~= descriptor and previous.onLeave then
             safecall(previous.onLeave, host.currentId)
         end
+
+        -- the same view again (the window reopening, a page rebuilt after an edit) keeps its place
+        local sameView = id == previousId and (not target
+            or ((target.itemKey == nil or target.itemKey == host._currentItem) and (target.tabId == nil or target.tabId == host._currentTab)))
+        local keepScroll = sameView and scrollFrame:GetVerticalScroll() or 0
 
         ClearScrollChild(gui, scrollChild)
         HideNested()
@@ -888,16 +967,22 @@ function InstanceMixin:CreateContentHost(parent, opts)
         local mode = descriptor and (descriptor.mode or "clean")
         if mode == "tabs" then
             ShowTabs(descriptor)
+            RestoreScroll(id, keepScroll)
             return
         end
 
-        if tabStrip then tabStrip.frame:Hide() end
+        if tabStrip then
+            tabStrip.frame:Hide()
+        end
         if descriptor then
             ShowContent(descriptor, nil)
+            RestoreScroll(id, keepScroll)
         else
             host._pendingTarget = nil
             host._currentTab = nil
-            if miniSidebar then miniSidebar.frame:Hide() end
+            if miniSidebar then
+                miniSidebar.frame:Hide()
+            end
             sidebarInset = 0
             AnchorScrollTop()
             UpdateScrollbar()
@@ -952,8 +1037,7 @@ function InstanceMixin:CreateContentHost(parent, opts)
             local ownerTop, childTop = owner:GetTop(), scrollChild:GetTop()
             if not ownerTop or not childTop then return end
             local maxScroll = mmax(0, scrollChild:GetHeight() - scrollFrame:GetHeight())
-            local target = mmax(0, mmin(childTop - ownerTop - 50, maxScroll))
-            if scrollbar:IsShown() then scrollbar:SetValue(target) else scrollFrame:SetVerticalScroll(target) end
+            SetScroll(mmax(0, mmin(childTop - ownerTop - 50, maxScroll)))
             host:FlashWidget(owner)
         end)
     end

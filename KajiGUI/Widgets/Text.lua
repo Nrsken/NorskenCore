@@ -15,7 +15,7 @@
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji
@@ -51,6 +51,7 @@ local BG_MODES = {
 ---@field _minHeight number
 ---@field _titleSpacer number
 ---@field _measured? number last settled height, nil until the first measure
+---@field _linkReserve number room kept free at the right for a link arrow
 local TextMixin = {}
 
 ---Flattens the body, which may be a string, a bulleted list, or a provider for either.
@@ -76,7 +77,7 @@ function TextMixin:Measure(width)
     -- No width yet means the row has not been laid out; OnSizeChanged brings us back.
     if not self._autoHeight or not width or width <= 0 then return end
 
-    self.label:NCSetWidth(width)
+    self.label:NCSetWidth(width - self._linkReserve)
     local desired = max(self._titleSpacer + (self.label:GetStringHeight() or 0) + self.gui.theme.paddingSmall,
         self._minHeight)
     -- Bailing on an unchanged height is what stops resize -> OnSizeChanged -> resize looping.
@@ -130,6 +131,7 @@ function TextMixin:OnAcquire(parent, titleText, config)
     self._autoHeight = autoHeight and true or false
     self._minHeight = config.minHeight or 0
     self._measured = nil
+    self._linkReserve = config.link and Kaji.LINK_WIDTH or 0
 
     self:SetParent(parent)
     self:ClearAllPoints()
@@ -155,10 +157,11 @@ function TextMixin:OnAcquire(parent, titleText, config)
         self.label:SetJustifyV("TOP")
     else
         self.label:SetJustifyV("MIDDLE")
-        self.label:NCSetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT", 0, 0)
+        self.label:NCSetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT", -self._linkReserve, 0)
     end
     self.label:SetJustifyH(config.justify or "LEFT")
     self.label:SetText(self:ResolveBody(config.text))
+    Kaji.SetLink(self, self.gui, nil, config.link, self.container)
 
     self:SetAlpha(1)
     self:UpdateColors()
@@ -182,10 +185,12 @@ end
 ---@field minHeight? number shortest the block may get while auto sizing
 ---@field bgMode? "show"|"border"|"hide"
 ---@field justify? "LEFT"|"CENTER"|"RIGHT" body alignment, LEFT by default
+---@field link? KajiGUILink the whole block opens where this is set, an arrow at its right end
 
 Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local row = CreateFrame("Frame", nil, gui._poolHost) --[[@as KajiGUIText]]
     row.gui = gui
+    row._linkReserve = 0
 
     local container = CreateFrame("Frame", nil, row, "BackdropTemplate")
     container:NCSetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)

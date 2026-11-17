@@ -28,7 +28,7 @@
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji
@@ -282,7 +282,7 @@ end
 ---
 ---The body animates and runs until the next Section, a Separator or :EndSection.
 ---@param title string
----@param config? { key?: any, collapsed?: boolean, summary?: string, summaryColor?: number[], onToggle?: fun(), onMoveUp?: fun(), onMoveDown?: fun(), onDuplicate?: fun(), onDelete?: fun() }
+---@param config? { key?: any, collapsed?: boolean, summary?: string, summaryColor?: number[], notice?: KajiGUINotice, onToggle?: fun(), onMoveUp?: fun(), onMoveDown?: fun(), onDuplicate?: fun(), onDelete?: fun() }
 ---@return boolean expanded
 ---@return KajiGUISectionHeader header for SetTitle/SetSummary while its settings change
 function FluentCard:Section(title, config)
