@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 local L = Core.L
 
@@ -180,6 +180,7 @@ Core.Colors = {
     stagger = {},
     status = {},
     dispel = {},
+    dispelRGB = {},
     white = CreateColor(1, 1, 1, 1),
     warning = { 1, 0.55, 0.2, 1 },
     highlightColor = { 1, 1, 1, 0.25 },
@@ -241,8 +242,12 @@ function Core:LoadCustomColors()
         palette.class[token] = CreateColor(c[1], c[2], c[3])
     end
 
+    -- aura buttons hand the game plain ones, half the cost to copy; a new table each load
+    -- tells a button its copy went stale
+    palette.dispelRGB = {}
     for index, c in next, db.Dispel do
         palette.dispel[index] = CreateColor(c[1], c[2], c[3])
+        palette.dispelRGB[index] = { r = c[1], g = c[2], b = c[3] }
     end
 
     -- Status colors are consumed directly (RGBA) by the health handler.

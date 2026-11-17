@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class AuraTriggers
 local AuraTriggers = {}
@@ -75,7 +75,7 @@ function AuraTriggers:New(overrides)
     return trigger
 end
 
----A branch matching everything the base type allows, so an empty AuraFilter trigger still resolves.
+---A branch matching all the base type allows, so an empty AuraFilter trigger resolves.
 ---@param trigger table
 ---@return table[]
 local function BareBranch(trigger)
@@ -97,10 +97,11 @@ one aura group per branch. Always at least one, so a binding never ends up with 
 function Core:GetTriggerBranches(trigger)
     local Filters = Core.AuraFilters
 
-    -- A bare filter string is accepted as a one-branch trigger, which is what the displays running a
-    -- hardcoded HELPFUL/HARMFUL group (PlayerAuras) and their previews pass.
+    -- a bare filter string is a one-branch trigger; PlayerAuras and its previews pass one
     if type(trigger) == 'string' then
-        if not AuraUtil.IsValidFilterString(trigger) then return Filters:Compile(nil, AF.Harmful) end
+        if not AuraUtil.IsValidFilterString(trigger) then
+            return Filters:Compile(nil, AF.Harmful)
+        end
         return Filters:Compile({ { type = trigger } }, nil)
     end
 
@@ -111,15 +112,17 @@ function Core:GetTriggerBranches(trigger)
     if trigger.Type == Types.Preset then
         -- A preset ships its own per-branch types, so it needs no base of its own.
         local branches = AuraTriggers:GetPresetBranches(trigger)
-        if not branches then return Filters:Compile(nil, AF.Harmful) end
+        if not branches then
+            return Filters:Compile(nil, AF.Harmful)
+        end
 
         return Filters:Compile(branches, nil)
     end
 
     if trigger.Type == Types.SpellIDs then
         local map = trigger.SpellIDs
-        -- A spell list says which aura, never whose. The PLAYER token is how it says the latter, since
-        -- a SpellIDs trigger has no branch of its own to put a token on.
+        -- a spell list says which aura, never whose: that's the PLAYER token, as a SpellIDs
+        -- trigger has no branch of its own to put one on
         local tokens = trigger.OnlyMine and { [AF.Player] = true } or nil
 
         if type(map) ~= 'table' or next(map) == nil then
@@ -139,18 +142,47 @@ function Core:GetTriggerBranches(trigger)
     return Filters:Compile(branches, trigger.Base)
 end
 
+---How many branches GetTriggerBranches makes, without the new tables a compile makes.
+---@param trigger (table|string)?
+---@return number
+function Core:CountTriggerBranches(trigger)
+    local branches = type(trigger) == 'table' and trigger.branches
+    if type(trigger) == 'table' and trigger.Type == Types.Preset then
+        -- an edited preset only adds and removes spells, never branches
+        local preset = Core.AuraFiltersPremade:Get(trigger.Preset)
+        branches = preset and preset.branches
+    end
+    -- a spell list, a bare filter string or no branches at all compile to one
+    if type(trigger) ~= 'table' or trigger.Type == Types.SpellIDs or type(branches) ~= 'table' or not branches[1] then
+        return 1
+    end
+
+    -- up to the first gap, as Compile walks them
+    local count = 0
+    for _ in ipairs(branches) do
+        count = count + 1
+    end
+    return count
+end
+
 ---A preset's branches with the trigger's added and switched-off spells applied.
 ---@param trigger table
 ---@return table[]? branches nil for an unknown preset
 function AuraTriggers:GetPresetBranches(trigger)
     local preset = Core.AuraFiltersPremade:Get(trigger.Preset)
     if not preset then return nil end
-    if not (preset.spells and (trigger.Added or trigger.Removed)) then return preset.branches end
+    if not (preset.spells and (trigger.Added or trigger.Removed)) then
+        return preset.branches
+    end
 
     local branches = CopyTable(preset.branches)
     local map = branches[1].candidates[preset.spellField]
-    for id, group in pairs(trigger.Added or {}) do map[id] = group end
-    for id in pairs(trigger.Removed or {}) do map[id] = nil end
+    for id, group in pairs(trigger.Added or {}) do
+        map[id] = group
+    end
+    for id in pairs(trigger.Removed or {}) do
+        map[id] = nil
+    end
 
     return branches
 end
@@ -161,7 +193,9 @@ function AuraTriggers:ConvertSpellIDs(trigger)
     if trigger.Type ~= Types.SpellIDs then return end
 
     local ids = {}
-    for id in pairs(trigger.SpellIDs or {}) do ids[id] = 'OTHER' end
+    for id in pairs(trigger.SpellIDs or {}) do
+        ids[id] = 'OTHER'
+    end
 
     trigger.branches = {
         { tokens = trigger.OnlyMine and { [AF.Player] = true } or nil, candidates = { includeSpellIDs = ids } },
@@ -170,7 +204,7 @@ function AuraTriggers:ConvertSpellIDs(trigger)
     trigger.SpellIDs, trigger.OnlyMine = nil, nil
 end
 
----Type and branches are written explicitly so the AceDB Preset default can't revert it on load.
+---Type and branches are written out so the AceDB Preset default can't revert it on load.
 ---@param trigger table
 function AuraTriggers:ConvertPreset(trigger)
     if trigger.Type ~= Types.Preset then return end
@@ -213,7 +247,9 @@ function AuraTriggers:ToAuraFilter(trigger)
     local base = branches[1].type or trigger.Base or AF.Harmful
     -- Presets carry a type per branch; the editor only has the trigger-wide one, so it moves up.
     for _, branch in ipairs(branches) do
-        if branch.type == base then branch.type = nil end
+        if branch.type == base then
+            branch.type = nil
+        end
     end
 
     return self:New({ Unit = trigger.Unit, Base = base, branches = branches })
@@ -232,9 +268,8 @@ function AuraTriggers:GetShippedLists(trigger)
     return lists
 end
 
--- Consumers that want telling when any trigger changed, keyed by consumer table. A page can affect
--- several live displays at once (every unit frame sharing a unit config), so this stays a broadcast
--- rather than a direct call from the GUI.
+-- consumers told when any trigger changes; a broadcast, since one page can reach several
+-- live displays (every unit frame sharing a unit config)
 local callbacks = {}
 
 ---@param consumer table

@@ -20,6 +20,7 @@
             "BugSack",
             "CustomAuraContainerAuraProcessingPolicy",
             "CustomAuraContainerItemEnchantmentPlacement",
+            "CustomAuraContainerLayoutDefaults",
             "HidingBarAddon",
             "LoadAddOnWithErrorHandling",
             "NorskenCoreDB",

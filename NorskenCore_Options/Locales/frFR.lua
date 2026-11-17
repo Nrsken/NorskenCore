@@ -1,2 +1,2 @@
 -- French frFR localization file.
-local L = (_G.NorskenCore --[[@as NRSKNUI]]):NewLocale('frFR')
+local L = (_G.NorskenCore --[[@as NorskenCore]]):NewLocale('frFR')

@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 
 local math_floor = math.floor
@@ -220,15 +220,27 @@ local function ResolveBreakpointColors(useBreakpointColors, singleColor)
     return colors
 end
 
+---Where each breakpoint starts, in seconds.
+---@return number[]
+local function BreakpointStarts()
+    local points = Core:GetSharedSettings().globalMedia.profileBreakPoints
+    local starts = {}
+    for i = 1, #POINT_KEYS do
+        -- point one starts at 0 so short durations are covered; the rest only stay ascending
+        starts[i] = (i == 1) and 0 or math_max(tonumber(points[POINT_KEYS[i]].threshold) or 0, starts[i - 1] + 1)
+    end
+    return starts
+end
+
 ---@param colors? number[][] Per-breakpoint rgba from ResolveBreakpointColors.
 local function BuildDurationBreakpoints(colors)
     local points = Core:GetSharedSettings().globalMedia.profileBreakPoints
-    local breakpoints, previous = {}, 0
+    local starts = BreakpointStarts()
+    local breakpoints = {}
 
     for i = 1, #POINT_KEYS do
         local point = points[POINT_KEYS[i]]
-        -- Point one has to start at 0 so short durations are covered, the rest only need to stay ascending.
-        local threshold = (i == 1) and 0 or math_max(tonumber(point.threshold) or 0, previous + 1)
+        local threshold = starts[i]
         local format = colors and CreateColor(unpack(colors[i])):WrapTextInColorCode(point.format) or point.format
 
         if point.format == Core.MINUTES_SECONDS_FORMAT then
@@ -247,7 +259,6 @@ local function BuildDurationBreakpoints(colors)
                 components = { DurationComponent(point.format) },
             }
         end
-        previous = threshold
     end
 
     return breakpoints
@@ -297,4 +308,44 @@ function Core:GetAuraDurationFormatter(useBreakpointColors, singleColor)
     end
 
     return formatter
+end
+
+---How the shared Duration Text colours a time left; with none picked it fades.
+---@return 'single'|'breakpoint'|'curve'
+function Core:GetSharedDurationMode()
+    local media = Core:GetSharedSettings().globalMedia
+    if media.durationSingleColor then
+        return 'single'
+    elseif media.durationBreakpointColors then
+        return 'breakpoint'
+    end
+    return 'curve'
+end
+
+local stepCurve, stepCurveKey
+
+---The shared Duration Text colours as one curve on the time left, whichever the mode.
+---@return ColorCurveObject
+function Core:GetSharedDurationColorCurve()
+    local mode = Core:GetSharedDurationMode()
+    if mode == 'curve' then
+        return Core.curves.AuraDurationColor
+    end
+
+    -- every shared change bumps SharedVersion, so nothing has to refresh this
+    local key = mode .. Core.SharedVersion
+    if stepCurveKey ~= key then
+        local media = Core:GetSharedSettings().globalMedia
+        local colors = ResolveBreakpointColors(true, mode == 'single' and media.durationSingleColorValue or nil)
+        ---@cast colors -nil
+        local curve = C_CurveUtil.CreateColorCurve()
+        curve:SetType(Enum.LuaCurveType.Step)
+        -- the first step reaches below zero, where nothing reads
+        curve:AddPoint(-1, CreateColor(unpack(colors[1])))
+        for i, start in ipairs(BreakpointStarts()) do
+            curve:AddPoint(start, CreateColor(unpack(colors[i])))
+        end
+        stepCurve, stepCurveKey = curve, key
+    end
+    return stepCurve
 end

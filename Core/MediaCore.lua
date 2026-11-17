@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 local LSM = Core.Libs.LSM
 
@@ -32,6 +32,11 @@ Core.Media = {
     Sounds = {},
     Solid = SOLID,
     GUITextures = 'Interface\\AddOns\\NorskenCore\\Media\\GUITextures\\',
+    -- the white Norsken mark, tinted by whoever draws it
+    Logo = 'Interface\\AddOns\\NorskenCore\\Media\\Logo\\logocookingsPT1128x128OT.png',
+    -- a top-to-bottom white fade, tinted by whoever draws it (the dispel highlight)
+    Gradient = 'Interface\\AddOns\\NorskenCore\\Media\\white_gradient.tga',
+    LogoGlow = 'Interface\\AddOns\\NorskenCore\\Media\\Logo\\logocookingsPT1128x128OT_glow.png',
     FallbackFont = FALLBACK_FONT,
     FallbackSize = FALLBACK_SIZE,
     DefaultFont = DEFAULT_FONT_NAME,
@@ -121,7 +126,7 @@ do
         lastResolvedPath = path
 
         Core:DeferUntilUnrestricted(0, function()
-            Core:SharedSettingsChanged(true)
+            Core:SharedSettingsChanged(Core.Enum.Apply.Text)
             Core:RefreshFontStyles()
         end)
     end

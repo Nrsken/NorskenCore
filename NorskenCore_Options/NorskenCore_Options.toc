@@ -17,4 +17,5 @@ GUI-SharedLanguage.lua
 GUI-SharedTheme.lua
 GUI-SpellList.lua
 GUI-AuraCards.lua
+GUI-AuraLook.lua
 GUI-TriggerEditor.lua

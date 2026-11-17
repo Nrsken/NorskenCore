@@ -1,11 +1,11 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class AuraFilters
 local AuraFilters = {}
 Core.AuraFilters = AuraFilters
 
-local tinsert = table.insert
 local ipairs, pairs = ipairs, pairs
+local tinsert = table.insert
 local CopyTable = CopyTable
 local unpack = unpack
 local type = type
@@ -34,7 +34,7 @@ AuraFilters.BoolCandidateFields = {
     'nameplateShowPersonal',
 }
 
--- Table candidate fields that can be a table or nil. The spell ID fields are handled on their own.
+-- candidate fields holding a table or nil, the spell ID fields are handled on their own
 AuraFilters.TableCandidateFields = {
     'includeDispelTypes',
     'excludeDispelTypes',
@@ -66,7 +66,7 @@ local BOOL_CANDIDATE_FIELDS = AuraFilters.BoolCandidateFields
 local TABLE_CANDIDATE_FIELDS = AuraFilters.TableCandidateFields
 
 ---Assemble the parse filter string from a branch's base type + triple state tokens.
----The base is the trigger's, so a branch only carries its own type when a preset gave it one.
+---The base is the trigger's: a branch carries its own type only when a preset gave it one.
 ---@param branch table
 ---@param baseType string?
 ---@return string
@@ -95,13 +95,19 @@ end
 ---@return table map
 local function ShippedSpells(shipped)
     local map = {}
-    for id in pairs(Core.AuraFiltersPremade:GetShippedSpells(shipped.list) or {}) do map[id] = true end
-    for id in pairs(shipped.Added or {}) do map[id] = true end
-    for id in pairs(shipped.Removed or {}) do map[id] = nil end
+    for id in pairs(Core.AuraFiltersPremade:GetShippedSpells(shipped.list) or {}) do
+        map[id] = true
+    end
+    for id in pairs(shipped.Added or {}) do
+        map[id] = true
+    end
+    for id in pairs(shipped.Removed or {}) do
+        map[id] = nil
+    end
     return map
 end
 
----Build the candidateFilters table from a branch's candidate fields. Returns nil when none are defined.
+---A branch's candidateFilters table, nil when it defines none.
 ---@param branch table
 ---@return table?
 local function BuildCandidateFilters(branch)
@@ -135,17 +141,21 @@ local function BuildCandidateFilters(branch)
     -- Spell lists store their group as the value, the client gets plain true.
     for _, field in ipairs(SPELLID_CANDIDATE_FIELDS) do
         local map = specCandidates[field]
-        if shipped and shipped.field == field then map = ShippedSpells(shipped) end
+        if shipped and shipped.field == field then
+            map = ShippedSpells(shipped)
+        end
         if type(map) == 'table' then
             local ids = {}
             for id, value in pairs(map) do
-                if value then ids[id] = true end
+                if value then
+                    ids[id] = true
+                end
             end
             if next(ids) ~= nil then
                 cFilter = cFilter or {}
                 cFilter[field] = ids
             elseif field == 'includeSpellIDs' then
-                -- An empty "only these" list would be no filter at all to the client, so it matches nothing instead.
+                -- an empty "only these" list is no filter to the client, so it matches nothing instead
                 cFilter = cFilter or {}
                 cFilter[field] = { [0] = true }
             end
@@ -157,8 +167,8 @@ local function BuildCandidateFilters(branch)
         cFilter.maxDuration = specCandidates.maxDuration
     end
 
-    -- Matching on AuraUtil.ProcessAura's classification. This only works while the container runs
-    -- the ProcessAura policy, container:AddFilteredGroup turns it on when it sees this field.
+    -- matches on AuraUtil.ProcessAura's classification, which needs the ProcessAura policy;
+    -- container:AddFilteredGroup turns that on when it sees this field
     local processedAuraType = specCandidates.processedAuraType
     if type(processedAuraType) == 'number' and processedAuraType ~= AuraUtil.AuraUpdateChangedType.None then
         cFilter = cFilter or {}
@@ -201,4 +211,3 @@ function AuraFilters:HasSpellIDCandidates(candidates)
     for _ in pairs(candidates.includeSpellIDs or {}) do return true end
     return false
 end
-

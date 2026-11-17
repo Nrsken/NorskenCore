@@ -1,6 +1,6 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = _G.NorskenCore
----@class NRSKNUI.GUITriggerEditor
+---@class NorskenCore.GUITriggerEditor
 local TriggerEditor = {}
 Core.GUITriggerEditor = TriggerEditor
 local L = Core.L
@@ -8,6 +8,7 @@ local rowH = Core.Kaji.DEFAULT_THEME.rowHeight
 
 local AuraTriggers = Core.AuraTriggers
 local Premade = Core.AuraFiltersPremade
+local Apply = Core.Enum.Apply
 local SpellList = Core.GUISpellList
 local AF = AuraUtil.AuraFilters
 
@@ -15,12 +16,8 @@ local ipairs, tonumber, tostring = ipairs, tonumber, tostring
 local format = string.format
 local setmetatable = setmetatable
 local tinsert, tremove = table.insert, table.remove
-local min, rad = math.min, math.rad
 local CopyTable = CopyTable
 local nop = nop
-
-local TEX = Core.Media.GUITextures
-local DELETE_COLOR = { 1, 0, 0 }
 
 -- A "trigger" here is one branch of the saved trigger: an aura group inside the display's container.
 
@@ -28,6 +25,7 @@ local AURA_TYPES = {
     { value = AF.Helpful, text = L['Buffs'] },
     { value = AF.Harmful, text = L['Debuffs'] },
 }
+TriggerEditor.AuraTypes = AURA_TYPES
 local SPELL_MODES = {
     { value = 'all',  text = L['All Spells'] },
     { value = 'only', text = L['Whitelist'] },
@@ -161,15 +159,6 @@ end
 
 -- Weak keys: a branch or trigger that goes away takes its state with it.
 local openState = setmetatable({}, { __mode = 'k' })
-local pickedBranch = setmetatable({}, { __mode = 'k' })
-
----@param trigger table
----@return number
-local function Picked(trigger)
-    local index = min(pickedBranch[trigger] or 1, #trigger.branches)
-    pickedBranch[trigger] = index
-    return index
-end
 
 -- Spells --
 
@@ -266,57 +255,21 @@ function TriggerEditor:Label(theme, trigger, index)
     return format('%s  %s', format(L['Trigger %d'], index), Muted(theme, auraType))
 end
 
----Duplicate and delete on every row of the trigger dropdown.
----@param trigger table
----@param changed fun(picked: number)
----@return fun(index: number): KajiGUIDropdownItemAction[]
-local function TriggerActions(gui, trigger, changed)
-    local branches = trigger.branches
-    return function(index)
-        return {
-            {
-                icon = TEX .. 'plus-sign.png',
-                tooltip = L['Duplicate'],
-                onClick = function()
-                    TriggerEditor:DuplicateBranch(trigger, index)
-                    changed(#branches)
-                end,
-            },
-            {
-                icon = TEX .. 'NorskenCustomCrossv3.png', -- same cross, tint and rotation as skinned close buttons
-                color = DELETE_COLOR,
-                rotation = rad(45),
-                tooltip = L['Delete Trigger'],
-                -- The last one stays: a display without any matches everything its base allows.
-                disabled = #branches == 1,
-                onClick = function()
-                    gui:Prompt({
-                        title = L['Delete Trigger'],
-                        text = format(L['Delete Trigger %d and everything set on it?\nThis cannot be undone.'], index),
-                        onAccept = function()
-                            TriggerEditor:RemoveBranch(trigger, index)
-                            changed(min(index, #branches))
-                        end,
-                        acceptText = L['Delete'],
-                        cancelText = L['Cancel'],
-                    })
-                end,
-            },
-        }
-    end
-end
-
 ---The Load Preset dropdown: it replaces every trigger, or only the one at `index`.
 ---@param gui table
 ---@param trigger table
 ---@param changed fun(picked: number)
 ---@param refresh fun() puts the dropdown back when the prompt is cancelled
 ---@param index number?
+---@param single boolean? only presets of one trigger, for a display that shows one
 ---@return table config
-function TriggerEditor:LoadPresetConfig(gui, trigger, changed, refresh, index)
+function TriggerEditor:LoadPresetConfig(gui, trigger, changed, refresh, index, single)
     local options = {}
-    for i, preset in ipairs(Premade:GetList()) do
-        options[i] = { value = preset.key, text = preset.text }
+    for _, preset in ipairs(Premade:GetList()) do
+        local branches = Premade:Get(preset.key).branches
+        if not single or #branches == 1 then
+            options[#options + 1] = { value = preset.key, text = preset.text }
+        end
     end
 
     return {
@@ -347,72 +300,7 @@ function TriggerEditor:LoadPresetConfig(gui, trigger, changed, refresh, index)
     }
 end
 
----@param page table
----@param trigger table
----@param ctx table
----@param apply fun()
----@param show fun(picked: number) shows another trigger
----@param changed fun(picked: number) after the trigger list changed
----@return KajiGUIFluentCard
-local function BuildContainerCard(page, trigger, ctx, apply, show, changed)
-    local gui = page.gui
-    local card
-    card = page:Card(ctx.title, ctx.group):Rebuild(function(c)
-        local index = Picked(trigger)
-        local options = {}
-        for i = 1, #trigger.branches do
-            options[i] = { value = i, text = TriggerEditor:Label(gui.theme, trigger, i) }
-        end
-
-        local editing = {
-            width = 0.5,
-            options = options,
-            value = index,
-            tooltip = L['Each trigger is its own group of auras, shown together in this display.'],
-            itemActions = TriggerActions(gui, trigger, changed),
-            callback = function(value)
-                if value ~= index then show(value) end
-            end,
-        }
-        local addTrigger = {
-            height = 24,
-            callback = function()
-                TriggerEditor:AddBranch(trigger)
-                changed(#trigger.branches)
-            end,
-        }
-        local loadPreset = TriggerEditor:LoadPresetConfig(gui, trigger, changed, function() card:Rebuild() end)
-
-        local first = c:Row(rowH)
-        if ctx.showUnit then
-            first:Dropdown(L['Unit'], {
-                width = 0.5,
-                options = AuraTriggers.UnitOptions,
-                value = trigger.Unit,
-                tooltip = L['Every trigger in this display watches this unit.'],
-                callback = function(value)
-                    trigger.Unit = value
-                    apply()
-                end,
-            })
-            first:Dropdown(L['Editing'], editing)
-
-            local second = c:Row(rowH, 0)
-            second:Dropdown(L['Load Preset'], loadPreset)
-            addTrigger.width, addTrigger.yOffset = 0.5, -14 -- level with the dropdown box beside it
-            second:Button(L['Add Trigger'], addTrigger)
-        else
-            first:Dropdown(L['Editing'], editing)
-            first:Dropdown(L['Load Preset'], loadPreset)
-
-            addTrigger.width = 1
-            c:Row(24, 0):Button(L['Add Trigger'], addTrigger)
-        end
-    end)
-    return card
-end
-
--- Trigger card --
+-- Trigger rows --
 
 ---@param card KajiGUIFluentCard
 ---@param branch table
@@ -540,23 +428,6 @@ local function BuildBranch(c, trigger, index, apply, changed, retype, nest)
     BuildFilters(c, branch, changed, nest)
 end
 
----@param page table
----@param trigger table
----@param apply fun()
----@param retype fun() after the aura type changed, which the container card names
----@param group string? the page condition group its widgets join
----@return KajiGUIFluentCard
-local function BuildTriggerCard(page, trigger, apply, retype, group)
-    local card
-    card = page:Card(format(L['Trigger %d'], Picked(trigger)), group):Rebuild(function(c)
-        BuildBranch(c, trigger, Picked(trigger), apply, function()
-            apply()
-            card:Rebuild()
-        end, retype)
-    end)
-    return card
-end
-
 ---Bring an old trigger up to the shape the editor writes, before anything reads its branches.
 ---@param trigger table
 function TriggerEditor:Prepare(trigger)
@@ -574,8 +445,10 @@ end
 ---@param index number
 ---@param changed fun() after any edit, which rebuilds the rows
 ---@param nest { key: string } the section's key
-function TriggerEditor:BuildBranch(c, trigger, index, changed, nest)
-    c:Row(rowH):Dropdown(L['Load Preset'], self:LoadPresetConfig(c.page.gui, trigger, changed, function() c:Rebuild() end, index))
+---@param single boolean? see BuildSections
+function TriggerEditor:BuildBranch(c, trigger, index, changed, nest, single)
+    local refresh = function() c:Rebuild() end
+    c:Row(rowH):Dropdown(L['Load Preset'], self:LoadPresetConfig(c.page.gui, trigger, changed, refresh, index, single))
     BuildBranch(c, trigger, index, nop, changed, changed, nest) -- changed applies too, so a retype runs it once
 end
 
@@ -628,32 +501,87 @@ function TriggerEditor:RemoveBranch(trigger, index)
     Rebase(trigger)
 end
 
--- Card --
+-- which trigger sections are open, by index; a lone trigger starts open
+local sectionOpen = {}
 
+---An aura group's triggers, a section each, in the order its container shows them.
+---`single` shows one trigger; an old save with more can delete down to it.
 ---@param page table
 ---@param trigger table
----@param ctx { title: string, group?: string, showUnit?: boolean, onChange: fun() }
-function TriggerEditor:Build(page, trigger, ctx)
+---@param opts { title: string, apply: fun(part: NorskenCore.Apply), open: table?, top: fun(card: table, edit: fun(fn: fun()?))?, single: boolean? } `open` keeps the sections' state, `top` draws what every trigger shares
+function TriggerEditor:BuildSections(page, trigger, opts)
     self:Prepare(trigger)
+    local theme = page.gui.theme
+    local opened = opts.open or sectionOpen
 
-    local function Apply()
-        ctx.onChange()
-        AuraTriggers:Invalidate()
-    end
+    page:Card(opts.title, 'all'):Rebuild(function(card)
+        local function Edit(fn)
+            if fn then
+                fn()
+            end
+            -- every trigger edit changes which auras show
+            opts.apply(Apply.Visibility)
+            AuraTriggers:Invalidate()
+            card:Rebuild()
+        end
+        -- the editor's callbacks pass arguments of their own
+        local function Changed()
+            Edit()
+        end
+        local branches = trigger.branches
 
-    -- Both cards rebuild in place rather than the page reloading, so the scroll stays where it was.
-    local containerCard, triggerCard
-    local function Show(picked)
-        pickedBranch[trigger] = picked
-        containerCard:Rebuild()
-        triggerCard:SetTitle(format(L['Trigger %d'], Picked(trigger)))
-        triggerCard:Rebuild()
-    end
-    local function Changed(picked)
-        Apply()
-        Show(picked)
-    end
+        if opts.top then
+            opts.top(card, Edit)
+        end
+        if opts.single and branches[2] then
+            card:Row(rowH):Text(nil, { width = 1, text = L['Only Trigger 1 is used here. Delete the others.'], bgMode = 'hide' })
+        end
 
-    containerCard = BuildContainerCard(page, trigger, ctx, Apply, Show, Changed)
-    triggerCard = BuildTriggerCard(page, trigger, Apply, function() containerCard:Rebuild() end, ctx.group)
+        for index = 1, #branches do
+            local open = opened[index]
+            if open == nil then
+                open = #branches == 1
+            end
+
+            local key = 'cdm:trigger:' .. index
+            local section = {
+                key = key,
+                collapsed = not open,
+                onToggle = function()
+                    opened[index] = not open
+                    card:Rebuild()
+                end,
+                -- the last one stays: a display without any matches everything its aura type allows
+                onDelete = #branches > 1 and function()
+                    Edit(function() self:RemoveBranch(trigger, index) end)
+                end or nil,
+            }
+            if not opts.single then
+                section.onMoveUp = index > 1 and function()
+                    Edit(function() self:MoveBranch(trigger, index, index - 1) end)
+                end or nil
+                section.onMoveDown = index < #branches and function()
+                    Edit(function() self:MoveBranch(trigger, index, index + 1) end)
+                end or nil
+                section.onDuplicate = function()
+                    Edit(function() self:DuplicateBranch(trigger, index) end)
+                end
+            end
+            if card:Section(self:Label(theme, trigger, index), section) then
+                self:BuildBranch(card, trigger, index, Changed, { key = key }, opts.single)
+            end
+        end
+        card:EndSection()
+        if opts.single then return end
+
+        card:Separator()
+
+        card:Row(30, 0):Button(L['Add Trigger'], {
+            width = 1,
+            height = 24,
+            callback = function()
+                Edit(function() self:AddBranch(trigger) end)
+            end,
+        })
+    end)
 end

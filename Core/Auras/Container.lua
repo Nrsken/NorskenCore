@@ -1,40 +1,30 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 
----@type fun(unit: UnitToken, target: UnitToken, canAssistImmunePC: boolean?, canAssistUninteractable: boolean?): boolean
-local UnitCanAssist = UnitCanAssist
-local UnitIsVisible = UnitIsVisible
 local UnitIsPlayerControlledOrGroupMember = UnitIsPlayerControlledOrGroupMember
-local C_Timer, GetTime = C_Timer, GetTime
-local min, max, huge, ceil, floor = math.min, math.max, math.huge, math.ceil, math.floor
-local GenerateClosure = GenerateClosure
+local UnitIsVisible = UnitIsVisible
+local ipairs, pairs = ipairs, pairs
 local CreateFrame = CreateFrame
 local CopyTable = CopyTable
-local ipairs, pairs = ipairs, pairs
+local GetTime = GetTime
 local Mixin = Mixin
 local type = type
 
+---@type fun(unit: UnitToken, target: UnitToken, canAssistImmunePC: boolean?, canAssistUninteractable: boolean?): boolean
+local UnitCanAssist = UnitCanAssist
+
+local huge = math.huge
+
 local AuraFilterTokens = AuraUtil.AuraFilters
 
--- An empty include map matches nothing, and unlike a filter string it survives an untrusted unit.
+-- an empty include map matches nothing; unlike a filter string it holds on untrusted units
 local NEVER_MATCH_CANDIDATES = { includeDispelTypes = {} }
 
--- Element-wide defaults copied onto the container. Group/slot options override them per group.
+-- element-wide defaults copied onto the container, a group's own options override them
 local ELEMENT_OPTIONS = {
-    'size', 'width', 'height',
-    'maxFrameCount', 'sortMethod', 'sortDirection',
+    'maxFrameCount', 'sortMethod', 'sortDirection', 'hidePermanent',
     'elementSpacing', 'lineSpacing', 'groupSpacing', 'groupLineSpacing',
     'forceNewLine', 'elementWidth', 'elementHeight',
-    'disableCooldown', 'drawSwipe', 'drawEdge', 'reverseSwipe',
-    'showApplicationCount', 'applicationCountFormatter',
-    'showDurationText', 'durationTextFormatter', 'durationTextColorCurve',
-    'showBuffBorder', 'showDebuffBorder', 'showWithoutDispelType', 'borderStyle',
-    'customDispelColorMap', 'customDispelColorCurve',
-    'showBuffDispelIcon', 'showDebuffDispelIcon', 'dispelIconSize',
-    'disableMouse', 'cancelAuraButtons', 'borderColor',
-    'tooltipAnchorPoint', 'tooltipOffsetX', 'tooltipOffsetY', 'tooltipHideInCombat',
-    'hidePermanent',
-    'fontDB', 'stackFont', 'durationFont',
 }
 
 -- Subset of ELEMENT_OPTIONS that belongs in a flow layout table.
@@ -43,26 +33,15 @@ local LAYOUT_OPTIONS = {
     'forceNewLine', 'elementWidth', 'elementHeight',
 }
 
----Resolve a button option: per-group options win, then the element-wide default, then the fallback.
----@param options table
----@param container table
----@param key string
----@param fallback any?
----@return any
-local function Opt(options, container, key, fallback)
-    local value = options[key]
-    if value == nil then value = container[key] end
-    if value == nil then return fallback end
-    return value
-end
-
 ---Resolve a growth direction to the AnchorUtil.FlowDirection value the flow layout expects.
 ---Accepts a FlowDirection value directly or one of 'LEFT'/'RIGHT'/'UP'/'DOWN'.
 ---@param direction string|number|nil
 ---@param default number
 ---@return number
 local function ResolveGrowthDirection(direction, default)
-    if type(direction) == 'number' then return direction end
+    if type(direction) == 'number' then
+        return direction
+    end
 
     local flow = AnchorUtil.FlowDirection
     if direction == 'LEFT' then
@@ -78,293 +57,8 @@ local function ResolveGrowthDirection(direction, default)
     return default
 end
 
----@param horizontal string? 'LEFT' | 'RIGHT' | 'CENTER'
----@param vertical string? 'UP' | 'DOWN' | 'CENTER'
----@param anchorTo string? the owner's point the container attaches to
----@return string flowCorner the corner buttons start from, inside the container
----@return string containerPoint the container's own point, where it attaches to its owner
----@return string horizontalFlow 'LEFT' | 'RIGHT'
----@return string verticalFlow 'UP' | 'DOWN'
-function Core:ResolveAuraGrowth(horizontal, vertical, anchorTo)
-    local horizontalFlow = (horizontal == 'LEFT') and 'LEFT' or 'RIGHT'
-    local verticalFlow = (vertical == 'UP') and 'UP' or 'DOWN'
-
-    local cornerV = (verticalFlow == 'DOWN') and 'TOP' or 'BOTTOM'
-    local cornerH = (horizontalFlow == 'LEFT') and 'RIGHT' or 'LEFT'
-
-    -- LEFT / RIGHT / CENTER sit on the owner's vertical middle, TOP / BOTTOM / CENTER on its horizontal one.
-    local middleV = anchorTo == 'LEFT' or anchorTo == 'RIGHT' or anchorTo == 'CENTER'
-    local middleH = anchorTo == 'TOP' or anchorTo == 'BOTTOM' or anchorTo == 'CENTER'
-
-    local pointV = (vertical == 'CENTER' or middleV) and '' or cornerV
-    local pointH = (horizontal == 'CENTER' or middleH) and '' or cornerH
-    local containerPoint = pointV .. pointH
-
-    return cornerV .. cornerH, containerPoint ~= '' and containerPoint or 'CENTER', horizontalFlow, verticalFlow
-end
-
--- The first letter of a dynamic group's Grid Fill each other Grow stands for, so one parser reads them all.
-local GROW_FILL = { RIGHT = 'R', LEFT = 'L', HORIZONTAL = 'R', DOWN = 'D', UP = 'U', VERTICAL = 'D' }
-
----The flow layout a dynamic group's Layout asks for, so an aura group grows the way a dynamic group does.
----@param layout table a dynamic group's Layout: Grow, Align, Spacing, RowSpacing, GridType, GridWidth
----@param width number one button's width
----@param height number one button's height
----@return table flow the container config's layout keys
-function Core:ResolveAuraFlow(layout, width, height)
-    local grow = layout.Grow
-    local grid = grow == 'GRID'
-    local fill = layout.GridType
-    if not grid then
-        local first = GROW_FILL[grow] or 'D' -- a dynamic group's default
-        if first == 'R' or first == 'L' then
-            fill = first .. (layout.Align == 'BOTTOM' and 'U' or 'D')
-        else
-            fill = first .. (layout.Align == 'RIGHT' and 'L' or 'R')
-        end
-    end
-    local rowFirst, xSign, ySign, corner = Core:ParseGridType(fill)
-
-    -- The container sizes itself to its auras, so anchoring it by a centre keeps them centred as they come and go.
-    local centred = grow == 'HORIZONTAL' or grow == 'VERTICAL'
-    local alignCentre = not grid and (layout.Align or 'CENTER') == 'CENTER'
-    local centreV = rowFirst and alignCentre or not rowFirst and centred
-    local centreH = rowFirst and centred or not rowFirst and alignCentre
-    local pointV = centreV and '' or (ySign > 0 and 'BOTTOM' or 'TOP')
-    local pointH = centreH and '' or (xSign > 0 and 'LEFT' or 'RIGHT')
-    local containerPoint = pointV .. pointH
-
-    local spacing = layout.Spacing or 1
-    local maximumLineSize
-    if grid then
-        maximumLineSize = (layout.GridWidth or 5) * ((rowFirst and width or height) + spacing)
-    end
-
-    return {
-        layoutAxis = rowFirst and AnchorUtil.FlowLayoutAxis.Horizontal or AnchorUtil.FlowLayoutAxis.Vertical,
-        anchorPoint = corner,
-        containerPoint = containerPoint ~= '' and containerPoint or 'CENTER',
-        horizontalGrowthDirection = xSign > 0 and 'RIGHT' or 'LEFT',
-        verticalGrowthDirection = ySign > 0 and 'UP' or 'DOWN',
-        elementSpacing = spacing,
-        lineSpacing = grid and layout.RowSpacing or spacing,
-        maximumLineSize = maximumLineSize,
-    }
-end
-
----How a count of buttons falls into lines, the way the native flow layout wraps them.
----@param config table a container config: size or width/height, elementSpacing, lineSpacing, maximumLineSize, layoutAxis
----@param count number most buttons that can be placed
----@return number width
----@return number height
----@return number perLine
----@return number lines
-function Core:GetAuraGridSize(config, count)
-    count = max(1, count)
-    local width = config.width or config.size or 24
-    local height = config.height or config.size or 24
-    local spacing, lineSpacing = config.elementSpacing or 0, config.lineSpacing or 0
-    local vertical = config.layoutAxis == AnchorUtil.FlowLayoutAxis.Vertical
-    local primary, cross = width, height
-    if vertical then
-        primary, cross = height, width
-    end
-
-    local perLine = count
-    if config.maximumLineSize then
-        perLine = max(1, floor((config.maximumLineSize + spacing) / (primary + spacing)))
-    end
-    local lines = ceil(count / perLine)
-    local along = min(perLine, count)
-
-    local primarySize = along * primary + (along - 1) * spacing
-    local crossSize = lines * cross + (lines - 1) * lineSpacing
-    if vertical then
-        return crossSize, primarySize, perLine, lines
-    end
-    return primarySize, crossSize, perLine, lines
-end
-
--- Check what type of duration text coloring is enabled in the global media settings.
-local function GetGlobalDurationColorMode()
-    local media = Core:GetSharedSettings().globalMedia
-    local useBreakpointColors = media and media.durationBreakpointColors
-    local useCurveColors = media and media.durationCurveColors
-    local useSingleColor = media and media.durationSingleColor
-    local singleColor = media and media.durationSingleColorValue
-
-    -- Mode precedence, single color > breakpoint colors > curve colors.
-    if useSingleColor then
-        useBreakpointColors = false
-        useCurveColors = false
-    elseif useBreakpointColors then
-        useCurveColors = false
-    end
-
-    -- If no mode is selected, keep curve mode on.
-    if not useSingleColor and not useBreakpointColors and not useCurveColors then
-        useCurveColors = true
-    end
-
-    return useBreakpointColors, useCurveColors, useSingleColor, singleColor
-end
-
----Shared aura button constructor.
----@param container table AuraContainer element
----@param options table group/slot options (carries size/font/toggle overrides)
----@param button table native AuraButton
-function Core:SkinAuraButton(container, options, button)
-    options = options or {}
-
-    -- Size the button and add a backdrop for border. The backdrop takes no settings and is anchored to
-    -- the button, so a re-skinned preview dummy keeps the one it already has.
-    local size = Opt(options, container, 'size', 24)
-    button:SetSize(Opt(options, container, 'width', size), Opt(options, container, 'height', size))
-    button:EnableMouse(not Opt(options, container, 'disableMouse'))
-    Core.CreateBackdrop(button, 0)
-    Core.AddBorders(button)
-
-    -- Tooltip anchor and combat hiding. The native button handles the tooltip itself, we just tell it where to go.
-    button:SetTooltipAnchorPoint(
-        Opt(options, container, 'tooltipAnchorPoint', 'ANCHOR_BOTTOMLEFT'),
-        Opt(options, container, 'tooltipOffsetX', 0),
-        Opt(options, container, 'tooltipOffsetY', 0)
-    )
-    button:SetHideTooltipInCombat(Opt(options, container, 'tooltipHideInCombat') == true)
-
-    -- Icon, trimmed and inset inside the 1px backdrop border.
-    local icon = button:CreateTexture(nil, 'ARTWORK')
-    icon:NCSetInside(button, 1, 1)
-    icon:NCSetZoom()
-    button.Icon = icon
-    button:SetIcon(icon)
-
-    -- Cooldown spiral over the icon.
-    local cooldown
-    if not Opt(options, container, 'disableCooldown') then
-        -- Reused when already there, which only a preview dummy does: the container skins a button once.
-        cooldown = button.Cooldown or CreateFrame('Cooldown', nil, button, 'CooldownFrameTemplate')
-        cooldown:SetAllPoints(icon)
-        cooldown:SetDrawEdge(Opt(options, container, 'drawEdge', false))
-        cooldown:SetDrawBling(false)
-        cooldown:SetDrawSwipe(Opt(options, container, 'drawSwipe', false))
-        cooldown:SetReverse(Opt(options, container, 'reverseSwipe', false))
-        cooldown:SetHideCountdownNumbers(true) -- we render our own duration text
-        cooldown:SetSwipeColor(0, 0, 0, 0.7)
-        button.Cooldown = cooldown
-        button:SetDurationCooldown(cooldown)
-    end
-
-    local showApplicationCount = Opt(options, container, 'showApplicationCount')
-    local showDurationText = Opt(options, container, 'showDurationText')
-    local showBuffDispelIcon = Opt(options, container, 'showBuffDispelIcon')
-    local showDebuffDispelIcon = Opt(options, container, 'showDebuffDispelIcon')
-
-    -- Create a overlay frame to hold the optional regions, so they can be stacked above the cooldown and icon.
-    local overlay = button
-    if cooldown and (showApplicationCount or showDurationText or showBuffDispelIcon or showDebuffDispelIcon) then
-        overlay = button.nuiAuraOverlay or CreateFrame('Frame', nil, button)
-        overlay:SetAllPoints()
-        overlay:SetFrameLevel(cooldown:GetFrameLevel() + 1)
-        button.nuiAuraOverlay = overlay
-    end
-
-    local fontDB = Opt(options, container, 'fontDB')
-    local stackFont = Opt(options, container, 'stackFont')
-    local durationFont = Opt(options, container, 'durationFont')
-
-    -- Count text setup
-    if showApplicationCount then
-        local pos = stackFont and stackFont.Position
-        local count = overlay:CreateFontString(nil, 'OVERLAY')
-        count:SetFontStyle(fontDB, stackFont and stackFont.FontSize or 10, nil, nil, true)
-        count:SetFontJustify(stackFont or 'BOTTOMRIGHT', button, pos and pos.XOffset or -1, pos and pos.YOffset or 1, true)
-        button.Count = count
-        button:SetApplicationCount(count, {
-            formatter = Opt(options, container, 'applicationCountFormatter'),
-        })
-    end
-
-    -- Duration text setup w/ custom formatter and coloring.
-    if showDurationText then
-        local pos = durationFont and durationFont.Position
-        local time = overlay:CreateFontString(nil, 'OVERLAY')
-        time:SetFontStyle(fontDB, durationFont and durationFont.FontSize or 12, nil, nil, true)
-        time:SetFontJustify(durationFont or 'CENTER', button, pos and pos.XOffset or 0, pos and pos.YOffset or 0, true)
-        button.Time = time
-
-        local useBreakpointColors, useCurveColors, useSingleColor, singleColor = GetGlobalDurationColorMode()
-        local configuredCurve = Opt(options, container, 'durationTextColorCurve')
-        local colorCurve = (configuredCurve == true) and Core.curves.AuraDurationColor or configuredCurve
-
-        button:SetDurationText(time, {
-            textFormatter = Opt(options, container, 'durationTextFormatter')
-                or Core:GetAuraDurationFormatter(useBreakpointColors, (useSingleColor and singleColor) or nil),
-            textColor = (useCurveColors and colorCurve) and {
-                curve = colorCurve,
-                property = Enum.DurationTextBindingProperty.RemainingDuration,
-            } or nil,
-        })
-    end
-
-    -- Optional border for weapon-enchant buttons.
-    local borderColor = Opt(options, container, 'borderColor')
-    if borderColor then
-        local enchantBorder = overlay:CreateTexture(nil, 'OVERLAY')
-        enchantBorder:SetTexture(Core.Media.GUITextures .. 'AuraOverlay.png') -- Use our own border texture.
-        enchantBorder:NCDisablePixelSnap()
-        enchantBorder:NCSetInside(button)
-        enchantBorder:SetVertexColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
-    end
-
-    -- Dispel-colored border overlay, coloring is handled natively from the dispel color map/curve.
-    local showBuffBorder = Opt(options, container, 'showBuffBorder')
-    local showDebuffBorder = Opt(options, container, 'showDebuffBorder')
-    if showBuffBorder or showDebuffBorder then
-        local border = overlay:CreateTexture(nil, 'OVERLAY')
-        border:SetTexture(Core.Media.GUITextures .. 'AuraOverlay.png') -- Use our own border texture.
-        border:NCDisablePixelSnap()
-        border:NCSetInside(button)
-        button.Border = border
-        button:AddDispelTypeTexture(border, {
-            style = Opt(options, container, 'borderStyle', Enum.CustomAuraButtonDispelTypeTextureStyle.PreserveAsset),
-            showWhenHelpful = showBuffBorder == true,
-            showWhenHarmful = showDebuffBorder == true,
-            showWithoutDispelType = Opt(options, container, 'showWithoutDispelType') == true,
-            customDispelColorMap = Opt(options, container, 'customDispelColorMap', Core.Colors.dispel),
-            customDispelColorCurve = Opt(options, container, 'customDispelColorCurve'),
-        })
-    end
-
-    -- Native dispel type icon in the corner.
-    local dispelIconSize = Opt(options, container, 'dispelIconSize')
-    if showBuffDispelIcon or showDebuffDispelIcon then
-        local dispelIcon = overlay:CreateTexture(nil, 'OVERLAY')
-        dispelIcon:SetPoint('TOPRIGHT', button, 'TOPRIGHT', -2, -2)
-        dispelIcon:SetSize(dispelIconSize, dispelIconSize)
-        button.DispelIcon = dispelIcon
-        button:AddDispelTypeTexture(dispelIcon, {
-            style = Enum.CustomAuraButtonDispelTypeTextureStyle.Icon,
-            showWhenHelpful = showBuffDispelIcon == true,
-            showWhenHarmful = showDebuffDispelIcon == true,
-        })
-    end
-
-    -- Right-click cancelaura.
-    local cancelAuraButtons = Opt(options, container, 'cancelAuraButtons')
-    if cancelAuraButtons then
-        button:SetCancelAuraButtons(cancelAuraButtons)
-    end
-
-    -- Post-create hook for any additional skinning the caller wants to do.
-    -- This is called after all the regions are created and assigned to the button.
-    if container.PostCreateButton then
-        container:PostCreateButton(button, options)
-    end
-end
-
 ---Push the container-level flow layout settings.
----Shared by creation and :ApplyLayout, since every one of these can be changed on a live container.
+---Shared by creation and :ApplyLayout, as every one of these can change on a live container.
 ---@param container table
 ---@param config table
 local function ApplyFlowLayout(container, config)
@@ -380,39 +74,38 @@ local function ApplyFlowLayout(container, config)
     container:SetFlowLayoutMaximumLineSize(config.maximumLineSize) -- nil means unbounded
 end
 
----Pad a group/enchant layout table with the container's element-wide layout defaults.
+---A group/enchant layout padded with the container's element-wide layout defaults. A copy:
+---a caller's table can be passed again after those defaults change.
 ---@param container table
 ---@param layout table?
 ---@return table
 local function ResolveLayout(container, layout)
-    layout = layout or {}
-
+    local resolved = {}
+    for key, value in pairs(layout or {}) do
+        resolved[key] = value
+    end
     for _, key in ipairs(LAYOUT_OPTIONS) do
-        if layout[key] == nil then
-            layout[key] = container[key]
+        if resolved[key] == nil then
+            resolved[key] = container[key]
         end
     end
 
-    return layout
+    return resolved
 end
 
 -- Convenience mixin applied to every container created through frame:CreateAuraContainer.
 -- This mirrors oUF's element API so unit-frame and standalone code read the same.
 local ContainerMixin = {}
 
----Pad group/slot options with the container's element-wide defaults and install the NorskenUI skin.
+---Pad group/slot options with the container's sort.
 ---@param container table
 ---@param options table
 local function ResolveDisplayOptions(container, options)
     options.sortMethod = options.sortMethod or container.sortMethod or AuraContainerSortMethod.ExpirationOnly
     options.sortDirection = options.sortDirection or container.sortDirection or AuraContainerSortDirection.Normal
-
-    if not options.initializeFrame then
-        options.initializeFrame = GenerateClosure(Core.SkinAuraButton, Core, container, options)
-    end
 end
 
----Which identity verdict a display's spellID matching hangs on, nil when the client never voids it.
+---Which identity verdict a spellID list hangs on, nil when the client never voids it.
 ---@param filterString string
 ---@param candidateFilters table?
 ---@return boolean?
@@ -436,7 +129,7 @@ local function ResolveIdentityDependence(filterString, candidateFilters)
     return nil
 end
 
----Does this filter string carry anything the client can drop? A bare base token has nothing to lose.
+---Can the client drop part of this filter string? A bare base token has nothing to lose.
 ---@param filterString string
 ---@return boolean
 local function IsFilterStringNarrowing(filterString)
@@ -449,8 +142,8 @@ local function IsFilterStringNarrowing(filterString)
     return false
 end
 
----Mirrors AuraContainerUtil.CanApplyIdentityCandidateFilters: a spellID list is voided for harmful
----auras on assistable units and helpful auras on the rest, group members excepted.
+---Mirrors AuraContainerUtil.CanApplyIdentityCandidateFilters: a spellID list is voided
+---for harmful auras on units you can help and helpful ones on the rest, bar group members.
 ---@param container table
 ---@param identity boolean? this display's ResolveIdentityDependence verdict
 ---@param assistOnly boolean? the display belongs on units the player can help, whatever it matches
@@ -471,16 +164,20 @@ end
 ---@param slot number
 ---@return number
 local function ResolveMaxFrameCount(container, slot)
-    if container.parkedSlots and container.parkedSlots[slot] then return 0 end
+    if container.parkedSlots and container.parkedSlots[slot] then
+        return 0
+    end
 
     local identity = container.groupIdentity and container.groupIdentity[slot]
     local narrowing = container.groupNarrowing and container.groupNarrowing[slot]
-    if IsGated(container, identity, nil, narrowing) then return 0 end
+    if IsGated(container, identity, nil, narrowing) then
+        return 0
+    end
 
     return container.maxFrameCount or huge
 end
 
----Sole writer of a group's frame cap, so the value it caches can never go stale behind another path.
+---Sole writer of a group's frame cap, so the value it caches can never go stale.
 ---@param container table
 ---@param slot number
 ---@param key string
@@ -494,8 +191,8 @@ local function PushGroupCap(container, slot, key)
     container:SetAuraGroupMaxFrameCount(key, cap)
 end
 
----Sole writer of a slot's candidate filters, see PushGroupCap. The gate cannot use the slot's filter
----string: a non-visible unit is exactly where the client stops honouring one.
+---Sole writer of a slot's candidate filters, see PushGroupCap. The gate can't use the
+---filter string: a unit that isn't visible is where the client stops honouring one.
 ---@param container table
 ---@param index number
 ---@param key string
@@ -525,10 +222,12 @@ local function MarkNeedsAssist(container)
     if not watcher then return end
 
     watcher.assistCount = watcher.assistCount + 1
-    if watcher.canAssist == nil then SampleWatcher(watcher) end -- never sampled before now
+    if watcher.canAssist == nil then -- never sampled before now
+        SampleWatcher(watcher)
+    end
 end
 
----Mark that this container has a display whose filter string can be dropped. Sticky, as above.
+---Mark that a display here has a filter string the client can drop. Sticky, as above.
 ---@param container table
 local function MarkNeedsVisible(container)
     if container.needsVisible then return end
@@ -557,17 +256,21 @@ function ContainerMixin:AddGroup(filter, options)
     local key = (self:GetDebugName() or 'NRSKNUIAuraContainer') .. 'Group' .. self.groupIndex
     self:AddAuraGroup(key, filter, options)
 
-    -- Remembered so :ApplyLayout can re-push per-group settings without the caller tracking keys.
+    -- kept so :ApplyLayout can re-push each group's settings without the caller's keys
     self.groupKeys = self.groupKeys or {}
     self.groupIdentity = self.groupIdentity or {}
     self.groupNarrowing = self.groupNarrowing or {}
     local slot = #self.groupKeys + 1
     self.groupKeys[slot] = key
     self.groupIdentity[slot] = ResolveIdentityDependence(filter, options.candidateFilters)
-    if self.groupIdentity[slot] ~= nil then MarkNeedsAssist(self) end
+    if self.groupIdentity[slot] ~= nil then
+        MarkNeedsAssist(self)
+    end
 
     self.groupNarrowing[slot] = IsFilterStringNarrowing(filter) or nil
-    if self.groupNarrowing[slot] then MarkNeedsVisible(self) end
+    if self.groupNarrowing[slot] then
+        MarkNeedsVisible(self)
+    end
 
     -- A group added while its gate is shut would otherwise come up live.
     PushGroupCap(self, slot, key)
@@ -575,12 +278,14 @@ function ContainerMixin:AddGroup(filter, options)
     return key, slot
 end
 
----Compiled branches for a trigger, always at least one so a binding never ends up with no groups.
+---A trigger's compiled branches, at least one so a binding never has no groups.
 ---@param trigger table?
 ---@return table[] branches
 local function ResolveBranches(trigger)
     local branches = Core:GetTriggerBranches(trigger)
-    if branches and branches[1] then return branches end
+    if branches and branches[1] then
+        return branches
+    end
     return { { filterString = AuraFilterTokens.Harmful } }
 end
 
@@ -604,7 +309,7 @@ local function SyncBinding(container, binding)
             -- AddGroup mutates the options it is given, so each group gets its own copy.
             local groupOptions = binding.options and CopyTable(binding.options) or {}
             groupOptions.candidateFilters = branch.candidateFilters
-            -- the game hands initializeFrame only the button, so a caller that styles per trigger is told which one here
+            -- the game hands initializeFrame only the button, so a per-trigger caller is told which
             local initializeBranch = groupOptions.initializeBranchFrame
             groupOptions.initializeBranchFrame = nil
             if initializeBranch then
@@ -615,10 +320,14 @@ local function SyncBinding(container, binding)
 
         local slot = binding.slots[index]
         container.groupIdentity[slot] = ResolveIdentityDependence(branch.filterString, branch.candidateFilters)
-        if container.groupIdentity[slot] ~= nil then MarkNeedsAssist(container) end
+        if container.groupIdentity[slot] ~= nil then
+            MarkNeedsAssist(container)
+        end
 
         container.groupNarrowing[slot] = IsFilterStringNarrowing(branch.filterString) or nil
-        if container.groupNarrowing[slot] then MarkNeedsVisible(container) end
+        if container.groupNarrowing[slot] then
+            MarkNeedsVisible(container)
+        end
         container.parkedSlots[slot] = nil
         PushGroupCap(container, slot, binding.keys[index])
     end
@@ -630,9 +339,9 @@ local function SyncBinding(container, binding)
 end
 
 ---Register an inline trigger, can be called multiple times.
----@param trigger table? an inline trigger (see Core/Auras/AuraTriggers.lua)
----@param options table? optional per-group options (candidateFilters is filled in from each branch;
----`initializeBranchFrame(button, branchIndex)` in place of initializeFrame tells a button which branch made it)
+---@param trigger table? an inline trigger (see Core/Auras/Triggers.lua)
+---@param options table? per-group options; candidateFilters comes from each branch and
+---`initializeBranchFrame(button, index)` replaces initializeFrame and is told the branch
 ---@return string[]
 function ContainerMixin:AddFilteredGroup(trigger, options)
     local binding = { trigger = trigger, keys = {}, slots = {}, options = options }
@@ -681,12 +390,16 @@ function ContainerMixin:ReapplyFilters()
         for _, binding in ipairs(self.filterBindings) do
             SyncBinding(self, binding)
         end
+        -- a spellID list new to this container has no verdict yet, so it would show unfiltered
+        if self:UpdateUnitGate() then
+            self:UpdateAllAuras()
+        end
     end)
 end
 
----Point every binding registered through :AddFilteredGroup at a different trigger and reapply.
+---Point every :AddFilteredGroup binding at another trigger and reapply.
 ---Used when the GUI edits or replaces the trigger a display runs.
----@param trigger table? an inline trigger (see Core/Auras/AuraTriggers.lua)
+---@param trigger table? an inline trigger (see Core/Auras/Triggers.lua)
 function ContainerMixin:RebindFilteredGroups(trigger)
     if not self.filterBindings then return end
 
@@ -718,14 +431,19 @@ function ContainerMixin:AddSlot(filter, options)
 
     local index = self.slotIndex
     self.slotKeys[index] = key
+    self.slotFilters[index] = filter
     self.slotCandidates[index] = options.candidateFilters
     self.slotShown[index] = true
     self.slotIdentity[index] = ResolveIdentityDependence(filter, options.candidateFilters)
     self.slotAssistOnly[index] = assistOnly or nil
-    if self.slotIdentity[index] ~= nil or assistOnly then MarkNeedsAssist(self) end
+    if self.slotIdentity[index] ~= nil or assistOnly then
+        MarkNeedsAssist(self)
+    end
 
     self.slotNarrowing[index] = IsFilterStringNarrowing(filter) or nil
-    if self.slotNarrowing[index] then MarkNeedsVisible(self) end
+    if self.slotNarrowing[index] then
+        MarkNeedsVisible(self)
+    end
 
     local slot = self:AddAuraSlot(key, filter, options)
 
@@ -744,7 +462,34 @@ function ContainerMixin:SetSlotCandidates(index, candidateFilters)
     local key = self.slotKeys[index]
     if not key then return end
 
+    self:EnsureProcessAuraPolicy(candidateFilters)
     self.slotCandidates[index] = candidateFilters
+    -- new candidates can bring a spellID list the gate wasn't watching
+    self.slotIdentity[index] = ResolveIdentityDependence(self.slotFilters[index], candidateFilters)
+    if self.slotIdentity[index] ~= nil then
+        MarkNeedsAssist(self)
+    end
+    PushSlotCandidates(self, index, key)
+end
+
+---Point a slot at another filter string; the game keeps its button.
+---@param index number the third return of :AddSlot
+---@param filter string
+function ContainerMixin:SetSlotFilterString(index, filter)
+    local key = self.slotKeys[index]
+    if not key or self.slotFilters[index] == filter then return end
+
+    self.slotFilters[index] = filter
+    self:SetAuraSlotFilterString(key, filter)
+    self.slotNarrowing[index] = IsFilterStringNarrowing(filter) or nil
+    if self.slotNarrowing[index] then
+        MarkNeedsVisible(self)
+    end
+    -- whether a spellID list is voided hangs on helpful or harmful
+    self.slotIdentity[index] = ResolveIdentityDependence(filter, self.slotCandidates[index])
+    if self.slotIdentity[index] ~= nil then
+        MarkNeedsAssist(self)
+    end
     PushSlotCandidates(self, index, key)
 end
 
@@ -758,6 +503,8 @@ function ContainerMixin:SetSlotShown(index, shown)
     self.slotShown[index] = shown
     PushSlotCandidates(self, index, key)
 end
+
+-- Unit gate --
 
 local UNIT_GATE_EVENTS = {
     'UNIT_FLAGS', 'UNIT_TARGETABLE_CHANGED',
@@ -784,7 +531,13 @@ local SETTLE_EVENTS = {
 
 local SETTLE_DELAY = 0.5
 
--- One watcher per unit token: the four containers a unit frame builds all want the same verdict.
+-- a container listens to UNIT_AURA for its token only, never to who the token points at
+local UNIT_CHANGED_EVENTS = {
+    target = 'PLAYER_TARGET_CHANGED',
+    focus = 'PLAYER_FOCUS_CHANGED',
+}
+
+-- one watcher per unit token: a unit frame's four containers all want the same verdict
 ---@type table<string, Frame>
 local watchers = {}
 local globalWatcher
@@ -815,8 +568,12 @@ local function ApplyGate(container, watcher)
     container.unitAlwaysHelpful = alwaysHelpful
     container.unitInvisible = invisible
 
-    for slot, key in ipairs(container.groupKeys or {}) do PushGroupCap(container, slot, key) end
-    for index, key in ipairs(container.slotKeys or {}) do PushSlotCandidates(container, index, key) end
+    for slot, key in ipairs(container.groupKeys or {}) do
+        PushGroupCap(container, slot, key)
+    end
+    for index, key in ipairs(container.slotKeys or {}) do
+        PushSlotCandidates(container, index, key)
+    end
 
     return true
 end
@@ -862,7 +619,7 @@ end
 local function SettleAll()
     RefreshAll()
 
-    -- Item enchants sit outside the gate, so a verdict that never moved leaves them dead after a loading screen.
+    -- item enchants sit outside the gate and would stay dead after a loading screen
     for container in pairs(enchantContainers) do
         container:UpdateAllAuras()
     end
@@ -884,8 +641,19 @@ local function ScheduleSettle(frame, callback)
 end
 
 ---@param watcher Frame
-local function OnGateEvent(watcher)
-    RefreshWatcher(watcher)
+---@param event string
+local function OnGateEvent(watcher, event)
+    if event ~= UNIT_CHANGED_EVENTS[watcher.unit] then
+        RefreshWatcher(watcher)
+        return
+    end
+
+    -- another unit now, so every container redraws whether or not the verdict moved
+    SampleWatcher(watcher)
+    for container in pairs(watcher.containers) do
+        ApplyGate(container, watcher)
+        container:UpdateAllAuras()
+    end
 end
 
 ---@param _ Frame
@@ -902,11 +670,16 @@ end
 local function RegisterWatcher(watcher)
     local unit = watcher.unit
 
-    -- An unrecognised token turns every RegisterUnitEvent into a unitless one, firing for the whole roster.
+    -- an unknown token makes every RegisterUnitEvent unitless, firing for the whole roster
     if not Core:IsValidUnitToken(unit) then return end
 
     for _, event in ipairs(UNIT_GATE_EVENTS) do
         watcher:RegisterUnitEvent(event, unit, unit ~= 'player' and 'player' or nil)
+    end
+
+    local changed = UNIT_CHANGED_EVENTS[unit]
+    if changed then
+        watcher:RegisterEvent(changed)
     end
 end
 
@@ -915,7 +688,9 @@ end
 ---@return Frame watcher
 local function GetWatcher(unit)
     local watcher = watchers[unit]
-    if watcher then return watcher end
+    if watcher then
+        return watcher
+    end
 
     watcher = CreateFrame('Frame')
     watcher.unit = unit
@@ -931,10 +706,34 @@ local function GetWatcher(unit)
         globalWatcher = CreateFrame('Frame')
         globalWatcher:SetScript('OnEvent', OnGlobalGateEvent)
         globalWatcher:NCSetScheduledUpdate(RefreshAll)
-        for _, event in ipairs(GATE_EVENTS) do globalWatcher:RegisterEvent(event) end
+        for _, event in ipairs(GATE_EVENTS) do
+            globalWatcher:RegisterEvent(event)
+        end
     end
 
     return watcher
+end
+
+---Take a container off the watcher it is on.
+---@param container table
+local function UnwatchUnit(container)
+    local current = container.gateWatcher
+    if not current then return end
+
+    container.gateWatcher = nil
+    current.containers[container] = nil
+    current.count = current.count - 1
+    if container.needsAssist then
+        current.assistCount = current.assistCount - 1
+    end
+    if container.needsVisible then
+        current.visibleCount = current.visibleCount - 1
+    end
+
+    -- Frames cannot be destroyed, so an idle watcher is kept for reuse but stops listening.
+    if current.count == 0 then
+        current:UnregisterAllEvents()
+    end
 end
 
 ---Move a container onto the shared watcher for a unit, dropping the one it was on.
@@ -942,25 +741,21 @@ end
 ---@param unit string
 ---@return Frame watcher
 local function WatchUnit(container, unit)
-    local current = container.gateWatcher
-
-    if current then
-        current.containers[container] = nil
-        current.count = current.count - 1
-        if container.needsAssist then current.assistCount = current.assistCount - 1 end
-        if container.needsVisible then current.visibleCount = current.visibleCount - 1 end
-
-        -- Frames cannot be destroyed, so an idle watcher is kept for reuse but stops listening.
-        if current.count == 0 then current:UnregisterAllEvents() end
-    end
+    UnwatchUnit(container)
 
     local watcher = GetWatcher(unit)
-    if watcher.count == 0 then RegisterWatcher(watcher) end
+    if watcher.count == 0 then
+        RegisterWatcher(watcher)
+    end
 
     watcher.containers[container] = true
     watcher.count = watcher.count + 1
-    if container.needsAssist then watcher.assistCount = watcher.assistCount + 1 end
-    if container.needsVisible then watcher.visibleCount = watcher.visibleCount + 1 end
+    if container.needsAssist then
+        watcher.assistCount = watcher.assistCount + 1
+    end
+    if container.needsVisible then
+        watcher.visibleCount = watcher.visibleCount + 1
+    end
     container.gateWatcher = watcher
 
     SampleWatcher(watcher)
@@ -984,29 +779,32 @@ function ContainerMixin:UpdateUnitGate()
     return ApplyGate(self, watcher)
 end
 
+---Stop gating a parked container; the next UpdateUnitGate puts it back.
+function ContainerMixin:StopUnitGate()
+    UnwatchUnit(self)
+end
+
 ---Register a temporary weapon-enchant frame (main/off-hand).
 ---@param slot number AuraContainerItemEnchantmentSlot value (MainHand / OffHand / Ranged)
----@param options table? optional per-frame options (.hidePermanent, .templateNames, ...)
+---@param options table per-frame options: initializeFrame, and hidePermanent, .templateNames, ...
 ---@return table? enchant
 function ContainerMixin:AddItemEnchant(slot, options)
-    options = options or {}
-
-    if options.borderColor == nil then options.borderColor = Core.Colors.enchantColor end
-    if options.hidePermanent == nil then options.hidePermanent = self.hidePermanent end
-    if not options.initializeFrame then options.initializeFrame = GenerateClosure(Core.SkinAuraButton, Core, self, options) end
+    if options.hidePermanent == nil then
+        options.hidePermanent = self.hidePermanent
+    end
 
     enchantContainers[self] = true
 
     return self:AddItemEnchantment(slot, options)
 end
 
----Set the flow layout for the item-enchant group, padded with the container's layout defaults.
+---The item-enchant group's flow layout, padded with the container's layout defaults.
 ---@param options table? optional layout overrides (.placement, .elementSpacing, .groupSpacing, .layoutIndex, ...)
 function ContainerMixin:SetItemEnchantLayout(options)
     self:SetItemEnchantmentLayout(ResolveLayout(self, options))
 end
 
----Create a native aura container parented to this frame and return it with the NorskenUI convenience API mixed.
+---A native aura container on this frame, with the NorskenUI API mixed in.
 ---@param config table?
 ---@return table? container
 local function CreateAuraContainer(self, config)
@@ -1016,18 +814,19 @@ local function CreateAuraContainer(self, config)
 
     ApplyFlowLayout(container, config)
 
-    -- Carry element-wide skin/layout defaults so AddGroup/AddSlot and the skin can read them.
+    -- Carry element-wide layout and sort defaults so AddGroup/AddSlot can read them.
     for _, key in ipairs(ELEMENT_OPTIONS) do
         container[key] = config[key]
     end
 
-    -- Kept addon-side, the container's own processAuraPolicyOptions live in the restricted environment.
+    -- kept addon-side, the container's own copy lives in the restricted environment
     container.__processAuraPolicyOptions = config.processAuraPolicyOptions
 
-    -- Last value PushGroupCap / PushSlotFilter handed the client, so an idempotent re-push stays addon-side.
+    -- the last values PushGroupCap / PushSlotCandidates pushed, so a repeat stays addon-side
     container.groupCaps = {}
     container.slotPushed = {}
     container.slotKeys = {}
+    container.slotFilters = {}
     container.slotCandidates = {}
     container.slotShown = {}
     container.slotIdentity = {}

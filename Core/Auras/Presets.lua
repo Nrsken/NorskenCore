@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class AuraFiltersPremade
 local Premade = {}
@@ -48,7 +48,9 @@ end
 ---@return number[]
 local function SortedIds(map)
     local ids = {}
-    for id in pairs(map) do ids[#ids + 1] = id end
+    for id in pairs(map) do
+        ids[#ids + 1] = id
+    end
     tsort(ids)
     return ids
 end
@@ -68,7 +70,7 @@ local EXTERNAL_DEFENSIVES = {
     },
 }
 
--- A player's own defensives, raid cooldowns, racials and trinkets: Defensive Buffs without the externals.
+-- the player's own defensives, raid cooldowns, racials and trinkets, without externals
 local PERSONAL_DEFENSIVES = {
     {
         group = 'DEATHKNIGHT',
@@ -211,12 +213,12 @@ local PERSONAL_DEFENSIVES = {
     },
 }
 
--- Defensive Buffs lists both, so an aura group can show the externals apart while a list of everything stays one key.
+-- both lists, so an aura group can show externals apart while everything stays one key
 local DEFENSIVE_BUFFS = { EXTERNAL_DEFENSIVES }
 for _, group in ipairs(PERSONAL_DEFENSIVES) do
     DEFENSIVE_BUFFS[#DEFENSIVE_BUFFS + 1] = group
 end
--- Presets with `spells` are editable: triggers layer Added/Removed on top of the shipped list.
+-- presets with `spells` are editable: triggers lay Added/Removed over the shipped list
 local ByKey = {}
 Core:OnLanguageSet(function()
     Premade.Presets = {
@@ -498,7 +500,9 @@ Core:OnLanguageSet(function()
                 },
             },
         },
+
         -- Defensives and control --
+
         {
             key = 'preset:externalDefensives',
             name = L['External Defensives'],
@@ -542,7 +546,9 @@ Core:OnLanguageSet(function()
                 },
             },
         },
+
         -- Target and boss --
+
         {
             key = 'preset:enemyBuffs',
             name = L['Enemy Buffs'],
@@ -616,7 +622,9 @@ Core:OnLanguageSet(function()
                 },
             },
         },
+
         -- Group frames --
+
         {
             key = 'preset:partyBuffs',
             name = L['Party Buffs'],
@@ -671,14 +679,16 @@ Core:OnLanguageSet(function()
         },
     }
 
-    -- Keyed for lookup, the array above stays the display order. Editable presets get their spell map here.
+    -- keyed for lookup, the array keeps display order; editable presets get their spell map
     for _, preset in ipairs(Premade.Presets) do
         ByKey[preset.key] = preset
 
         if preset.spells then
             local map = {}
             for _, group in ipairs(preset.spells) do
-                for _, id in ipairs(group.ids) do map[id] = group.group end
+                for _, id in ipairs(group.ids) do
+                    map[id] = group.group
+                end
             end
             local branch = preset.branches[1]
             branch.candidates = branch.candidates or {}
@@ -704,7 +714,7 @@ function Premade:GetShippedSpells(key)
     return preset.branches[1].candidates[preset.spellField], preset.spellField
 end
 
----{ key, text } entries for the dropdowns, flagged so the GUI can group them and refuse rename/delete.
+---{ key, text } entries for dropdowns, flagged so the GUI groups them and refuses rename.
 ---@return table[]
 function Premade:GetList()
     local list = {}
