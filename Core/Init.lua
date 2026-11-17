@@ -1,24 +1,26 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 _G.NorskenCore = Core
 
 local LibStub = LibStub
 
--- off the addon table: addons would inherit Core's OnInitialize/OnEnable via __index
+-- Kept off the addon table so addons don't inherit Core's OnInitialize and OnEnable
 Core.Ace = LibStub('AceAddon-3.0'):NewAddon('NorskenCore', 'AceEvent-3.0')
 
 Core.Libs = {
     LSM = LibStub('LibSharedMedia-3.0'),
     LS = LibStub('LibSpecialization'),
-} --[[@as NRSKNUI.Libraries]]
+} --[[@as NorskenCore.Libraries]]
 
--- KajiGUI's shared state: Core files hand it things before KajiGUI loads (Anchors, LoadConditions)
+-- KajiGUI's shared state, Core files fill it before KajiGUI loads
 ---@type Kaji
 Core.Kaji = {}
 
--- every widget's NC methods: Pixel.lua and Frames/ fill it, InjectAPI.lua injects it
+-- Every widget's NC methods, filled by Pixel.lua and Frames/, injected by InjectAPI.lua
 Core.FrameMethods = {}
 
 Core.ClearTexture = 0
 Core.WhiteTexture = 'Interface\\Buttons\\WHITE8X8'
+-- The game's own question mark, for an icon that has none
+Core.QuestionMarkTexture = 134400
 Core.GlobalZoom = 0.3

@@ -1,4 +1,4 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji
@@ -421,7 +421,7 @@ local function CreateTree(gui, parent, opts)
             row.iconBorder:NCSetPoint('LEFT', row.bg, 'LEFT', ACCENT_BAR_WIDTH + 1, 0)
         end
 
-        row.icon:SetTexture(data.icon or 134400)
+        row.icon:SetTexture(data.icon or Core.QuestionMarkTexture)
         row.icon:SetDesaturated(not data.enabled)
         row.icon:SetAlpha(data.enabled and 1 or DISABLED_ALPHA)
         -- every page shares these pooled rows, so whatever another page drew on the canvas goes before this one draws
@@ -964,7 +964,7 @@ local function CreateTree(gui, parent, opts)
         ghost:SetBackdropColor(theme.bgMedium[1], theme.bgMedium[2], theme.bgMedium[3], 0.95)
         ghost:SetBackdropBorderColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
         ghost:NCSetWidth(row:GetWidth())
-        ghostIcon:SetTexture(row.data.icon or 134400)
+        ghostIcon:SetTexture(row.data.icon or Core.QuestionMarkTexture)
         gui:ApplyFont(ghostLabel, 'normal')
         ghostLabel:SetText(#keys > 1 and format(L['%d Displays'], #keys) or row.data.text or '')
         ghostLabel:SetTextColor(theme.textPrimary[1], theme.textPrimary[2], theme.textPrimary[3], 1)

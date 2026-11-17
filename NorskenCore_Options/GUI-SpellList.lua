@@ -1,6 +1,6 @@
----@class NRSKNUI
+---@class NorskenCore
 local Core = _G.NorskenCore
----@class NRSKNUI.GUISpellList
+---@class NorskenCore.GUISpellList
 local SpellList = {}
 Core.GUISpellList = SpellList
 local L = Core.L
@@ -20,7 +20,6 @@ local ROW_HEIGHT = 32
 local ICON_SIZE = 24
 local BUTTON_ROW_HEIGHT = 30
 local CROSS_WIDTH = 0.06
-local UNKNOWN_ICON = 134400
 local CROSS = Core.Media.GUITextures .. 'NorskenCustomCrossv3.png'
 local DELETE_COLOR = { 1, 0, 0 }
 
@@ -268,7 +267,7 @@ function SpellList:BuildList(card, source)
     for _, entry in ipairs(entries) do
         local info = GetSpellInfo(entry.id)
         entry.name = info and info.name or format(L['Unknown spell %d'], entry.id)
-        entry.icon = info and info.iconID or UNKNOWN_ICON
+        entry.icon = info and info.iconID or Core.QuestionMarkTexture
     end
 
     local function Reset()

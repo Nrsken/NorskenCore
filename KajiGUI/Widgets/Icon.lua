@@ -41,7 +41,7 @@
 
 --]]
 
----@class NRSKNUI
+---@class NorskenCore
 local Core = select(2, ...)
 ---@class Kaji
 local Kaji = Core.Kaji
@@ -56,7 +56,7 @@ local C_Item = C_Item
 
 local WIDGET_TYPE = "Icon"
 local QUALITY_ATLAS_PATTERN = "|A:(Professions%-ChatIcon%-Quality%-Tier%d):%d+:%d+"
-local QUESTION_MARK = 134400
+local QUESTION_MARK = Core.QuestionMarkTexture
 local TEXT_SPACING = 6
 local DIMMED_ALPHA = 0.4
 local BLACK = { 0, 0, 0 } -- the border an icon rests on
