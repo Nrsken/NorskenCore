@@ -10,6 +10,7 @@
 local Core = select(2, ...)
 local L = Core.L
 
+local _G = _G
 local LibStub = LibStub
 local setmetatable = setmetatable
 local InCombatLockdown = InCombatLockdown

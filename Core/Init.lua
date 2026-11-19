@@ -21,6 +21,6 @@ Core.FrameMethods = {}
 
 Core.ClearTexture = 0
 Core.WhiteTexture = 'Interface\\Buttons\\WHITE8X8'
--- The game's own question mark, for an icon that has none
 Core.QuestionMarkTexture = 134400
 Core.GlobalZoom = 0.3
+Core.GCD_SPELL = 61304
