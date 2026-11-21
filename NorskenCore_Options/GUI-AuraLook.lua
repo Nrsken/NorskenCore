@@ -9,6 +9,7 @@ local rowH = Theme.rowHeight
 local Apply = Core.Enum.Apply
 local SharedPages = Core.GUISharedPages
 local ANCHOR_POINTS = Core.AnchorOptions
+local UNIT_NAME_PATTERN = Core.UNIT_NAME_PATTERN
 local CASTER_PATTERN = Core.CASTER_PATTERN
 
 local tinsert, tremove = table.insert, table.remove
@@ -589,6 +590,13 @@ end
 
 -- Text --
 
+-- Whether a text writes a unit's name, which Class Color and Show Realm format
+---@param text string?
+---@return boolean
+local function ReadsUnit(text)
+    return strfind(text or '', CASTER_PATTERN) ~= nil or strfind(text or '', UNIT_NAME_PATTERN) ~= nil
+end
+
 ---What a text's %p/%t stand for: a time on most triggers, a value on Power and Stat.
 ---@param text string?
 ---@param triggers table[]
@@ -765,7 +773,7 @@ function AuraLook.TextRows(card, page, element, set, mixed, key, ctx)
 
     -- only a text with a time, value, count or name has anything to format
     local readsName = strfind(element.Text or '', '%%%d*%.?n') ~= nil
-    local readsCaster = strfind(element.Text or '', CASTER_PATTERN) ~= nil
+    local readsCaster = ReadsUnit(element.Text)
     for i = 2, #displays do
         local other = displays[i].SubRegions[ctx.slot].Text
         local time, value, power, count = Reads(other, displays[i].Triggers, ctx.isValue)
@@ -774,7 +782,7 @@ function AuraLook.TextRows(card, page, element, set, mixed, key, ctx)
         readsPower = readsPower or power
         readsCount = readsCount or count
         readsName = readsName or strfind(other or '', '%%%d*%.?n') ~= nil
-        readsCaster = readsCaster or strfind(other or '', CASTER_PATTERN) ~= nil
+        readsCaster = readsCaster or ReadsUnit(other)
     end
 
     if not ctx.noColor then
@@ -811,7 +819,7 @@ function AuraLook.TextRows(card, page, element, set, mixed, key, ctx)
         casterRow:Checkbox(L['Class Color'], {
             width = 0.5,
             conditions = { shown },
-            tooltip = L["Colors %casterName by the caster's class, in the game's class colors."],
+            tooltip = L["Colors %casterName and %unitName by class, in the game's class colors."],
             value = element.CasterClassColor,
             mixed = mixed({ 'CasterClassColor' }),
             callback = function(checked) set({ 'CasterClassColor' }, checked or nil, Apply.Color) end,
