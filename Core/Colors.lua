@@ -4,7 +4,9 @@ local L = Core.L
 
 -- Module with a bunch of color utilities
 
-local math_floor = math.floor
+local UnitClassFromGUID = UnitClassFromGUID
+local UnitNameFromGUID = UnitNameFromGUID
+local floor = math.floor
 local format = string.format
 local issecretvalue = issecretvalue
 local type = type
@@ -16,6 +18,8 @@ local modf = math.modf
 local next = next
 
 local GetBlizzardClassColor = C_ClassColor.GetClassColor
+
+local UNKNOWNOBJECT = UNKNOWNOBJECT
 
 ---An { r, g, b, a? } color array with 0-1 components.
 ---@alias RGBA number[]
@@ -45,18 +49,27 @@ function Core:ColorTextByClass(text, classToken)
     return color:WrapTextInColorCode(text)
 end
 
----The player's name written the way an aura button writes a caster's (CustomAuraButtonPrivateMixin:ApplyCasterName,
----live 12.1.5), for previews of %casterName.
+---A unit's name the way an aura button writes a caster's, the player's when no GUID
+---@param guid string? the player or a group member, whose identity is never secret
 ---@param useClassColors boolean?
 ---@param showRealmName boolean?
 ---@return string
-function Core:FormatCasterName(useClassColors, showRealmName)
-    local name = Core.MyName
-    if showRealmName and Core.MyRealm and Core.MyRealm ~= '' then
-        name = name .. '-' .. Core.MyRealm
+function Core:FormatUnit(guid, useClassColors, showRealmName)
+    guid = guid or Core.MyGUID
+    -- Copied from CustomAuraButtonPrivateMixin:ApplyCasterName in Blizzard_CustomAuraButton.lua
+    local name, realm = UnitNameFromGUID(guid)
+    ---@diagnostic disable-next-line: secret-comparison
+    if name == UNKNOWNOBJECT then
+        return ''
     end
-    -- the one place Blizzard's class colours are used: the game colours the real text itself, which stays secret
-    local color = useClassColors and RAID_CLASS_COLORS[Core.MyClass]
+
+    ---@diagnostic disable-next-line: secret-comparison
+    if showRealmName and realm and realm ~= '' then
+        name = name .. '-' .. realm
+    end
+    -- Blizzard's class colors, as the game colors the native caster text with them
+    local _, classFilename = UnitClassFromGUID(guid)
+    local color = useClassColors and classFilename and RAID_CLASS_COLORS[classFilename]
     return color and color:WrapTextInColorCode(name) or name
 end
 
@@ -66,9 +79,9 @@ end
 ---@param b? number
 ---@return string hex
 function Core:RGBAToHex(r, g, b)
-    r = math_floor((r or 1) * 255 + 0.5)
-    g = math_floor((g or 1) * 255 + 0.5)
-    b = math_floor((b or 1) * 255 + 0.5)
+    r = floor((r or 1) * 255 + 0.5)
+    g = floor((g or 1) * 255 + 0.5)
+    b = floor((b or 1) * 255 + 0.5)
     return format("%02X%02X%02X", r, g, b)
 end
 

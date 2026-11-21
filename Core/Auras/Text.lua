@@ -11,7 +11,9 @@ local BindingProperty = Enum.DurationTextBindingProperty
 
 Core.LITERAL_PERCENT = '\001' -- a typed %%, until the text's kind decides how a percent sign is written
 Core.CASTER_PATTERN = '%%%d*%.?casterName' -- %casterName or %2.casterName, see ApplyAuraLook
+Core.UNIT_NAME_PATTERN = '%%unitName' -- The unit an event trigger fired for, formatted as %casterName
 
+local UNIT_NAME_PATTERN = Core.UNIT_NAME_PATTERN
 local LITERAL_PERCENT = Core.LITERAL_PERCENT
 local CASTER_PATTERN = Core.CASTER_PATTERN
 
@@ -59,19 +61,27 @@ local function FormatName(addon, element, name)
     return name
 end
 
----The text with %n, %N.n, %i, %N.i, %casterName, \n and {rt1}..{rt8} filled in.
----%% stays LITERAL_PERCENT until the text's kind writes the sign.
+---The text with %n, %N.n, %i, %N.i, %casterName, %unitName, \n and {rt1}..{rt8} filled in
+---%% stays LITERAL_PERCENT until the text's kind writes the sign
 ---@param element table
 ---@param spellName string
 ---@param texture number|string?
 ---@param triggers table[]? the display's triggers, which %N.n and %N.i read
----@param reader table? answers `previewing`, `:GetTriggerName(trigger)` and `:GetTriggerTexture(trigger)`
+---@param reader table? has previewing, GetTriggerName and GetTriggerTexture
+---@param unitGUID string? whose name %unitName writes
 ---@return string
-function Core:ExpandText(element, spellName, texture, triggers, reader)
+function Core:ExpandText(element, spellName, texture, triggers, reader, unitGUID)
     local raw = gsub(element.Text or '', '%%%%', LITERAL_PERCENT)
-    -- only an aura button knows its caster, as a whole text; a preview shows the player
+    local previewing = reader and reader.previewing
+    -- Only an aura button knows its caster, as a whole text, a preview shows the player
     raw = gsub(raw, CASTER_PATTERN, function()
-        return reader and reader.previewing and Core:FormatCasterName(element.CasterClassColor, element.CasterRealm) or ''
+        return previewing and Core:FormatUnit(nil, element.CasterClassColor, element.CasterRealm) or ''
+    end)
+    raw = gsub(raw, UNIT_NAME_PATTERN, function()
+        if not (unitGUID or previewing) then
+            return ''
+        end
+        return Core:FormatUnit(unitGUID, element.CasterClassColor, element.CasterRealm)
     end)
     raw = gsub(raw, '\\n', '\n')
     raw = gsub(raw, '{rt(%d)}', RaidMarker)
