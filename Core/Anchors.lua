@@ -35,7 +35,7 @@ local format = string.format
 local tonumber = tonumber
 local type = type
 
-local C_Timer = C_Timer
+local After = C_Timer.After
 local UIParent = UIParent
 local setmetatable = setmetatable
 local scrubsecretvalues = scrubsecretvalues
@@ -94,8 +94,9 @@ local StackOverlays
 ---Creates a function that fades a frame to a target alpha over time.
 ---@param frame Frame
 ---@param duration? number defaults to FADE_DURATION
+---@param onHidden fun(frame: Frame)? runs when a fade out has hidden the frame
 ---@return fun(toAlpha: number)
-local function CreateFader(frame, duration)
+local function CreateFader(frame, duration, onHidden)
     -- an Alpha animation reads back the resting alpha, not the one on screen
     local target
     local animate, setCurrent = Animations:CreateColorAnimator(frame, function(_, _, _, alpha)
@@ -103,6 +104,9 @@ local function CreateFader(frame, duration)
         -- a fade in starts at 0 too
         if alpha == 0 and target == 0 then
             frame:Hide()
+            if onHidden then
+                onHidden(frame)
+            end
         end
     end, { 0, 0, 0, frame:GetAlpha() }, duration or FADE_DURATION)
 
@@ -289,10 +293,10 @@ local function Reapply(key)
         entry.module[apply](entry.module)
     end
 
-    -- a box out of view stays put away
-    C_Timer.After(0, function()
+    -- A box out of view or a closed session stays off its display
+    After(0, function()
         local overlay = Anchors.overlays[key]
-        if overlay and overlay:IsShown() then
+        if Anchors.isActive and overlay and overlay:IsShown() then
             Anchors:UpdateOverlay(key)
         end
         Anchors:UpdateMarkers()
@@ -489,6 +493,7 @@ function Anchors:Unregister(key)
     local overlay = Anchors.overlays[key]
     if overlay then
         overlay:Hide()
+        overlay:ClearAllPoints()
         overlay.entry = nil
         Anchors.overlays[key] = nil
         spareOverlays[key] = overlay
@@ -504,7 +509,12 @@ local overlayHost = CreateFrame('Frame', 'NRSKNUI_AnchorsOverlays', UIParent)
 overlayHost:SetAllPoints(UIParent)
 overlayHost:Hide()
 
-local FadeOverlays = CreateFader(overlayHost)
+-- Once faded out nothing of ours stays on a display, so its geometry is only its own
+local FadeOverlays = CreateFader(overlayHost, nil, function()
+    for _, overlay in pairs(Anchors.overlays) do
+        overlay:ClearAllPoints()
+    end
+end)
 
 -- Drag --
 
@@ -710,6 +720,7 @@ local function EndDragVisuals()
 
     ShowGuides(nil, nil)
     readout:Hide()
+    readout:ClearAllPoints()
 end
 
 ---@param value number
@@ -1454,7 +1465,7 @@ function Anchors:Enter(aceModule)
     Anchors:UpdateHelp()
 
     Anchors:RefreshTheme() -- overlays and panels outlive a session, the theme may have changed since
-    C_Timer.After(LAYOUT_SETTLE_DELAY, function() Anchors:OnExternalPositionChange() end)
+    After(LAYOUT_SETTLE_DELAY, function() Anchors:OnExternalPositionChange() end)
     Core.Ace:SendMessage('NRSKNUI_ANCHORS_CHANGED')
 end
 
@@ -1696,8 +1707,10 @@ local function RevertKey(key)
 end
 
 ---A frame in the dialogs' look: their border, glow and shadow.
+---@param gui table
+---@param detach boolean? hanging off a box, it lets go once faded out
 ---@return NorskenCore.AnchorsWindow
-local function NewStrip(gui)
+local function NewStrip(gui, detach)
     local frame = CreateFrame('Frame', nil, UIParent, 'BackdropTemplate') --[[@as NorskenCore.AnchorsWindow]]
     frame:SetFrameStrata('FULLSCREEN_DIALOG')
     frame:SetFrameLevel(STRIP_LEVEL)
@@ -1711,7 +1724,7 @@ local function NewStrip(gui)
         Kaji.RefreshBackdrop(frame)
         stylePopup()
     end)
-    frame.fader = CreateFader(frame)
+    frame.fader = CreateFader(frame, nil, detach and frame.ClearAllPoints or nil)
     return frame
 end
 
@@ -1888,7 +1901,7 @@ function Anchors:CreatePanel()
             activeAddon.PreviewManager:Refresh()
             PlaceOverlays()
             Anchors:RefreshOverlayStates()
-            C_Timer.After(LAYOUT_SETTLE_DELAY, function() Anchors:OnExternalPositionChange() end)
+            After(LAYOUT_SETTLE_DELAY, function() Anchors:OnExternalPositionChange() end)
         end,
     })
     panel.show:NCSetWidth(SHOW_WIDTH)
@@ -2097,7 +2110,7 @@ function Anchors:CreatePopup()
     if popup then return end
 
     local gui = activeAddon.GUI
-    local strip = NewStrip(gui)
+    local strip = NewStrip(gui, true)
     popup = strip
 
     -- to the box they were filled for, a new selection's focus loss commits too
@@ -2145,7 +2158,7 @@ function Anchors:CreatePopup()
         L['Back to where it was when anchors opened.'], function() Anchors:RevertSelected() end)
 
     -- the anchor points and the way back to the default, one click away
-    local flyout = NewStrip(gui)
+    local flyout = NewStrip(gui, true)
     strip.flyout = flyout
     strip.from = gui:CreateAnchorPicker(flyout, L['Anchor From'], {
         callback = function(point) Anchors:SetAnchorPoints(point, nil) end,
@@ -2170,10 +2183,13 @@ end
 ---@param overlay Frame?
 ---@param movable boolean
 local function PlaceBoxArrows(overlay, movable)
+    -- Hidden arrows still on the box would lay out with every resize of its display
     if not overlay then
         if boxArrows then
             boxArrows.column:Hide()
+            boxArrows.column:ClearAllPoints()
             boxArrows.row:Hide()
+            boxArrows.row:ClearAllPoints()
         end
         return
     end
