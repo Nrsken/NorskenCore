@@ -1,6 +1,7 @@
 -- German deDE localization file.
 local L = select(2, ...):NewLocale('deDE')
 
+L['Back'] = "Zurück"
 L['Class Color'] = "Klassenfarbe"
 L['Custom Color'] = "Eigene Farbe"
 L['Theme Color'] = "Designfarbe"
@@ -321,6 +322,10 @@ L['No anchor selected.'] = "Kein Anker ausgewählt."
 L['No anchor selected. Click an overlay to select it.'] = "Kein Anker ausgewählt. Klicke auf ein Overlay, um es auszuwählen."
 L['X Offset:'] = "X-Versatz:"
 L['Y Offset:'] = "Y-Versatz:"
+L['Show'] = "Anzeigen"
+L['Shift'] = "Umschalt"
+L['Alt'] = "ALT"
+L['Ctrl'] = "STRG"
 L['Loaded'] = "Geladen"
 L['Not Loaded'] = "Nicht geladen"
 L['Disabled'] = "Deaktiviert"

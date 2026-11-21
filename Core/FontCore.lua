@@ -366,8 +366,7 @@ local function SetFontJustify(self, source, parent, offsetX, offsetY, skip, boun
         anchor = (source.Position and source.Position.AnchorFrom) or 'CENTER'
     end
 
-    -- Flip the X offset value depending on the anchor side, useful for texts that have backdrop and need to be offset inward from the edge of the frame.
-    -- See 'NorskenUI_QoL\Combat\CombatTimer.lua' for example usage.
+    -- Flip X inward on a side anchor, so a text with a backdrop stays inside the frame edge
     if flip then
         if anchor == 'LEFT' then
             offsetX = offsetX
