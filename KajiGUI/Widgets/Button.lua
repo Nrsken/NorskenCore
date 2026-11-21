@@ -39,6 +39,7 @@ local Animations = Core.Animations
 local safecall = Kaji.safecall
 local L = Core.L
 
+local issecretvalue = issecretvalue
 local CreateFrame = CreateFrame
 local Mixin = Mixin
 
@@ -215,9 +216,7 @@ function ButtonMixin:SetTooltipContent(filler)
     self._tooltipContent = filler
 end
 
----The icon/text block is centred against the button's width, which is only final once the
----row has resolved it - and OnAcquire runs before that, on whatever width the previous
----occupant left behind.
+---The icon/text block is centred against the button's width, final only once the row resolved it
 function ButtonMixin:OnLayout()
     self:LayoutContent()
     self:UpdateBackgroundCrop()
@@ -239,10 +238,18 @@ function ButtonMixin:LayoutContent()
     self._iconSpan = hasText and span or self._iconSize
 
     local width = self:GetWidth()
-    if not width or width <= 0 then return end
+    local secret = issecretvalue(width)
+    if not secret and width <= 0 then return end
 
     self.icon:ClearAllPoints()
-    self.icon:NCSetPoint("LEFT", self, "LEFT", (width - self._iconSpan) / 2, self._iconYOffset)
+
+    -- Since we use the same button widget for anchors nudges and secret elements can taint the button,
+    -- we need to handle the positioning differently when the width is considered secret.
+    if secret then
+        self.icon:NCSetPoint('CENTER', self, 'CENTER', (self._iconSize - self._iconSpan) / 2, self._iconYOffset)
+    else
+        self.icon:NCSetPoint('LEFT', self, 'LEFT', (width - self._iconSpan) / 2, self._iconYOffset)
+    end
 
     self.text:ClearAllPoints()
     if hasText then
