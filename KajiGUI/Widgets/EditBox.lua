@@ -26,7 +26,10 @@ local CreateFrame = CreateFrame
 local Mixin = Mixin
 local tostring = tostring
 
-local WIDGET_TYPE = "EditBox"
+local WIDGET_TYPE = 'EditBox'
+local PANEL_BUTTON_SIZE = 24
+local PANEL_ICON_SIZE = 14
+local PANEL_BUTTON_GAP = 4
 
 ---An unset value lists as blank, not "nil".
 ---@param value any
@@ -45,11 +48,52 @@ end
 ---@field _animateBorder fun(isHover: boolean)
 ---@field _syncBorder fun(r: number, g: number, b: number, a?: number)
 ---@field _paintGlow fun()
+---@field panelButton Button|BackdropTemplate
+---@field panelIcon Texture
+---@field _panel? KajiGUISidePanelConfig
+---@field _panelOpen boolean
+---@field _animatePanelButton fun(r: number, g: number, b: number, a: number)
+---@field _setPanelButton fun(r: number, g: number, b: number, a: number)
+---@field _committed string the text it was given or last saved
 local EditBoxMixin = {}
 
 ---@param val string
 function EditBoxMixin:SetValue(val)
-    self.editBox:SetText(val or "")
+    self.editBox:SetText(val or '')
+    self._committed = self.editBox:GetText()
+end
+
+-- A box with a panel skips a save that changes nothing, as a code click takes its focus
+-- first and the save's card rebuild would lose the cursor
+function EditBoxMixin:Commit()
+    local text = self.editBox:GetText()
+    if self._panel and text == self._committed then return end
+
+    self._committed = text
+    safecall(self._callback, text)
+end
+
+---@param open boolean
+---@param instant boolean? no fade, for a box taking over an open panel
+function EditBoxMixin:SetPanelOpen(open, instant)
+    self._panelOpen = open
+    local p = open and 1 or 0
+    if instant then
+        self._setPanelButton(p, 0, 0, 0)
+        self:PaintPanelButton(p)
+    else
+        self._animatePanelButton(p, 0, 0, 0)
+    end
+end
+
+---@param p number 0 at rest to 1 hovered or open
+function EditBoxMixin:PaintPanelButton(p)
+    local theme = self.gui.theme
+    local rest, accent, border = theme.textMuted, theme.accent, theme.widgetBorder
+    self.panelIcon:SetVertexColor(rest[1] + (accent[1] - rest[1]) * p, rest[2] + (accent[2] - rest[2]) * p,
+        rest[3] + (accent[3] - rest[3]) * p, 1)
+    self.panelButton:SetBackdropBorderColor(border[1] + (accent[1] - border[1]) * p,
+        border[2] + (accent[2] - border[2]) * p, border[3] + (accent[3] - border[3]) * p, 1)
 end
 
 ---@return string
@@ -62,6 +106,11 @@ function EditBoxMixin:SetEnabled(enabled)
     self:SetAlpha(enabled and 1 or 0.4)
     self.editBox:EnableMouse(enabled)
     self.editBox:EnableKeyboard(enabled)
+    self.panelButton:EnableMouse(enabled and not self._mixed)
+    -- A box switched off takes no codes
+    if not enabled and self._panelOpen then
+        Kaji.ToggleSidePanel(self, self._panel)
+    end
     if not enabled then
         self.editBox:ClearFocus()
         self._hovered = false
@@ -76,6 +125,9 @@ function EditBoxMixin:UpdateColors()
     self.editBox:SetTextColor(theme.textPrimary[1], theme.textPrimary[2], theme.textPrimary[3], 1)
     self._syncBorder(theme.widgetBorder[1], theme.widgetBorder[2], theme.widgetBorder[3], theme.widgetBorder[4] or 1)
     Kaji.PaintMixed(self, self.label)
+    -- The refresh resets the border, so the button's paint goes after it
+    Kaji.RefreshBackdrop(self.panelButton)
+    self:PaintPanelButton(self._panelOpen and 1 or 0)
 end
 
 ---@param parent Frame
@@ -92,18 +144,28 @@ function EditBoxMixin:OnAcquire(parent, labelText, config)
 
     -- The label sits left of the box or above it; both layouts re-anchor from scratch so
     -- a recycled widget cannot keep the other one's points.
+    local panel = config.panel
+    local right = panel and -(PANEL_BUTTON_SIZE + PANEL_BUTTON_GAP) or 0
     self.label:ClearAllPoints()
     self.container:ClearAllPoints()
     if inlineLabel then
-        self.label:NCSetPoint("LEFT", self, "LEFT", 0, 0)
+        self.label:NCSetPoint('LEFT', self, 'LEFT', 0, 0)
         self.label:NCSetWidth(labelWidth)
-        self.container:NCSetPoint("TOPLEFT", self, "TOPLEFT", labelWidth, 0)
-        self.container:NCSetPoint("TOPRIGHT", self, "TOPRIGHT", 0, 0)
+        self.container:NCSetPoint('TOPLEFT', self, 'TOPLEFT', labelWidth, 0)
+        self.container:NCSetPoint('TOPRIGHT', self, 'TOPRIGHT', right, 0)
     else
-        self.label:NCSetPoint("TOPLEFT", self, "TOPLEFT", 0, 1)
-        self.container:NCSetPoint("TOPLEFT", self, "TOPLEFT", 0, -14)
-        self.container:NCSetPoint("TOPRIGHT", self, "TOPRIGHT", 0, -14)
+        self.label:NCSetPoint('TOPLEFT', self, 'TOPLEFT', 0, 1)
+        self.container:NCSetPoint('TOPLEFT', self, 'TOPLEFT', 0, -14)
+        self.container:NCSetPoint('TOPRIGHT', self, 'TOPRIGHT', right, -14)
     end
+
+    -- A blank box standing for several values can't take a code
+    self._panel = panel
+    self.panelButton:SetShown(panel ~= nil)
+    self.panelButton:EnableMouse(not config.mixed)
+    self.panelButton:SetAlpha(config.mixed and 0.4 or 1)
+    Kaji.SetTooltip(self.panelButton, self.gui, panel and panel.title, panel and panel.tooltip)
+    self:SetPanelOpen(false, true)
 
     self.label:SetText(labelText or "")
     self._callback = config.callback
@@ -111,7 +173,8 @@ function EditBoxMixin:OnAcquire(parent, labelText, config)
 
     Kaji.SetMixed(self, config.mixed, DescribeValue)
     self.editBox:SetAutoFocus(autoFocus)
-    self.editBox:SetText(not config.mixed and tostring(config.value or "") or "") -- mixed is blank, as WA's
+    self.editBox:SetText(not config.mixed and tostring(config.value or '') or '') -- Mixed is blank, as WA's
+    self._committed = self.editBox:GetText()
     self.editBox:EnableMouse(true)
     self.editBox:EnableKeyboard(true)
 
@@ -122,10 +185,19 @@ function EditBoxMixin:OnAcquire(parent, labelText, config)
     self:UpdateColors()
     self:Show()
 
-    if autoFocus then self.editBox:SetFocus() end
+    if autoFocus then
+        self.editBox:SetFocus()
+    end
+    if panel then
+        Kaji.TrackSidePanelBox(self, panel.key)
+    end
 end
 
 function EditBoxMixin:OnRelease()
+    if self._panel then
+        Kaji.TrackSidePanelBox(self, nil)
+        self._panel = nil
+    end
     self._hovered = false
     self._paintGlow()
     self._callback = nil
@@ -151,6 +223,7 @@ end
 ---@field labelWidth? number Width reserved for an inline label.
 ---@field notice? KajiGUINotice a marker after the label, see Kaji.SetNotice
 ---@field mixed? KajiGUIMixedEntry[] the things it edits disagree: blank until typed in, see Kaji.SetMixed
+---@field panel? KajiGUISidePanelConfig a button right of the box opening a side panel that can type into it
 
 Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     local theme = gui.theme
@@ -177,7 +250,37 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
     editBox:SetFontObject("GameFontNormal")
     row.editBox = editBox
 
+    -- Reads the panel off the row, so a pooled box never opens an old one
+    local panelButton = CreateFrame('Button', nil, row, 'BackdropTemplate')
+    panelButton:NCSetSize(PANEL_BUTTON_SIZE, PANEL_BUTTON_SIZE)
+    panelButton:NCSetPoint('LEFT', container, 'RIGHT', PANEL_BUTTON_GAP, 0)
+    Kaji.SetBackdrop(panelButton, gui, { bg = 'bgDark', bgAlpha = 0.9, border = 'widgetBorder', borderAlpha = 1 })
+    panelButton:Hide()
+    row.panelButton = panelButton
+
+    local panelIcon = panelButton:CreateTexture(nil, 'ARTWORK')
+    panelIcon:NCSetSize(PANEL_ICON_SIZE, PANEL_ICON_SIZE)
+    panelIcon:NCSetPoint('CENTER', panelButton, 'CENTER', 0, 0)
+    panelIcon:SetTexture(theme.panelTexture)
+    row.panelIcon = panelIcon
+
     Mixin(row, EditBoxMixin)
+
+    row._animatePanelButton, row._setPanelButton = Animations:CreateColorAnimator(panelButton,
+        function(p) row:PaintPanelButton(p) end, { 0, 0, 0, 0 }, theme.animDuration)
+    panelButton:SetScript('OnEnter', function()
+        row._animatePanelButton(1, 0, 0, 0)
+        Kaji.ShowTooltip(panelButton)
+    end)
+    panelButton:SetScript('OnLeave', function()
+        row._animatePanelButton(row._panelOpen and 1 or 0, 0, 0, 0)
+        Kaji.HideTooltip()
+    end)
+    panelButton:SetScript('OnClick', function()
+        if row._panel then
+            Kaji.ToggleSidePanel(row, row._panel)
+        end
+    end)
 
     row._animateBorder, row._syncBorder = Animations:CreateHoverColorAnimator(container,
         function(r, g, b, a) container:SetBackdropBorderColor(r, g, b, a) end,
@@ -204,9 +307,9 @@ Kaji:RegisterWidgetType(WIDGET_TYPE, function(gui)
         local border = row.gui.theme.widgetBorder
         container:SetBackdropBorderColor(border[1], border[2], border[3], 1)
         row._paintGlow()
-        -- a mixed box nobody typed in stays as it was, rather than giving them all an empty value
+        -- A mixed box nobody typed in stays as it was, rather than giving them all an empty value
         if row._mixed then return end
-        safecall(row._callback, eb:GetText())
+        row:Commit()
     end)
     editBox:SetScript("OnEditFocusGained", function()
         local accent = row.gui.theme.accent

@@ -10,6 +10,7 @@ local Apply = Core.Enum.Apply
 local SharedPages = Core.GUISharedPages
 local ANCHOR_POINTS = Core.AnchorOptions
 local UNIT_NAME_PATTERN = Core.UNIT_NAME_PATTERN
+local RaidMarkerTexture = Core.RaidMarkerTexture
 local CASTER_PATTERN = Core.CASTER_PATTERN
 
 local tinsert, tremove = table.insert, table.remove
@@ -109,21 +110,6 @@ local TEXT_ALIGNMENTS = { TEXT_JUSTIFY[2], TEXT_JUSTIFY[3], TEXT_JUSTIFY[4] } --
 local WIDTH_MODES = {
     { value = 'auto',  text = L['Automatic'] },
     { value = 'fixed', text = L['Fixed'] },
-}
-
-local TEXT_TOKENS = {
-    { '%p',            L['Time left'] },
-    { '%t',            L['Total time'] },
-    { '%s',            L['Charges'] },
-    { '%n',            L['Spell name'] },
-    { '%2.n',          L["Trigger 2's name, e.g. the highest stat"] },
-    { '%i',            L['Spell icon'] },
-    { '%2.i',          L["Trigger 2's icon"] },
-    { '%casterName',   L['Who cast the aura'] },
-    { '%2.casterName', L["In an aura group, only on Trigger 2's auras"] },
-    { '%%',            L['A percent sign'] },
-    { '\\n',           L['New line'] },
-    { '{rt1}',         L['Raid marker 1 to 8'] },
 }
 
 -- Structure --
@@ -628,6 +614,106 @@ local function Reads(text, triggers, isValue)
     return readsTime, readsValue, readsPower, readsCount, source
 end
 
+-- Text codes --
+
+local CHIP_HEIGHT = 24
+local CODE_ROW_HEIGHT = 20
+local MARKER_SIZE = 16
+
+-- What every text can use, reading the trigger it shows
+local GLOBAL_CODES = {
+    { '%p', L['Time left, or the value'] },
+    { '%t', L['Total time, or the max'] },
+    { '%n', L['Name'] },
+    { '%i', L['Icon'] },
+    { '%s', L['Charges or stacks'] },
+    { '%%', L['A percent sign'] },
+}
+
+---@class AuraLookCodeSection
+---@field title string
+---@field codes { [1]: string, [2]: string, [3]: string? }[] each code, what it shows and a tooltip for more
+
+-- An aura group's own triggers, whose buttons are auras alone
+---@param trigger table
+---@return AuraLookCodeSection[]
+local function AuraGroupCodes(trigger)
+    local sections = {}
+    for n = 1, Core:CountTriggerBranches(trigger) do
+        local prefix = '%' .. n .. '.'
+        sections[n] = {
+            title = format(L['Trigger %d'], n),
+            codes = {
+                { prefix .. 'p', L['Time left'] },
+                { prefix .. 't', L['Total time'] },
+                { prefix .. 's', L['Stacks'] },
+                { prefix .. 'n', L['Spell name'] },
+                { prefix .. 'i', L['Spell icon'] },
+                { prefix .. 'casterName', L['Who cast the aura'], L['Only works as a text of its own.'] },
+            },
+        }
+    end
+    return sections
+end
+
+---@param page table
+---@param insert fun(code: string)
+---@param sections AuraLookCodeSection[]
+local function BuildCodes(page, insert, sections)
+    local card = page:Card(nil, 'all')
+    AuraLook.Heading(card, L['Global'])
+    local chips = card:Row(CHIP_HEIGHT)
+    for _, entry in ipairs(GLOBAL_CODES) do
+        chips:Button(entry[1], { width = 1 / #GLOBAL_CODES, tooltip = entry[2], callback = function() insert(entry[1]) end })
+    end
+    local markers = card:Row(CHIP_HEIGHT)
+    for i = 1, 8 do
+        local code = '{rt' .. i .. '}'
+        markers:Button('', {
+            width = 1 / 8,
+            image = RaidMarkerTexture .. i,
+            imageSize = MARKER_SIZE,
+            tooltip = code,
+            callback = function() insert(code) end,
+        })
+    end
+
+    for _, section in ipairs(sections) do
+        AuraLook.Heading(card, section.title)
+        for i, entry in ipairs(section.codes) do
+            card:Row(CODE_ROW_HEIGHT, 0):Stripe(i % 2 == 0):ListRow(entry[1], {
+                width = 1,
+                text = entry[2],
+                tooltip = entry[3],
+                callback = function() insert(entry[1]) end,
+            })
+        end
+    end
+end
+
+---The code panel of a text box, for any text a display's triggers fill
+---@param key string the box's identity in its view
+---@param triggers table[]? nil on an aura group, which has one trigger of branches
+---@param codes (fun(triggers: table[]): AuraLookCodeSection[])? a section per trigger
+---@param groupTrigger table? an aura group's trigger, whose branches are its triggers
+---@return KajiGUISidePanelConfig
+function AuraLook.TextPanel(key, triggers, codes, groupTrigger)
+    return {
+        key = key,
+        title = L['Dynamic Text Replacements'],
+        tooltip = L['Codes that fill the text in as it shows. Click for the list.'],
+        build = function(page, insert)
+            local sections = {}
+            if groupTrigger then
+                sections = AuraGroupCodes(groupTrigger)
+            elseif codes and triggers then
+                sections = codes(triggers)
+            end
+            BuildCodes(page, insert, sections)
+        end,
+    }
+end
+
 ---@class AuraLookTextContext
 ---@field displays table[] the displays this text is on; the first one's triggers are what %N.p tokens point into
 ---@field slot number where the text sits in each one's SubRegions
@@ -635,6 +721,7 @@ end
 ---@field main boolean? a text display's own text: always shown, pinned at its alignment, no rotation
 ---@field dropped string? the aura button slot an earlier text already took: time, count, caster or name
 ---@field isValue (fun(trigger: table): boolean)? a trigger whose %p is a value, not a time
+---@field codes (fun(triggers: table[]): AuraLookCodeSection[])? the text panel's section per trigger
 ---@field noColor boolean? the caller colours it, so it has no Color row
 
 ---@param card table
@@ -698,18 +785,7 @@ function AuraLook.TextRows(card, page, element, set, mixed, key, ctx)
     textRow:EditBox(L['Display Text'], {
         width = main and 1 or 0.5,
         conditions = { shown },
-        tooltip = function(tooltip)
-            local accent, secondary = page.gui.theme.accent, page.gui.theme.textSecondary
-            tooltip:SetText(L['Display Text'], accent[1], accent[2], accent[3], 1, false)
-            for _, token in ipairs(TEXT_TOKENS) do
-                tooltip:AddDoubleLine(token[1], token[2], accent[1], accent[2], accent[3], secondary[1], secondary[2], secondary[3])
-            end
-            tooltip:AddLine(' ')
-            tooltip:AddLine(L["%p and %t can't share a text with %s."], secondary[1], secondary[2], secondary[3], true)
-            tooltip:AddLine(L['On Power, %p is the value and %t the max; on Player Stat, %p is the percent and %t the rating.'], secondary[1], secondary[2], secondary[3], true)
-            tooltip:AddLine(L['%2.p, %2.t or %2.s read Trigger 2 instead of the shown trigger. A text reads one trigger.'], secondary[1], secondary[2], secondary[3], true)
-            tooltip:AddLine(L['%casterName only works on an aura, as a text of its own.'], secondary[1], secondary[2], secondary[3], true)
-        end,
+        panel = AuraLook.TextPanel(key, triggers, ctx.codes, groupTrigger),
         notice = notes[1] and { level = level, text = notes } or nil,
         value = element.Text,
         mixed = mixed({ 'Text' }),
@@ -1341,6 +1417,7 @@ end
 ---@field enchants boolean? the group shows weapon enchants, see AuraTypeRows
 ---@field pipName string? a split power bar's "Rune"
 ---@field isValue (fun(trigger: table): boolean)? see TextRows
+---@field codes (fun(triggers: table[]): AuraLookCodeSection[])? see TextRows
 ---@field dropped table<table, string>? texts an aura button leaves empty, see Core:DroppedAuraTexts
 ---@field auraGroup boolean? an aura group's button, whose dropped texts are found here
 ---@field rows fun(card: table, page: table, element: table, set: function, mixed: function, key: string)? kinds this file doesn't draw
@@ -1456,6 +1533,7 @@ function AuraLook.SubElements(card, page, displays, apply, opts)
                     pipName = opts.pipName,
                     dropped = slot,
                     isValue = opts.isValue,
+                    codes = opts.codes,
                 })
             elseif element.type == 'border' then
                 BorderRows(card, page, element, set, mixed, key, opts.pipName)

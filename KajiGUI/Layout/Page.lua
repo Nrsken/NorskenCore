@@ -140,6 +140,14 @@ function FluentRow:MultiLineEditBox(label, config) return self:_Add("CreateMulti
 ---@return KajiGUIText widget
 function FluentRow:Text(label, config) return self:_Add("CreateText", label, config) --[[@as KajiGUIText]] end
 
+---@param label string
+---@param config? KajiGUIWidgetConfig
+---@return KajiGUIListRow widget
+function FluentRow:ListRow(label, config)
+    -- _Add hands back the base widget type, as for every method here
+    return self:_Add('CreateListRow', label, config) --[[@as KajiGUIListRow]]
+end
+
 ---@param label? string
 ---@param config? KajiGUIWidgetConfig
 ---@return KajiGUIAnchorPicker widget

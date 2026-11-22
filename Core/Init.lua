@@ -22,5 +22,6 @@ Core.FrameMethods = {}
 Core.ClearTexture = 0
 Core.WhiteTexture = 'Interface\\Buttons\\WHITE8X8'
 Core.QuestionMarkTexture = 134400
+Core.RaidMarkerTexture = 'Interface\\TargetingFrame\\UI-RaidTargetingIcon_' -- Followed by the marker, 1 to 8
 Core.GlobalZoom = 0.3
 Core.GCD_SPELL = 61304

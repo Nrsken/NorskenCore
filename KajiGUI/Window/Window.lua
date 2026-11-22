@@ -90,22 +90,40 @@ end
 
 -- Header / Footer builders --
 
-local function BuildHeader(window, logoCfg)
-    local gui, theme, parent = window.gui, window.gui.theme, window.frame
-
-    local header = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+---A window's title bar across the top of the parent, repainted with the theme
+---@param gui KajiGUIInstance
+---@param parent Frame
+---@return Frame|BackdropTemplate header
+function Kaji.CreateHeaderBar(gui, parent)
+    local theme = gui.theme
+    local header = CreateFrame('Frame', nil, parent, 'BackdropTemplate')
     header:NCSetHeight(theme.headerHeight)
-    header:NCSetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-    header:NCSetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
+    header:NCSetPoint('TOPLEFT', parent, 'TOPLEFT', 0, 0)
+    header:NCSetPoint('TOPRIGHT', parent, 'TOPRIGHT', 0, 0)
     header:SetBackdrop({ bgFile = WHITE })
     Kaji.AddSurfaceTexture(header, gui)
 
-    local bottomBorder = header:CreateTexture(nil, "BORDER")
+    local bottomBorder = header:CreateTexture(nil, 'BORDER')
     bottomBorder:NCSetHeight(theme.borderSize)
-    bottomBorder:NCSetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
-    bottomBorder:NCSetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
+    bottomBorder:NCSetPoint('BOTTOMLEFT', header, 'BOTTOMLEFT', 0, 0)
+    bottomBorder:NCSetPoint('BOTTOMRIGHT', header, 'BOTTOMRIGHT', 0, 0)
 
     Kaji.AddTopSheen(header, gui)
+
+    local function Restyle()
+        local fill, border = theme.bgMedium, theme.border
+        header:SetBackdropColor(fill[1], fill[2], fill[3], fill[4])
+        bottomBorder:SetColorTexture(border[1], border[2], border[3], border[4])
+    end
+    Restyle()
+    gui:OnThemeChanged(Restyle)
+
+    return header
+end
+
+local function BuildHeader(window, logoCfg)
+    local gui, theme, parent = window.gui, window.gui.theme, window.frame
+    local header = Kaji.CreateHeaderBar(gui, parent)
 
     local layerTex = {}
     if logoCfg then
@@ -123,12 +141,22 @@ local function BuildHeader(window, logoCfg)
             layer._tex = t
             layer._paintGlow = Kaji.AddIconGlow(container, t, layer.size, layer.size, layer.glow, gui)
         end
+    end
 
+    local version
+    if logoCfg and logoCfg.version then
+        version = header:CreateFontString(nil, 'OVERLAY')
+        version:NCSetPoint(ParseAnchor(logoCfg.versionAnchor, header, layerTex))
+        gui:ApplyFont(version, 'small')
+        version:SetShadowColor(0, 0, 0, 0)
+        version:SetText(logoCfg.version)
     end
 
     local function Restyle()
-        header:SetBackdropColor(theme.bgMedium[1], theme.bgMedium[2], theme.bgMedium[3], theme.bgMedium[4])
-        bottomBorder:SetColorTexture(theme.border[1], theme.border[2], theme.border[3], theme.border[4])
+        if version then
+            local muted = theme.textMuted
+            version:SetTextColor(muted[1], muted[2], muted[3], 1)
+        end
         if logoCfg then
             for _, layer in ipairs(logoCfg.layers or {}) do
                 if layer._tex then
@@ -652,7 +680,7 @@ end
 ---@field name? string global frame name
 ---@field size? number[] { width, height }
 ---@field minSize? number[] { minWidth, minHeight }
----@field logo? table { layers = { {texture,size,anchor,color,alpha}, ... } }
+---@field logo? table { layers = { {texture,size,anchor,color,alpha}, ... }, version?: string, versionAnchor?: table }
 ---@field state? table { load: fun(): table?, save: fun(data: table) } addon-owned persistence
 ---@field defaultPage? string page id shown on first open
 ---@field onShow? fun()

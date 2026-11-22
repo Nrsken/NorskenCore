@@ -58,10 +58,8 @@ function InstanceMixin:CreateSidebar(parent, opts)
     local pad = theme.paddingSmall
 
     -- the column is page ground like the content area's, the list a panel on it as a page's list is
-    local frame = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    frame:SetBackdrop({ bgFile = Core.WhiteTexture })
-    Kaji.AddSurfaceTexture(frame, gui)
-    Kaji.AddSurfaceTexture(frame, gui, "page")
+    local frame = CreateFrame('Frame', nil, parent, 'BackdropTemplate')
+    Kaji.AddPageGround(frame, gui)
 
     -- inset as a page's list is: flush right, where the next column's own inset is the gap
     local panel = CreateFrame("Frame", nil, frame, "BackdropTemplate")
@@ -649,13 +647,9 @@ function InstanceMixin:CreateSidebar(parent, opts)
         end
     end
 
-    local function RestyleChrome()
-        frame:SetBackdropColor(theme.bgDark[1], theme.bgDark[2], theme.bgDark[3], theme.bgDark[4])
-        RestylePanel()
-    end
-    RestyleChrome()
+    RestylePanel()
     gui:OnThemeChanged(function()
-        RestyleChrome()
+        RestylePanel()
         sidebar:Refresh()
     end)
 

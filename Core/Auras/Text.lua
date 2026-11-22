@@ -14,6 +14,7 @@ Core.CASTER_PATTERN = '%%%d*%.?casterName' -- %casterName or %2.casterName, see 
 Core.UNIT_NAME_PATTERN = '%%unitName' -- The unit an event trigger fired for, formatted as %casterName
 
 local UNIT_NAME_PATTERN = Core.UNIT_NAME_PATTERN
+local RaidMarkerTexture = Core.RaidMarkerTexture
 local LITERAL_PERCENT = Core.LITERAL_PERCENT
 local CASTER_PATTERN = Core.CASTER_PATTERN
 
@@ -34,7 +35,7 @@ end
 local function RaidMarker(mark)
     local index = tonumber(mark)
     if index and index >= 1 and index <= 8 then
-        return '|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_' .. index .. ':0|t'
+        return '|T' .. RaidMarkerTexture .. index .. ':0|t'
     end
 end
 

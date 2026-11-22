@@ -131,6 +131,7 @@ local DEFAULT_THEME = {
     noticeTexture           = MEDIA .. "warning.png", -- white, tinted per notice level
     linkTexture             = MEDIA .. "external-link.png", -- white, muted until hovered
     linkGlowTexture         = MEDIA .. "external-link_glow.png",
+    panelTexture            = MEDIA .. 'fonts.png', -- White, the button that opens an edit box's side panel
     backTexture             = MEDIA .. "right-arrow.png", -- turned to point left
     -- Drag cursors: an Enum.Cursormode or built-in cursor name, never a path (addon textures draw black)
     dragCursor              = Enum.Cursormode and Enum.Cursormode.GrabbingHandCursor or "UI_MOVE_CURSOR",

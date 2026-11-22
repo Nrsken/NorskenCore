@@ -26,6 +26,7 @@
     <Script file="Window\Search.lua" />
     <Script file="Window\Window.lua" />
     <Script file="Window\ItemTree.lua" />
+    <Script file="Window\SidePanel.lua" />
 
     <!-- Widgets -->
     <Script file="Widgets\Separator.lua" />
@@ -40,6 +41,7 @@
     <Script file="Widgets\MultiLineEditBox.lua" />
     <Script file="Widgets\Button.lua" />
     <Script file="Widgets\Text.lua" />
+    <Script file="Widgets\ListRow.lua" />
     <Script file="Widgets\SortableStack.lua" />
     <Script file="Widgets\Icon.lua" />
     <Script file="Widgets\TalentTree.lua" />

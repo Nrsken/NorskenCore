@@ -128,7 +128,7 @@ function Shared:AddSupportFooter(window, addon)
             end,
         })
     end
-    window:SetFooterText(addon:GetVersionText() .. '  ·  ' .. addon.slashCommand)
+    window:SetFooterText(addon.slashCommand)
 end
 
 ---Where to report a bug, the last card on a home page.

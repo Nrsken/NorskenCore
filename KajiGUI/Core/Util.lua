@@ -380,6 +380,24 @@ function Kaji.SetNotice(owner, gui, label, notice, before)
     end
 end
 
+-- Windows --
+
+---The window whose content holds a widget, nil for one outside every window
+---@param frame Frame
+---@return KajiGUIWindowMixin?
+function Kaji.WindowOf(frame)
+    for _, window in ipairs(Kaji.windows) do
+        local host = window.content
+        local parent = host and frame:GetParent()
+        while parent and parent ~= host.frame do
+            parent = parent:GetParent()
+        end
+        if parent then
+            return window
+        end
+    end
+end
+
 -- Link --
 
 local LINK_SIZE = 12
@@ -454,16 +472,10 @@ function Kaji.SetLink(owner, gui, label, link, area)
         local function Open()
             local open = owner._link and owner._link.onClick
             if not open then return end
-            -- through the window it sits in, so the page it opens can lead back
-            for _, window in ipairs(Kaji.windows) do
-                local host = window.content
-                local parent = host and owner:GetParent()
-                while parent and parent ~= host.frame do
-                    parent = parent:GetParent()
-                end
-                if parent then
-                    return host:FollowLink(open, window)
-                end
+            -- Through the window it sits in, so the page it opens can lead back
+            local window = Kaji.WindowOf(owner)
+            if window then
+                return window.content:FollowLink(open, window)
             end
             Kaji.safecall(open)
         end
@@ -576,10 +588,27 @@ function Kaji.AddSurfaceTexture(frame, gui, kind)
         local pixelsPerUnit = frame:GetEffectiveScale() / Core.Pixel.GetPerfectPixel()
         tex:SetTexCoord(0, w * pixelsPerUnit / SURFACE_TEXTURE_SIZE, 0, h * pixelsPerUnit / SURFACE_TEXTURE_SIZE)
     end
-    frame:HookScript("OnSizeChanged", Retile)
+    frame:HookScript('OnSizeChanged', Retile)
     Retile()
 
     return tex
+end
+
+---The dark ground a window's columns sit on, with the surface and page grain over it
+---@param frame Frame|BackdropTemplate
+---@param gui KajiGUIInstance
+function Kaji.AddPageGround(frame, gui)
+    local theme = gui.theme
+    frame:SetBackdrop({ bgFile = Core.WhiteTexture })
+    Kaji.AddSurfaceTexture(frame, gui)
+    Kaji.AddSurfaceTexture(frame, gui, 'page')
+
+    local function Restyle()
+        local fill = theme.bgDark
+        frame:SetBackdropColor(fill[1], fill[2], fill[3], fill[4])
+    end
+    Restyle()
+    gui:OnThemeChanged(Restyle)
 end
 
 -- Depth --

@@ -98,12 +98,14 @@ end
 ---orphaning them with SetParent(nil) leaked the whole subtree, permanently.
 ---@param gui KajiGUIInstance
 ---@param scrollChild Frame
-local function ClearScrollChild(gui, scrollChild)
+function Kaji.ClearScrollChild(gui, scrollChild)
     for _, child in ipairs({ scrollChild:GetChildren() }) do
         gui:ReleaseWidget(child)
     end
     scrollChild:NCSetHeight(1)
 end
+
+local ClearScrollChild = Kaji.ClearScrollChild
 
 local TAB_HPAD = 14 -- horizontal padding on each side of a tab label
 local SLASH = 8 -- the 45° separator between neighbouring tabs, as tall as it is wide
@@ -429,16 +431,9 @@ function InstanceMixin:CreateContentHost(parent, opts)
 
     local frame = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     frame:SetAllPoints(parent)
+    -- Also covers the item list column, which sits inside this frame on a translucent fill
     if opts.showBackground ~= false then
-        frame:SetBackdrop({ bgFile = Core.WhiteTexture })
-        -- Also covers the item list column, which sits inside this frame on a translucent fill.
-        Kaji.AddSurfaceTexture(frame, gui)
-        Kaji.AddSurfaceTexture(frame, gui, "page")
-        local function Restyle()
-            frame:SetBackdropColor(theme.bgDark[1], theme.bgDark[2], theme.bgDark[3], theme.bgDark[4])
-        end
-        Restyle()
-        gui:OnThemeChanged(Restyle)
+        Kaji.AddPageGround(frame, gui)
     end
 
     local scrollFrame = CreateFrame("ScrollFrame", nil, frame)
@@ -525,6 +520,7 @@ function InstanceMixin:CreateContentHost(parent, opts)
     ---@field SetHeader fun(self: KajiGUIContentHost, headerFrame?: Frame, height?: number): void
     ---@field page? KajiGUIPage
     ---@field currentId? string
+    ---@field view? string the page, tab and item last built, what a side panel belongs to
     ---@field tabStrip? table
     ---@field miniSidebar? table
     local host = {
@@ -629,7 +625,9 @@ function InstanceMixin:CreateContentHost(parent, opts)
         host.page = page
         UpdateScrollbar()
 
-        local view = tostring(descriptor) .. "/" .. tostring(tabId) .. "/" .. tostring(itemKey)
+        local view = tostring(descriptor) .. '/' .. tostring(tabId) .. '/' .. tostring(itemKey)
+        host.view = view
+        Kaji.ViewBuilt(host)
         if host._following then
             host._landed = view
         elseif host._back and host._backView == view then
