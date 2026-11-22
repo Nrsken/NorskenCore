@@ -549,7 +549,7 @@ local function StartAura(button, entry, now)
     end
     if button.nuiCaster then
         local options = button.nuiCasterOptions or {}
-        button.nuiCaster:SetText(Core:FormatUnit(nil, options.useClassColors, options.showRealmName))
+        button.nuiCaster:SetText(Core:FormatUnit(nil, options.useClassColors, options.showRealmName, true))
     end
     if button.nuiCooldown then
         button.nuiCooldown:SetCooldown(start, entry.duration)

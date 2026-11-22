@@ -53,8 +53,9 @@ end
 ---@param guid string? the player or a group member, whose identity is never secret
 ---@param useClassColors boolean?
 ---@param showRealmName boolean?
+---@param gameColors boolean? a caster preview, colored as the game colors the live caster text
 ---@return string
-function Core:FormatUnit(guid, useClassColors, showRealmName)
+function Core:FormatUnit(guid, useClassColors, showRealmName, gameColors)
     guid = guid or Core.MyGUID
     -- Copied from CustomAuraButtonPrivateMixin:ApplyCasterName in Blizzard_CustomAuraButton.lua
     local name, realm = UnitNameFromGUID(guid)
@@ -67,10 +68,17 @@ function Core:FormatUnit(guid, useClassColors, showRealmName)
     if showRealmName and realm and realm ~= '' then
         name = name .. '-' .. realm
     end
-    -- Blizzard's class colors, as the game colors the native caster text with them
+    if not useClassColors then
+        return name
+    end
+
     local _, classFilename = UnitClassFromGUID(guid)
-    local color = useClassColors and classFilename and RAID_CLASS_COLORS[classFilename]
-    return color and color:WrapTextInColorCode(name) or name
+    -- The game writes the live caster text in its own colors and we can't recolor it
+    if gameColors then
+        local color = classFilename and GetBlizzardClassColor(classFilename)
+        return color and color:WrapTextInColorCode(name) or name
+    end
+    return Core:ColorTextByClass(name, classFilename)
 end
 
 ---Convert 0-1 RGB components to an "RRGGBB" hex string.

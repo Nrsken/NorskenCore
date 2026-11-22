@@ -76,7 +76,7 @@ function Core:ExpandText(element, spellName, texture, triggers, reader, unitGUID
     local previewing = reader and reader.previewing
     -- Only an aura button knows its caster, as a whole text, a preview shows the player
     raw = gsub(raw, CASTER_PATTERN, function()
-        return previewing and Core:FormatUnit(nil, element.CasterClassColor, element.CasterRealm) or ''
+        return previewing and Core:FormatUnit(nil, element.CasterClassColor, element.CasterRealm, true) or ''
     end)
     raw = gsub(raw, UNIT_NAME_PATTERN, function()
         if not (unitGUID or previewing) then
