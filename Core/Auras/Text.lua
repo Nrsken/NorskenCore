@@ -69,8 +69,9 @@ end
 ---@param triggers table[]? the display's triggers, which %N.n and %N.i read
 ---@param reader table? has previewing, GetTriggerName and GetTriggerTexture
 ---@param unitGUID string? whose name %unitName writes
+---@param tokens (fun(index: number?, name: string): string?)? a trigger's named tokens
 ---@return string
-function Core:ExpandText(element, spellName, texture, triggers, reader, unitGUID)
+function Core:ExpandText(element, spellName, texture, triggers, reader, unitGUID, tokens)
     local raw = gsub(element.Text or '', '%%%%', LITERAL_PERCENT)
     local previewing = reader and reader.previewing
     -- Only an aura button knows its caster, as a whole text, a preview shows the player
@@ -83,6 +84,12 @@ function Core:ExpandText(element, spellName, texture, triggers, reader, unitGUID
         end
         return Core:FormatUnit(unitGUID, element.CasterClassColor, element.CasterRealm)
     end)
+    -- Before %n and %i, which would take a token's first letter
+    if tokens then
+        raw = gsub(raw, '%%(%d*)%.?(%a+)', function(index, name)
+            return tokens(tonumber(index), name)
+        end)
+    end
     raw = gsub(raw, '\\n', '\n')
     raw = gsub(raw, '{rt(%d)}', RaidMarker)
     raw = gsub(raw, '%%(%d+)%.i', function(index)
